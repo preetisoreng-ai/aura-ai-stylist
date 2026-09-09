@@ -1,0 +1,1517 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FBF8F3" />
+    <title>Aura — Minimal Home</title>
+    <meta
+      name="description"
+      content="Aura Minimal Home Screen — an intent-first conversational front door for bespoke Indian occasion wear. Ethereal Aura orb, occasion chips, and a voice-or-text stylist bar."
+    />
+
+    <!-- Typography: Instrument Serif, DM Sans, DM Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap"
+    />
+
+    <!-- React 18, ReactDOM, Babel, Tailwind CSS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      /* Colours are declared as raw RGB channels so Tailwind's `/opacity`
+       modifier (bg-primary/90, border-hairline/60 …) resolves correctly.
+       A bare `var(--primary)` silently drops the alpha modifier on v3. */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas: "rgb(var(--canvas-rgb) / <alpha-value>)",
+              card: "rgb(var(--card-rgb) / <alpha-value>)",
+              inset: "rgb(var(--inset-rgb) / <alpha-value>)",
+              primary: "rgb(var(--primary-rgb) / <alpha-value>)",
+              onprimary: "rgb(var(--onprimary-rgb) / <alpha-value>)",
+              selfill: "rgb(var(--sel-fill-rgb) / <alpha-value>)",
+              ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+              muted: "rgb(var(--muted-rgb) / <alpha-value>)",
+              hairline: "rgb(var(--hairline-rgb) / <alpha-value>)",
+              ctrl: "rgb(var(--ctrl-border-rgb) / <alpha-value>)",
+              gold: "rgb(var(--gold-rgb) / <alpha-value>)",
+              goldtext: "rgb(var(--gold-text-rgb) / <alpha-value>)",
+            },
+            fontFamily: {
+              display: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
+              sans: ['"DM Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+              mono: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* ===================================================================
+       AURA DESIGN TOKENS — WCAG 2.1/2.2 AA verified pairings
+       Channels first, then convenience hex aliases for plain CSS.
+       =================================================================== */
+      :root {
+        --canvas-rgb: 251 248 243; /* #FBF8F3 Soft Ivory · surface-0 */
+        --card-rgb: 255 255 255; /* #FFFFFF Pristine White · surface-1 */
+        --inset-rgb: 243 238 228; /* #F3EEE4 Warm Sand · surface-2 */
+        --primary-rgb: 59 42 90; /* #3B2A5A Deep Royal Plum · 11.91:1 on Ivory */
+        --onprimary-rgb: 255 255 255; /* 12.61:1 on Plum */
+        --sel-fill-rgb: 245 244 247; /* Plum 50 · selected state */
+        --ink-rgb: 30 27 46; /* #1E1B2E · 15.84:1 on Ivory */
+        --muted-rgb: 90 84 104; /* #5A5468 · 6.83:1 on Ivory */
+        --hairline-rgb: 229 223 213; /* #E5DFD5 warm divider */
+        --ctrl-border-rgb: 124 123 134; /* #7C7B86 · 3.94:1 boundary */
+        --gold-rgb: 200 155 60; /* #C89B3C decorative only */
+        --gold-text-rgb: 120 93 36; /* #785D24 · 5.85:1 on Ivory */
+
+        --canvas: rgb(var(--canvas-rgb));
+        --card: rgb(var(--card-rgb));
+        --inset: rgb(var(--inset-rgb));
+        --primary: rgb(var(--primary-rgb));
+        --ink: rgb(var(--ink-rgb));
+        --muted: rgb(var(--muted-rgb));
+        --hairline: rgb(var(--hairline-rgb));
+
+        --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+
+        --e1: 0 1px 3px rgb(var(--ink-rgb) / 0.04);
+        --e2: 0 4px 16px rgb(var(--ink-rgb) / 0.08), 0 1px 3px rgb(var(--ink-rgb) / 0.04);
+        --e-float:
+          0 14px 34px -8px rgb(var(--primary-rgb) / 0.16),
+          0 3px 10px -2px rgb(var(--ink-rgb) / 0.05), 0 1px 2px rgb(var(--ink-rgb) / 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html {
+        background-color: var(--canvas);
+      }
+
+      body {
+        background-color: var(--canvas);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body.aura-locked {
+        overflow: hidden;
+      }
+
+      /* Visible, consistent keyboard focus on every interactive element. */
+      :focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* ===================================================================
+       APP VIEWPORT — native, frameless mobile canvas
+       =================================================================== */
+      .app-viewport {
+        width: 100%;
+        max-width: 430px;
+        /* --app-h is set from window.visualViewport while the on-screen
+           keyboard is open; it falls back to the full viewport otherwise. */
+        height: var(--app-h, 100dvh);
+        min-height: var(--app-h, 100vh);
+        margin: 0 auto;
+        background: var(--canvas);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Soft ambient wash sitting behind the orb — anchors the composition
+       without adding a visible object to the minimal layout. */
+      .canvas-wash {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(
+            120% 55% at 50% 26%,
+            rgb(var(--gold-rgb) / 0.1) 0%,
+            rgb(var(--gold-rgb) / 0.03) 38%,
+            transparent 70%
+          ),
+          radial-gradient(90% 45% at 50% 20%, rgb(var(--primary-rgb) / 0.06) 0%, transparent 68%);
+      }
+
+      /* ===================================================================
+       OCCASION CHIPS — 44px minimum target (Apple HIG · WCAG 2.2 AA)
+       =================================================================== */
+      .minimal-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 9999px;
+        background: rgb(var(--card-rgb) / 0.88);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.9);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 13.5px;
+        font-weight: 500;
+        letter-spacing: -0.005em;
+        line-height: 1;
+        white-space: nowrap;
+        transition:
+          border-color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+          background-color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+          transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+          box-shadow 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+        cursor: pointer;
+        user-select: none;
+        box-shadow: 0 1px 2px rgb(var(--ink-rgb) / 0.03);
+        backdrop-filter: blur(8px);
+      }
+
+      .minimal-chip .chip-icon {
+        display: inline-flex;
+        flex: none;
+        color: var(--gold-text, #785d24);
+      }
+
+      .minimal-chip:hover {
+        border-color: rgb(var(--primary-rgb) / 0.55);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -4px rgb(var(--primary-rgb) / 0.14);
+        background: rgb(var(--card-rgb) / 1);
+        color: var(--primary);
+      }
+
+      .minimal-chip:active {
+        transform: scale(0.975);
+      }
+
+      /* ===================================================================
+       FLOATING CONVERSATION BAR
+       =================================================================== */
+      .minimal-floating-bar {
+        background: var(--card);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        box-shadow: var(--e-float);
+        transition:
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
+      }
+
+      .minimal-floating-bar:focus-within {
+        border-color: rgb(var(--primary-rgb) / 0.75);
+        box-shadow:
+          0 16px 40px -8px rgb(var(--primary-rgb) / 0.2),
+          0 0 0 3px rgb(var(--primary-rgb) / 0.1);
+      }
+
+      .home-pill-line {
+        width: 134px;
+        height: 5px;
+        background: var(--ink);
+        opacity: 0.2;
+        border-radius: 9999px;
+        margin: 10px auto 4px auto;
+      }
+
+      /* ===================================================================
+       MOTION — every animation below is disabled under reduced-motion
+       =================================================================== */
+      @keyframes auraSlideFromRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraSheetUp {
+        from {
+          transform: translateY(24px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraToastIn {
+        from {
+          transform: translate(-50%, -14px);
+          opacity: 0;
+        }
+        to {
+          transform: translate(-50%, 0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraListenRing {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(var(--primary-rgb) / 0.35);
+        }
+        50% {
+          box-shadow: 0 0 0 7px rgb(var(--primary-rgb) / 0);
+        }
+      }
+
+      .drawer-slide-in {
+        animation: auraSlideFromRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-fade-in {
+        animation: auraFadeIn 0.18s ease-out forwards;
+      }
+      .aura-sheet-up {
+        animation: auraSheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-toast-in {
+        animation: auraToastIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-listening {
+        animation: auraListenRing 1.5s ease-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+        .minimal-chip:hover {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useRef, useEffect, useCallback } = React;
+
+      const prefersReducedMotion = () =>
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      /* ===================================================================
+       OCCASION TAXONOMY (Aura PRD §Occasion-first IA)
+       =================================================================== */
+      const chipIcon = (paths, strokeWidth = 1.8) => (
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          {paths}
+        </svg>
+      );
+
+      const CHIPS_DATA = [
+        {
+          id: "wedding_guest",
+          label: "Wedding guest",
+          icon: chipIcon(
+            <>
+              <path d="M6 3h12l4 6-10 12L2 9z" />
+              <path d="M11 3 8 9l4 12 4-12-3-6" />
+            </>
+          ),
+          prompt:
+            "Guest at a 3-day wedding in Jaipur.\nSomething celebratory that I can dance in comfortably.",
+          role: "Guest",
+          city: "Jaipur",
+          lead: "3 to 5 weeks",
+        },
+        {
+          id: "diwali",
+          label: "Diwali",
+          icon: chipIcon(
+            <>
+              <path d="M12 2v4" />
+              <path d="m4.93 10.93 2.83-2.83" />
+              <path d="M2 18h20" />
+              <path d="M20 18a8 8 0 0 1-16 0" />
+            </>
+          ),
+          prompt:
+            "A timeless piece for Diwali family dinner.\nHandloom I can wear and treasure for years.",
+          role: "Family",
+          city: "London",
+          lead: "2 to 3 weeks",
+        },
+        {
+          id: "sangeet",
+          label: "Sangeet",
+          icon: chipIcon(
+            <>
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </>
+          ),
+          prompt:
+            "A dramatic sangeet look for evening stage lighting.\nLightweight silhouette that moves freely when I dance.",
+          role: "Performer / Friend",
+          city: "Chicago",
+          lead: "3 to 4 weeks",
+        },
+        {
+          id: "reception",
+          label: "Reception",
+          icon: chipIcon(
+            <>
+              <path d="m8 22 4-11h-4" />
+              <path d="M16 22l-4-11h4" />
+              <path d="M5 2h14l-2 9H7z" />
+            </>
+          ),
+          prompt:
+            "A modern reception look with sculptural draping.\nMade in authentic Indian handloom silk.",
+          role: "Guest",
+          city: "New York",
+          lead: "4 to 6 weeks",
+        },
+        {
+          id: "temple",
+          label: "Temple morning",
+          icon: chipIcon(
+            <>
+              <path d="M3 21h18" />
+              <path d="M5 21V9l7-5 7 5v12" />
+              <path d="M9 21v-7a3 3 0 0 1 6 0v7" />
+            </>
+          ),
+          prompt:
+            "A morning temple visit — modest neckline, covered shoulders.\nPure organic silk handloom, easy in the heat.",
+          role: "Devotee",
+          city: "Chennai",
+          lead: "1 to 2 weeks",
+        },
+        {
+          id: "more",
+          label: "Show more",
+          isMore: true,
+          icon: chipIcon(
+            <>
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </>,
+            2.1
+          ),
+        },
+      ];
+
+      /* Secondary taxonomy surfaced by the "More occasions" sheet. */
+      const MORE_OCCASIONS = [
+        {
+          id: "griha",
+          label: "Griha Pravesh",
+          lead: "2 to 3 weeks",
+          prompt:
+            "Griha Pravesh housewarming puja at home.\nSomething traditional but easy to move and host in.",
+        },
+        {
+          id: "mehendi",
+          label: "Mehendi",
+          lead: "3 to 4 weeks",
+          prompt:
+            "Mehendi morning in a garden setting.\nLight, colourful, and comfortable to sit in for hours.",
+        },
+        {
+          id: "haldi",
+          label: "Haldi",
+          lead: "2 to 3 weeks",
+          prompt:
+            "Haldi ceremony — something I won't mind staining.\nBreathable cotton or lightweight handloom.",
+        },
+        {
+          id: "cocktail",
+          label: "Cocktail evening",
+          lead: "4 to 5 weeks",
+          prompt:
+            "Indo-western cocktail evening look.\nSharp and modern, still rooted in Indian craft.",
+        },
+        {
+          id: "annaprashan",
+          label: "Annaprashan",
+          lead: "2 to 3 weeks",
+          prompt:
+            "My child's Annaprashan ceremony.\nSomething soft, traditional, and easy to hold a baby in.",
+        },
+        {
+          id: "destination",
+          label: "Destination wedding",
+          lead: "6 to 8 weeks",
+          prompt:
+            "Destination wedding abroad, packing light.\nPieces that travel well and restyle across three events.",
+        },
+      ];
+
+      /* ===================================================================
+       COMPONENT: TRANSPARENT FLUID ORB
+       Canvas glass sphere with swirling internal caustics. Honours
+       prefers-reduced-motion by painting exactly one static frame.
+       =================================================================== */
+      function TransparentFluidOrb({ isListening, onActivate }) {
+        const canvasRef = useRef(null);
+        const animFrameRef = useRef(null);
+        const listeningRef = useRef(isListening);
+
+        /* Kept in a ref so changing listening state re-tunes the running
+         animation instead of tearing down and restarting the timeline. */
+        useEffect(() => {
+          listeningRef.current = isListening;
+        }, [isListening]);
+
+        useEffect(() => {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const ctx = canvas.getContext("2d");
+
+          const size = 230;
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = size * dpr;
+          canvas.height = size * dpr;
+          ctx.scale(dpr, dpr);
+
+          const still = prefersReducedMotion();
+          const startTime = Date.now();
+          let phase = 0;
+          let lastFrame = startTime;
+
+          const paint = (t) => {
+            const width = size,
+              height = size;
+            ctx.clearRect(0, 0, width, height);
+            const cx = width / 2;
+            const cy = height / 2;
+
+            // 1. Outermost organic fluid wave ripple
+            ctx.save();
+            ctx.beginPath();
+            for (let a = 0; a <= Math.PI * 2 + 0.04; a += 0.04) {
+              const deform = Math.sin(a * 4 + t * 0.9) * 3.5 + Math.cos(a * 3 - t * 0.7) * 2.5;
+              const r = 92 + deform;
+              const x = cx + Math.cos(a) * r;
+              const y = cy + Math.sin(a) * r;
+              if (a === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.lineWidth = 1.4;
+            ctx.strokeStyle = "rgba(200, 155, 60, 0.32)";
+            ctx.stroke();
+            ctx.fillStyle = "rgba(200, 155, 60, 0.02)";
+            ctx.fill();
+            ctx.restore();
+
+            // 2. Middle counter-swirling ripple
+            ctx.save();
+            ctx.beginPath();
+            for (let a = 0; a <= Math.PI * 2 + 0.04; a += 0.04) {
+              const deform = Math.sin(a * 5 - t * 1.3) * 3 + Math.cos(a * 2 + t * 0.8) * 2;
+              const r = 79 + deform;
+              const x = cx + Math.cos(a) * r;
+              const y = cy + Math.sin(a) * r;
+              if (a === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+            ctx.fill();
+            ctx.restore();
+
+            // 3. Central transparent glass sphere
+            const sphereR = 64;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, sphereR, 0, Math.PI * 2);
+            ctx.clip();
+
+            const baseGrad = ctx.createRadialGradient(cx - 15, cy - 18, 4, cx, cy, sphereR);
+            baseGrad.addColorStop(0, "rgba(255, 255, 255, 0.55)");
+            baseGrad.addColorStop(0.25, "rgba(250, 246, 238, 0.15)");
+            baseGrad.addColorStop(0.65, "rgba(200, 155, 60, 0.12)");
+            baseGrad.addColorStop(0.85, "rgba(59, 42, 90, 0.22)");
+            baseGrad.addColorStop(1, "rgba(35, 25, 54, 0.38)");
+            ctx.fillStyle = baseGrad;
+            ctx.fill();
+
+            // Gold caustic
+            const b1x = cx + Math.cos(t * 1.1) * 22;
+            const b1y = cy + Math.sin(t * 0.85) * 18;
+            const g1 = ctx.createRadialGradient(b1x, b1y, 2, b1x, b1y, 34);
+            g1.addColorStop(0, "rgba(200, 155, 60, 0.55)");
+            g1.addColorStop(0.5, "rgba(200, 155, 60, 0.2)");
+            g1.addColorStop(1, "rgba(200, 155, 60, 0)");
+            ctx.fillStyle = g1;
+            ctx.fill();
+
+            // Plum caustic
+            const b2x = cx + Math.sin(t * 0.95) * 20;
+            const b2y = cy + Math.cos(t * 1.15) * 20;
+            const g2 = ctx.createRadialGradient(b2x, b2y, 2, b2x, b2y, 38);
+            g2.addColorStop(0, "rgba(106, 93, 130, 0.48)");
+            g2.addColorStop(0.55, "rgba(59, 42, 90, 0.18)");
+            g2.addColorStop(1, "rgba(59, 42, 90, 0)");
+            ctx.fillStyle = g2;
+            ctx.fill();
+
+            // Champagne shimmer
+            const b3x = cx + Math.cos(t * 1.6 + 1.5) * 16;
+            const b3y = cy + Math.sin(t * 1.4 + 0.8) * 16;
+            const g3 = ctx.createRadialGradient(b3x, b3y, 1, b3x, b3y, 28);
+            g3.addColorStop(0, "rgba(255, 255, 255, 0.65)");
+            g3.addColorStop(0.5, "rgba(250, 245, 235, 0.22)");
+            g3.addColorStop(1, "rgba(255, 255, 255, 0)");
+            ctx.fillStyle = g3;
+            ctx.fill();
+
+            ctx.restore(); // end sphere clip
+
+            // 4. Glass rim + specular gleams
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, sphereR, 0, Math.PI * 2);
+            ctx.lineWidth = 1.6;
+            const rimGrad = ctx.createLinearGradient(cx - 45, cy - 45, cx + 45, cy + 45);
+            rimGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+            rimGrad.addColorStop(0.35, "rgba(200, 155, 60, 0.6)");
+            rimGrad.addColorStop(0.7, "rgba(59, 42, 90, 0.45)");
+            rimGrad.addColorStop(1, "rgba(255, 255, 255, 0.75)");
+            ctx.strokeStyle = rimGrad;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.ellipse(cx - 22, cy - 24, 26, 14, -Math.PI / 4, 0, Math.PI * 2);
+            const glint = ctx.createLinearGradient(cx - 36, cy - 36, cx - 10, cy - 10);
+            glint.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+            glint.addColorStop(0.6, "rgba(255, 255, 255, 0.25)");
+            glint.addColorStop(1, "rgba(255, 255, 255, 0)");
+            ctx.fillStyle = glint;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.ellipse(cx + 24, cy + 24, 20, 9, -Math.PI / 4, 0, Math.PI * 2);
+            const glint2 = ctx.createLinearGradient(cx + 34, cy + 34, cx + 12, cy + 12);
+            glint2.addColorStop(0, "rgba(200, 155, 60, 0.55)");
+            glint2.addColorStop(1, "rgba(200, 155, 60, 0)");
+            ctx.fillStyle = glint2;
+            ctx.fill();
+            ctx.restore();
+          };
+
+          if (still) {
+            // One representative frame, no rAF loop at all.
+            paint(1.2);
+            return;
+          }
+
+          const render = () => {
+            const now = Date.now();
+            const dt = Math.min((now - lastFrame) / 1000, 0.05);
+            lastFrame = now;
+            // Advancing a phase (rather than scaling absolute elapsed time)
+            // keeps the fluid continuous when the speed changes.
+            phase += dt * (listeningRef.current ? 2.4 : 1.0);
+            paint(phase);
+            animFrameRef.current = requestAnimationFrame(render);
+          };
+
+          render();
+
+          return () => {
+            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+          };
+        }, []);
+
+        return (
+          <button
+            type="button"
+            onClick={onActivate}
+            aria-label={isListening ? "Listening — tap to stop" : "Ask Aura by voice"}
+            className="relative flex items-center justify-center mx-auto rounded-full bg-transparent border-0 p-0 cursor-pointer transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            style={{ width: "230px", height: "230px" }}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-full pointer-events-none blur-xl"
+              style={{
+                background:
+                  "radial-gradient(circle, rgb(var(--gold-rgb) / 0.22) 0%, rgb(var(--primary-rgb) / 0.12) 45%, transparent 72%)",
+              }}
+            />
+            <canvas
+              ref={canvasRef}
+              aria-hidden="true"
+              style={{ width: "230px", height: "230px" }}
+              className="relative z-10 block"
+            />
+          </button>
+        );
+      }
+
+      /* ===================================================================
+       COMPONENT: OVERLAY — shared dialog behaviour for drawer + sheet
+       Escape to close, background scroll lock, focus moved in on open
+       and restored to the trigger on close, focus kept inside while open.
+       =================================================================== */
+      function Overlay({ open, onClose, labelledBy, align, children }) {
+        const panelRef = useRef(null);
+        const restoreRef = useRef(null);
+
+        useEffect(() => {
+          if (!open) return;
+
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+
+          const panel = panelRef.current;
+          const focusables = () =>
+            Array.from(
+              panel.querySelectorAll(
+                'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+              )
+            ).filter((el) => el.offsetParent !== null);
+
+          const first = focusables()[0];
+          if (first) first.focus();
+          else panel.focus();
+
+          const onKeyDown = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose();
+              return;
+            }
+            if (e.key !== "Tab") return;
+            const items = focusables();
+            if (items.length === 0) return;
+            const firstEl = items[0];
+            const lastEl = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === firstEl) {
+              e.preventDefault();
+              lastEl.focus();
+            } else if (!e.shiftKey && document.activeElement === lastEl) {
+              e.preventDefault();
+              firstEl.focus();
+            }
+          };
+
+          document.addEventListener("keydown", onKeyDown, true);
+          return () => {
+            document.removeEventListener("keydown", onKeyDown, true);
+            document.body.classList.remove("aura-locked");
+            const restore = restoreRef.current;
+            if (restore && typeof restore.focus === "function") restore.focus();
+          };
+        }, [open, onClose]);
+
+        if (!open) return null;
+
+        return (
+          <div
+            className={`absolute inset-0 z-50 flex aura-fade-in ${align === "end" ? "justify-end" : "items-end justify-center"}`}
+            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.45)", backdropFilter: "blur(2px)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={labelledBy}
+              tabIndex={-1}
+              className="focus:outline-none contents"
+            >
+              {children}
+            </div>
+          </div>
+        );
+      }
+
+      /* ===================================================================
+       MAIN APPLICATION
+       =================================================================== */
+      function App() {
+        const [drawerOpen, setDrawerOpen] = useState(() => {
+          try { return new URLSearchParams(window.location.search).get("drawer") === "true"; } catch (e) { return false; }
+        });
+        const [moreOpen, setMoreOpen] = useState(() => {
+          try { return new URLSearchParams(window.location.search).get("more") === "true"; } catch (e) { return false; }
+        });
+        const [selectedChipId, setSelectedChipId] = useState(() => {
+          try { return new URLSearchParams(window.location.search).get("chip") || null; } catch (e) { return null; }
+        });
+        const [inputVal, setInputVal] = useState(() => {
+          try {
+            const p = new URLSearchParams(window.location.search).get("chip");
+            if (p) {
+              const all = [...CHIPS_DATA, ...MORE_OCCASIONS];
+              const match = all.find((c) => c.id === p);
+              return match ? match.prompt : "";
+            }
+          } catch (e) {}
+          return "";
+        });
+        const [isListening, setIsListening] = useState(false);
+        const [activeCountry, setActiveCountry] = useState({
+          code: "US",
+          symbol: "US $",
+          flag: "🇺🇸",
+        });
+        const [toastMsg, setToastMsg] = useState("");
+        // Compose mode: the text editor is active, so the orb, headline and
+        // chips clear out and the bar rides just above the keyboard.
+        const [composing, setComposing] = useState(false);
+
+        const inputRef = useRef(null);
+        const toastTimer = useRef(null);
+        const micTimer = useRef(null);
+
+        // All selectable occasion chips for lookup
+        const allOccasions = [...CHIPS_DATA, ...MORE_OCCASIONS];
+        const selectedChip = allOccasions.find((c) => c.id === selectedChipId);
+        const isCardExpanded = Boolean(selectedChipId) || inputVal.includes("\n") || inputVal.length > 35;
+
+        // Track the visual viewport. When the mobile keyboard opens it
+        // shrinks the visual viewport without changing the layout viewport,
+        // so a bottom-anchored bar would otherwise sit underneath it.
+        useEffect(() => {
+          const vv = window.visualViewport;
+          if (!vv) return;
+          const root = document.documentElement;
+          const apply = () => {
+            root.style.setProperty("--app-h", vv.height + "px");
+          };
+          apply();
+          vv.addEventListener("resize", apply);
+          vv.addEventListener("scroll", apply);
+          return () => {
+            vv.removeEventListener("resize", apply);
+            vv.removeEventListener("scroll", apply);
+            root.style.removeProperty("--app-h");
+          };
+        }, []);
+
+        const exitCompose = () => {
+          if (inputRef.current) inputRef.current.blur();
+          setComposing(false);
+        };
+
+        // A single pending toast at a time — a new message replaces the old
+        // timer rather than racing it.
+        const showToast = useCallback((msg) => {
+          setToastMsg(msg);
+          if (toastTimer.current) clearTimeout(toastTimer.current);
+          toastTimer.current = setTimeout(() => setToastMsg(""), 3200);
+        }, []);
+
+        useEffect(
+          () => () => {
+            if (toastTimer.current) clearTimeout(toastTimer.current);
+            if (micTimer.current) clearTimeout(micTimer.current);
+          },
+          []
+        );
+
+        const isMultiline = inputVal.includes("\n") || inputVal.length > 35;
+
+        const handleMic = () => {
+          if (isListening) {
+            if (micTimer.current) clearTimeout(micTimer.current);
+            setIsListening(false);
+            showToast("Voice input stopped");
+            return;
+          }
+          setIsListening(true);
+          showToast("Listening — English, Hindi or Hinglish");
+          micTimer.current = setTimeout(() => {
+            setInputVal(
+              "Sister's wedding in Chicago, October.\nA pastel lehenga with a lightweight drape, budget $600."
+            );
+            setIsListening(false);
+            showToast("Voice transcribed into the conversation bar");
+          }, 1800);
+        };
+
+        const handleAsk = (text) => {
+          const trimmed = (text || "").trim();
+          if (!trimmed) {
+            showToast("Tell Aura about your occasion first");
+            if (inputRef.current) inputRef.current.focus();
+            return;
+          }
+          showToast("Opening your stylist conversation…");
+          setTimeout(() => {
+            window.location.href =
+              "conversation.html?prompt=" +
+              encodeURIComponent(trimmed) +
+              "&ship=" +
+              encodeURIComponent(activeCountry.code);
+          }, 500);
+        };
+
+        const loadPrompt = (prompt, label, chipId) => {
+          setSelectedChipId(chipId || null);
+          setInputVal(prompt);
+          showToast(`${label} selected — other chips removed`);
+          setTimeout(() => {
+            const el = inputRef.current;
+            if (!el) return;
+            el.focus();
+            el.setSelectionRange(prompt.length, prompt.length);
+          }, 60);
+        };
+
+        const handleChipClick = (chip) => {
+          if (chip.isMore) {
+            setMoreOpen(true);
+          } else {
+            loadPrompt(chip.prompt, chip.label, chip.id);
+          }
+        };
+
+        const handleDeselectChip = () => {
+          setSelectedChipId(null);
+          setInputVal("");
+          showToast("Occasion reset — all chips restored");
+        };
+
+        return (
+          <div className="min-h-screen w-full bg-canvas flex justify-center font-sans">
+            {/* Toast — announced politely, single entrance, no looping motion */}
+            <div className="sr-only" role="status" aria-live="polite">
+              {toastMsg}
+            </div>
+            {toastMsg && (
+              <div
+                aria-hidden="true"
+                className="fixed top-5 left-1/2 z-[60] bg-primary text-onprimary text-[12.5px] font-medium px-4 py-2.5 rounded-full shadow-lg border border-gold/40 flex items-center gap-2 aura-toast-in max-w-[92vw]"
+              >
+                <span className="text-gold" aria-hidden="true">
+                  ✦
+                </span>
+                <span className="truncate">{toastMsg}</span>
+              </div>
+            )}
+
+            <div className="app-viewport">
+              <div className="canvas-wash" aria-hidden="true" />
+
+              {/* ---------- 1. Header (hidden while composing) ---------- */}
+              {!composing && (
+              <header className="relative px-5 pt-4 pb-2 flex items-center justify-between z-20 shrink-0">
+                <div className="flex items-center gap-2.5 select-none">
+                  <span
+                    aria-hidden="true"
+                    className="relative w-8 h-8 rounded-full border-[2.5px] border-primary flex items-center justify-center bg-card shadow-sm"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-gold" />
+                  </span>
+                  <span className="font-display text-[22px] leading-none tracking-[0.01em] text-ink pt-[3px]">
+                    Aura
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => showToast("Stylist Desk — 3 master drapers available today")}
+                    className="h-11 px-4 rounded-full bg-inset hover:bg-selfill active:scale-95 text-primary text-[13px] font-medium transition-all duration-150 border border-hairline"
+                  >
+                    Stylist Desk
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDrawerOpen(true)}
+                    aria-label="Open navigation menu"
+                    aria-haspopup="dialog"
+                    aria-expanded={drawerOpen}
+                    className="w-11 h-11 rounded-full bg-card border border-hairline flex items-center justify-center text-ink shadow-sm hover:border-primary/40 active:scale-95 transition-all"
+                  >
+                    <svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.1"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <line x1="4" y1="7" x2="20" y2="7" />
+                      <line x1="4" y1="12" x2="20" y2="12" />
+                      <line x1="4" y1="17" x2="20" y2="17" />
+                    </svg>
+                  </button>
+                </div>
+              </header>
+              )}
+
+              {/* ---------- 2. Ethereal body (hidden while composing) ---------- */}
+              {!composing ? (
+              <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col justify-center items-center px-5 pt-1 pb-4 text-center z-10">
+                <TransparentFluidOrb isListening={isListening} onActivate={handleMic} />
+
+                <h1 className="font-display text-[36px] sm:text-[39px] leading-[1.1] text-ink tracking-[-0.012em] mt-7 mb-1.5">
+                  What can I help you
+                  <br />
+                  with today&thinsp;?
+                </h1>
+
+                {!isCardExpanded && (
+                  <p className="text-[12.5px] text-muted leading-relaxed max-w-[290px] mb-7">
+                    English, Hindi or Hinglish — Aura shapes the rest.
+                  </p>
+                )}
+
+                {/* Occasion chips: show all or only the selected chip */}
+                {selectedChipId && selectedChip ? (
+                  <div className="flex items-center justify-center gap-2 max-w-[392px] mx-auto w-full aura-fade-in my-1">
+                    <div className="minimal-chip bg-card border-primary text-primary font-medium flex items-center gap-2 px-4 py-2 shadow-sm cursor-default">
+                      <span className="chip-icon text-primary">{selectedChip.icon || "✦"}</span>
+                      <span>{selectedChip.label}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDeselectChip}
+                      aria-label="Remove occasion filter and show all chips"
+                      className="h-9 px-3 rounded-full bg-inset hover:bg-selfill active:scale-95 text-muted hover:text-ink border border-hairline text-[12px] font-medium transition-all flex items-center gap-1.5"
+                    >
+                      <span className="text-[11px]">✕</span>
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                ) : isCardExpanded ? null : (
+                  <div className="flex flex-col items-center gap-2.5 max-w-[392px] mx-auto w-full transition-all duration-200">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {CHIPS_DATA.slice(0, 3).map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => handleChipClick(chip)}
+                          className="minimal-chip"
+                        >
+                          <span className="chip-icon">{chip.icon}</span>
+                          <span>{chip.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {CHIPS_DATA.slice(3).map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => handleChipClick(chip)}
+                          className="minimal-chip"
+                          aria-haspopup={chip.isMore ? "dialog" : undefined}
+                        >
+                          <span className="chip-icon">{chip.icon}</span>
+                          <span>{chip.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </main>
+              ) : (
+                /* Empty ground above the composer — tapping it dismisses the
+                   keyboard and restores the home screen. */
+                <div
+                  className="flex-1 z-10"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    exitCompose();
+                  }}
+                  aria-hidden="true"
+                />
+              )}
+
+              {/* ---------- 3. Floating conversation card ---------- */}
+              <div className="relative px-4 pb-2 pt-1 z-30 shrink-0">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAsk(inputVal);
+                  }}
+                  className={`minimal-floating-bar transition-all duration-300 ${
+                    isCardExpanded
+                      ? "flex flex-col justify-between p-4 sm:p-5 rounded-[26px] min-h-[148px] shadow-lg border-primary/40"
+                      : `flex items-center gap-1 pl-4 pr-1.5 py-1.5 ${isMultiline ? "rounded-[22px]" : "rounded-full"}`
+                  }`}
+                >
+                  <label htmlFor="aura-ask" className="sr-only">
+                    Describe your occasion for the Aura stylist
+                  </label>
+
+                  {/* Textarea with generous top and bottom margin */}
+                  <textarea
+                    id="aura-ask"
+                    ref={inputRef}
+                    onFocus={() => setComposing(true)}
+                    onBlur={(e) => {
+                      // Staying inside the form (mic, send) is not leaving.
+                      const form = e.currentTarget.closest("form");
+                      if (!form || !form.contains(e.relatedTarget)) setComposing(false);
+                    }}
+                    rows={isCardExpanded ? 2 : 1}
+                    value={inputVal}
+                    onChange={(e) => {
+                      setInputVal(e.target.value);
+                      if (!e.target.value.trim() && selectedChipId) {
+                        setSelectedChipId(null);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAsk(inputVal);
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        exitCompose();
+                      }
+                    }}
+                    placeholder="Ask me anything"
+                    className={`w-full bg-transparent text-ink placeholder:text-muted text-[14px] focus:outline-none resize-none transition-all ${
+                      isCardExpanded
+                        ? "my-4 py-2 min-h-[58px] leading-[24px]"
+                        : "py-1.5 self-center pr-1 leading-[19px]"
+                    }`}
+                  />
+
+                  {/* Action Bar: bottom row when card expanded, inline when compact */}
+                  {isCardExpanded ? (
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline/50">
+                      <button
+                        type="button"
+                        onClick={handleMic}
+                        aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                        aria-pressed={isListening}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+                          isListening
+                            ? "bg-primary text-onprimary aura-listening"
+                            : "bg-inset text-primary hover:bg-selfill active:scale-95"
+                        }`}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                          <line x1="12" y1="19" x2="12" y2="22" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="submit"
+                        aria-label="Send to your stylist"
+                        className="w-10 h-10 rounded-full bg-primary text-onprimary flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shadow-sm shrink-0"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M5 12h14" />
+                          <path d="m12 5 7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center shrink-0 self-center">
+                      {inputVal.trim() ? (
+                        <button
+                          type="submit"
+                          aria-label="Send to your stylist"
+                          className="w-11 h-11 rounded-full bg-primary text-onprimary flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleMic}
+                          aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                          aria-pressed={isListening}
+                          className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                            isListening
+                              ? "bg-primary text-onprimary aura-listening"
+                              : "bg-inset text-primary hover:bg-selfill active:scale-95"
+                          }`}
+                        >
+                          <svg
+                            width="17"
+                            height="17"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" y1="19" x2="12" y2="22" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </form>
+
+                {!composing && <div className="home-pill-line" aria-hidden="true" />}
+              </div>
+
+              {/* ---------- More occasions sheet ---------- */}
+              <Overlay
+                open={moreOpen}
+                onClose={() => setMoreOpen(false)}
+                labelledBy="more-sheet-title"
+              >
+                <div className="bg-card w-full rounded-t-3xl px-5 pt-4 pb-6 border-t border-hairline shadow-2xl aura-sheet-up">
+                  <div
+                    className="w-10 h-1 rounded-full bg-hairline mx-auto mb-4"
+                    aria-hidden="true"
+                  />
+                  <div className="flex items-start justify-between pb-3 border-b border-hairline">
+                    <div>
+                      <h2
+                        id="more-sheet-title"
+                        className="font-display text-[21px] text-ink leading-tight"
+                      >
+                        More occasions
+                      </h2>
+                      <p className="text-[12px] text-muted mt-0.5">
+                        Pick one to load a starting brief — you can edit every word.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMoreOpen(false)}
+                      aria-label="Close more occasions"
+                      className="w-11 h-11 -mr-2 -mt-1.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset transition-colors shrink-0"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <ul className="divide-y divide-hairline">
+                    {MORE_OCCASIONS.map((o) => (
+                      <li key={o.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMoreOpen(false);
+                            loadPrompt(o.prompt, o.label);
+                          }}
+                          className="w-full min-h-[56px] py-3 flex items-center justify-between gap-3 text-left hover:bg-inset/60 active:bg-inset transition-colors rounded-lg px-1"
+                        >
+                          <span className="text-[14.5px] text-ink font-medium">{o.label}</span>
+                          <span className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono text-[10.5px] text-muted">{o.lead}</span>
+                            <svg
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-muted"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="m9 18 6-6-6-6" />
+                            </svg>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="font-mono text-[10.5px] text-muted text-center mt-4">
+                    Lead times shown for {activeCountry.flag} {activeCountry.symbol} delivery
+                  </p>
+                </div>
+              </Overlay>
+
+              {/* ---------- Navigation drawer ---------- */}
+              <Overlay
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                labelledBy="drawer-title"
+                align="end"
+              >
+                <div className="bg-card w-4/5 max-w-xs h-full p-5 flex flex-col justify-between border-l border-hairline shadow-2xl drawer-slide-in overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Profile */}
+                    <div className="pb-3.5 border-b border-hairline">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <span
+                            aria-hidden="true"
+                            className="relative w-12 h-12 rounded-full bg-primary text-onprimary font-display text-[19px] border-2 border-gold/70 flex items-center justify-center shadow-sm"
+                          >
+                            PS
+                            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#3F7A4B] border-2 border-card" />
+                          </span>
+                          <span className="flex flex-col">
+                            <span
+                              id="drawer-title"
+                              className="font-semibold text-[16px] text-ink leading-tight tracking-tight"
+                            >
+                              Priya Sharma
+                            </span>
+                            <span className="font-mono text-[11px] text-muted mt-0.5">
+                              Toronto, ON
+                            </span>
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setDrawerOpen(false)}
+                          aria-label="Close navigation menu"
+                          className="w-11 h-11 -mr-2 -mt-1.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset transition-colors shrink-0"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 5 primary tabs */}
+                    <nav aria-label="Primary">
+                      <ul className="space-y-1">
+                        {[
+                          {
+                            id: "home",
+                            label: "01 · Home",
+                            active: true,
+                            desc: "Occasion-first landing",
+                          },
+                          {
+                            id: "discover",
+                            label: "02 · Discover",
+                            desc: "Craft & regional provenance",
+                          },
+                          {
+                            id: "design",
+                            label: "03 · Design",
+                            link: "conversation.html",
+                            desc: "Active stylist workbench",
+                          },
+                          { id: "wardrobe", label: "04 · Wardrobe", desc: "Memory & measurements" },
+                          {
+                            id: "orders",
+                            label: "05 · Orders",
+                            desc: "Live artisan production tracker",
+                          },
+                        ].map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              aria-current={item.active ? "page" : undefined}
+                              onClick={() => {
+                                if (item.link) {
+                                  window.location.href = item.link;
+                                  return;
+                                }
+                                setDrawerOpen(false);
+                                showToast(`${item.label.split("· ")[1]} opens in the next release`);
+                              }}
+                              className={`w-full text-left p-2.5 min-h-[52px] rounded-xl transition-colors ${
+                                item.active
+                                  ? "bg-inset text-primary font-semibold"
+                                  : "hover:bg-selfill text-ink"
+                              }`}
+                            >
+                              <span className="block text-[14px]">{item.label}</span>
+                              <span className="block text-[11px] text-muted font-normal mt-0.5">
+                                {item.desc}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+
+                    {/* Dual-geography */}
+                    <div className="pt-4 border-t border-hairline space-y-2">
+                      <span
+                        id="ship-to-label"
+                        className="font-mono text-[10.5px] uppercase tracking-wider text-muted font-medium block"
+                      >
+                        Ship to
+                      </span>
+                      <div
+                        className="flex items-center gap-1.5"
+                        role="group"
+                        aria-labelledby="ship-to-label"
+                      >
+                        {[
+                          { code: "US", symbol: "US $", flag: "🇺🇸" },
+                          { code: "UK", symbol: "UK £", flag: "🇬🇧" },
+                          { code: "CA", symbol: "CA $", flag: "🇨🇦" },
+                          { code: "IN", symbol: "INR ₹", flag: "🇮🇳" },
+                        ].map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            aria-pressed={activeCountry.code === c.code}
+                            onClick={() => {
+                              setActiveCountry(c);
+                              showToast(`Ship-to ${c.code} — duties and lead times recalculated`);
+                            }}
+                            className={`flex-1 min-h-[44px] px-1 rounded-lg border text-[11.5px] font-mono transition-colors ${
+                              activeCountry.code === c.code
+                                ? "border-primary bg-primary text-onprimary"
+                                : "border-hairline bg-inset text-ink hover:border-ctrl"
+                            }`}
+                          >
+                            <span aria-hidden="true">{c.flag}</span> {c.code}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-muted leading-snug pt-1">
+                        Landed duties, taxes and feasible artisan lead times update automatically.
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="pt-6 mt-4 border-t border-hairline text-center text-muted text-[11px] font-mono">
+                    Aura v1.0 · Perfect Fit Guarantee
+                  </p>
+                </div>
+              </Overlay>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

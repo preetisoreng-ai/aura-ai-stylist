@@ -1,0 +1,1524 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FBF8F3" />
+    <title>Aura — Stylist Conversation</title>
+    <meta
+      name="description"
+      content="Aura stylist workbench — the conversational thread where an occasion brief becomes a set of bespoke design directions, with transparent lead times and landed cost."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      /* Same channel-based token strategy as index.html so Tailwind's
+       `/opacity` modifier resolves against CSS variables. */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas: "rgb(var(--canvas-rgb) / <alpha-value>)",
+              card: "rgb(var(--card-rgb) / <alpha-value>)",
+              inset: "rgb(var(--inset-rgb) / <alpha-value>)",
+              primary: "rgb(var(--primary-rgb) / <alpha-value>)",
+              onprimary: "rgb(var(--onprimary-rgb) / <alpha-value>)",
+              selfill: "rgb(var(--sel-fill-rgb) / <alpha-value>)",
+              ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+              muted: "rgb(var(--muted-rgb) / <alpha-value>)",
+              hairline: "rgb(var(--hairline-rgb) / <alpha-value>)",
+              ctrl: "rgb(var(--ctrl-border-rgb) / <alpha-value>)",
+              gold: "rgb(var(--gold-rgb) / <alpha-value>)",
+              goldtext: "rgb(var(--gold-text-rgb) / <alpha-value>)",
+            },
+            fontFamily: {
+              display: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
+              sans: ['"DM Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+              mono: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        --canvas-rgb: 251 248 243;
+        --card-rgb: 255 255 255;
+        --inset-rgb: 243 238 228;
+        --primary-rgb: 59 42 90;
+        --onprimary-rgb: 255 255 255;
+        --sel-fill-rgb: 245 244 247;
+        --ink-rgb: 30 27 46;
+        --muted-rgb: 90 84 104;
+        --hairline-rgb: 229 223 213;
+        --ctrl-border-rgb: 124 123 134;
+        --gold-rgb: 200 155 60;
+        --gold-text-rgb: 120 93 36;
+
+        --canvas: rgb(var(--canvas-rgb));
+        --card: rgb(var(--card-rgb));
+        --ink: rgb(var(--ink-rgb));
+
+        --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+        --e-float:
+          0 14px 34px -8px rgb(var(--primary-rgb) / 0.16),
+          0 3px 10px -2px rgb(var(--ink-rgb) / 0.05), 0 1px 2px rgb(var(--ink-rgb) / 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html {
+        background-color: var(--canvas);
+      }
+
+      body {
+        background-color: var(--canvas);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body.aura-locked {
+        overflow: hidden;
+      }
+
+      :focus-visible {
+        outline: 2px solid rgb(var(--primary-rgb));
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .app-viewport {
+        width: 100%;
+        max-width: 430px;
+        /* --app-h follows window.visualViewport so the composer stays above
+           the on-screen keyboard; the thread scrolls in the space left. */
+        height: var(--app-h, 100vh);
+        height: var(--app-h, 100dvh);
+        margin: 0 auto;
+        background: var(--canvas);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .thread-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+      }
+
+      .thread-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .thread-scroll::-webkit-scrollbar-thumb {
+        background: rgb(var(--hairline-rgb));
+        border-radius: 9999px;
+      }
+
+      /* Reuse the home screen's chip geometry — 44px minimum target. */
+      .reply-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 9999px;
+        background: rgb(var(--card-rgb) / 0.9);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        color: rgb(var(--ink-rgb));
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition:
+          border-color 0.2s ease,
+          background-color 0.2s ease,
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        box-shadow: 0 1px 2px rgb(var(--ink-rgb) / 0.03);
+      }
+
+      .reply-chip:hover {
+        border-color: rgb(var(--primary-rgb) / 0.55);
+        background: rgb(var(--card-rgb));
+        color: rgb(var(--primary-rgb));
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -4px rgb(var(--primary-rgb) / 0.14);
+      }
+
+      .reply-chip:active {
+        transform: scale(0.975);
+      }
+
+      .composer-bar {
+        background: var(--card);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        box-shadow: var(--e-float);
+        transition:
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
+      }
+
+      .composer-bar:focus-within {
+        border-color: rgb(var(--primary-rgb) / 0.75);
+        box-shadow:
+          0 16px 40px -8px rgb(var(--primary-rgb) / 0.2),
+          0 0 0 3px rgb(var(--primary-rgb) / 0.1);
+      }
+
+      .home-pill-line {
+        width: 134px;
+        height: 5px;
+        background: var(--ink);
+        opacity: 0.2;
+        border-radius: 9999px;
+        margin: 10px auto 4px auto;
+      }
+
+      /* ---------- Motion ---------- */
+      @keyframes auraMsgIn {
+        from {
+          transform: translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraToastIn {
+        from {
+          transform: translate(-50%, -14px);
+          opacity: 0;
+        }
+        to {
+          transform: translate(-50%, 0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraTypingDot {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.35;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraListenRing {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(var(--primary-rgb) / 0.35);
+        }
+        50% {
+          box-shadow: 0 0 0 7px rgb(var(--primary-rgb) / 0);
+        }
+      }
+
+      @keyframes auraSheetUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .aura-sheet-up {
+        animation: auraSheetUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Carousel track: swipeable, but without a visible scrollbar. */
+      .no-scrollbar {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .aura-msg-in {
+        animation: auraMsgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-toast-in {
+        animation: auraToastIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-listening {
+        animation: auraListenRing 1.5s ease-out infinite;
+      }
+
+      .typing-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 9999px;
+        background: rgb(var(--primary-rgb));
+        animation: auraTypingDot 1.3s ease-in-out infinite;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.16s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.32s;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+        .reply-chip:hover {
+          transform: none;
+        }
+        .typing-dot {
+          opacity: 0.7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useRef, useEffect, useCallback } = React;
+
+      const reducedMotion = () =>
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      const SHIP_TO = {
+        US: {
+          code: "US",
+          symbol: "$",
+          label: "US $",
+          flag: "🇺🇸",
+          duty: "Duties prepaid",
+          courier: "DHL Express · 4 days",
+        },
+        UK: {
+          code: "UK",
+          symbol: "£",
+          label: "UK £",
+          flag: "🇬🇧",
+          duty: "VAT prepaid",
+          courier: "DHL Express · 3 days",
+        },
+        CA: {
+          code: "CA",
+          symbol: "C$",
+          label: "CA $",
+          flag: "🇨🇦",
+          duty: "Duties prepaid",
+          courier: "DHL Express · 5 days",
+        },
+        IN: {
+          code: "IN",
+          symbol: "₹",
+          label: "INR ₹",
+          flag: "🇮🇳",
+          duty: "No import duty",
+          courier: "Blue Dart · 2 days",
+        },
+      };
+
+      /* ===================================================================
+       BRIEF PARSING
+       A light, honest read of the free-text brief. Anything Aura cannot
+       infer is shown as "Not set yet" rather than invented — the customer
+       should always see which facts are theirs and which are assumed.
+       =================================================================== */
+      const OCCASIONS = [
+        { key: "wedding", match: /\bwedding\b/i, label: "Wedding", weeks: "3 to 5 weeks" },
+        { key: "sangeet", match: /\bsangeet\b/i, label: "Sangeet", weeks: "3 to 4 weeks" },
+        { key: "reception", match: /\breception\b/i, label: "Reception", weeks: "4 to 6 weeks" },
+        { key: "diwali", match: /\bdiwali\b/i, label: "Diwali", weeks: "2 to 3 weeks" },
+        {
+          key: "temple",
+          match: /\btemple|puja|pooja\b/i,
+          label: "Temple / Puja",
+          weeks: "1 to 2 weeks",
+        },
+        { key: "mehendi", match: /\bmehendi|mehndi\b/i, label: "Mehendi", weeks: "3 to 4 weeks" },
+        { key: "haldi", match: /\bhaldi\b/i, label: "Haldi", weeks: "2 to 3 weeks" },
+        {
+          key: "griha",
+          match: /\bgriha|housewarming\b/i,
+          label: "Griha Pravesh",
+          weeks: "2 to 3 weeks",
+        },
+        {
+          key: "cocktail",
+          match: /\bcocktail\b/i,
+          label: "Cocktail evening",
+          weeks: "4 to 5 weeks",
+        },
+        { key: "annapras", match: /\bannaprashan\b/i, label: "Annaprashan", weeks: "2 to 3 weeks" },
+      ];
+
+      const GARMENTS = [
+        { match: /\blehenga\b/i, label: "Lehenga" },
+        { match: /\bsaree|sari\b/i, label: "Saree" },
+        { match: /\bsherwani\b/i, label: "Sherwani" },
+        { match: /\banarkali\b/i, label: "Anarkali" },
+        { match: /\bkurta\b/i, label: "Kurta set" },
+        { match: /\bsuit\b/i, label: "Suit set" },
+      ];
+
+      const CITIES = [
+        "Jaipur",
+        "London",
+        "Chicago",
+        "New York",
+        "Chennai",
+        "Toronto",
+        "Delhi",
+        "Mumbai",
+        "Dubai",
+        "Singapore",
+        "Bangalore",
+        "Hyderabad",
+        "San Francisco",
+        "Houston",
+        "Vancouver",
+        "Melbourne",
+        "Sydney",
+      ];
+
+      const MONTHS = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      function parseBrief(text, ship) {
+        const t = text || "";
+
+        const occasion = OCCASIONS.find((o) => o.match.test(t)) || null;
+        const garment = GARMENTS.find((g) => g.match.test(t)) || null;
+        const city = CITIES.find((c) => new RegExp("\\b" + c + "\\b", "i").test(t)) || null;
+        const month = MONTHS.find((m) => new RegExp("\\b" + m + "\\b", "i").test(t)) || null;
+
+        // Budget: a currency symbol or code followed by a number, either order.
+        const budgetMatch =
+          t.match(/(?:budget[^0-9]{0,12})?([$£₹]|C\$|USD|GBP|INR|CAD)\s?([0-9][0-9,\.]*)/i) ||
+          t.match(/([0-9][0-9,\.]*)\s?(USD|GBP|INR|CAD|dollars|pounds|rupees)/i);
+
+        let budget = null;
+        if (budgetMatch) {
+          const digits =
+            budgetMatch[2] && /[0-9]/.test(budgetMatch[2]) ? budgetMatch[2] : budgetMatch[1];
+          const unit =
+            budgetMatch[2] && /[0-9]/.test(budgetMatch[2]) ? budgetMatch[1] : budgetMatch[2];
+          const symbol = /[$£₹]|C\$/.test(unit)
+            ? unit
+            : { USD: "$", GBP: "£", INR: "₹", CAD: "C$", dollars: "$", pounds: "£", rupees: "₹" }[
+                unit
+              ] || ship.symbol;
+          // Trim sentence punctuation the number pattern picks up ("$600." → "$600").
+          budget = symbol + digits.replace(/[.,]+$/, "");
+        }
+
+        return {
+          occasion: occasion ? occasion.label : null,
+          lead: occasion ? occasion.weeks : "3 to 5 weeks",
+          leadAssumed: !occasion,
+          garment: garment ? garment.label : null,
+          city,
+          month,
+          budget,
+        };
+      }
+
+      /* ===================================================================
+       DESIGN DIRECTIONS — three responses to the same brief
+       =================================================================== */
+      function buildDirections(brief, ship) {
+        const piece = brief.garment || "Silhouette";
+        return [
+          {
+            id: "heritage",
+            name: "Heritage handloom",
+            short: "Banarasi mulberry silk",
+            craft: "Banarasi kadhwa weave · Varanasi",
+            image: "images/heritage_banarasi.jpg",
+            jewelry: {
+              name: "Basra Pearl & Polki Choker",
+              type: "Antique Choker & Jhumka Set",
+              craft: "Uncut Polki & Colombian emerald bead drops",
+              image: "images/jewelry_heritage.jpg",
+              pairingNote: "Antique 22k gold tones harmonize with Varanasi kadhwa gold zari weaving.",
+            },
+            note: `${piece} in pure mulberry silk with a restrained gold zari border. Weight and drape that photograph beautifully in warm light.`,
+            fabric: "Pure mulberry silk, kadhwa woven zari",
+            weight: "Approx. 2.1 kg finished",
+            care: "Dry clean only · store folded in muslin",
+            includes: "Blouse, skirt, dupatta · fully lined",
+            from: 780,
+            weeks: brief.lead,
+            swatch: ["#7B2D3B", "#C89B3C", "#F3EEE4"],
+          },
+          {
+            id: "modern",
+            name: "Modern sculptural",
+            short: "Chanderi, structured drape",
+            craft: "Chanderi with structured drape · Madhya Pradesh",
+            image: "images/modern_chanderi.jpg",
+            jewelry: {
+              name: "Sculpted Rose Gold & Amethyst Collar",
+              type: "Contemporary Collar & Studs",
+              craft: "Baguette diamonds & deep violet amethyst",
+              image: "images/jewelry_modern.jpg",
+              pairingNote: "Architectural geometric lines complement structured Chanderi drape.",
+            },
+            note: `A cleaner, architectural take — fewer surface motifs, more shape. Easy to move in, and reads contemporary against traditional dress codes.`,
+            fabric: "Chanderi silk-cotton, hand-finished seams",
+            weight: "Approx. 1.3 kg finished",
+            care: "Dry clean · steam rather than press",
+            includes: "Blouse, skirt, sculpted stole",
+            from: 640,
+            weeks: brief.lead,
+            swatch: ["#3B2A5A", "#B7A7C6", "#FBF8F3"],
+          },
+          {
+            id: "light",
+            name: "Featherweight festive",
+            short: "Organza, hand aari work",
+            craft: "Organza with hand aari embroidery · Lucknow",
+            image: "images/featherweight_organza.jpg",
+            jewelry: {
+              name: "Lilac Meenakari & Pearl Chandbalis",
+              type: "Meenakari Chandbalis & Choker",
+              craft: "Hand-painted enamel & tourmaline drops",
+              image: "images/jewelry_featherweight.jpg",
+              pairingNote: "Airy pastel hues match lightweight organza and delicate hand Chikankari.",
+            },
+            note: `Built for long events and warm rooms. Under 900g finished, packs flat, and holds its shape after a full day of wear.`,
+            fabric: "Silk organza, hand aari embroidery",
+            weight: "Under 900 g finished",
+            care: "Dry clean · hang on a padded hanger",
+            includes: "Blouse, skirt, sheer dupatta",
+            from: 520,
+            weeks: "2 to 3 weeks",
+            swatch: ["#D9C7A7", "#C89B3C", "#6A5D82"],
+          },
+          {
+            id: "regal",
+            name: "Regal zardozi",
+            short: "Velvet with zardozi handwork",
+            craft: "Zardozi handwork · Delhi",
+            image: "images/regal_zardozi.jpg",
+            jewelry: {
+              name: "Royal Jadau Hasli Collar",
+              type: "Heritage Hasli & Earring Set",
+              craft: "Cabochon rubies & 22k antique gold Jadau",
+              image: "images/jewelry_regal.jpg",
+              pairingNote: "Regal ruby warmth anchors deep wine velvet and raised metallic zardozi.",
+            },
+            note: `The most formal of the four — silk velvet carrying raised zardozi on the bodice and hem. Built for evening light and photographs.`,
+            fabric: "Silk velvet, raised zardozi handwork",
+            weight: "Approx. 2.6 kg finished",
+            care: "Dry clean only · never fold across the work",
+            includes: "Blouse, skirt, embroidered dupatta",
+            from: 920,
+            weeks: "5 to 7 weeks",
+            swatch: ["#2E2140", "#C89B3C", "#7B2D3B"],
+          },
+        ];
+      }
+
+      /* Framings of the garment photograph and the paired jewelry close-up. */
+      function getViewsForDirection(d) {
+        return [
+          { id: "full", label: "Full length", image: d.image, scale: 1, origin: "50% 50%", fit: "contain" },
+          { id: "bodice", label: "Bodice & neckline", image: d.image, scale: 2.1, origin: "50% 20%" },
+          {
+            id: "jewelry",
+            label: "✨ Jewelry Pairing · Close-up",
+            image: d.jewelry && d.jewelry.image ? d.jewelry.image : d.image,
+            isJewelry: true,
+            fit: "cover",
+          },
+          { id: "hem", label: "Hem & border", image: d.image, scale: 2.1, origin: "50% 86%" },
+        ];
+      }
+
+      const QUICK_REPLIES = [
+        "Show me lighter fabrics",
+        "Keep it under budget",
+        "Something more traditional",
+        "How does fitting work?",
+        "What's the total landed cost?",
+      ];
+
+      /* ===================================================================
+       AURA REPLY LOGIC — deterministic, honest responses to follow-ups
+       =================================================================== */
+      function auraReplyTo(text, brief, ship, directions) {
+        const t = text.toLowerCase();
+        /* Follow-ups answer with the garments themselves, not a wall of prose —
+           the same cards as the opening reply, narrowed to what was asked. */
+        const pick = (...ids) =>
+          ids.map((id) => directions.find((d) => d.id === id)).filter(Boolean);
+
+        if (/\blight|lighter|weight|heavy|hot|warm\b/.test(t)) {
+          return {
+            text: "Noted — I'll weight the lighter end. Organza, chanderi and fine cotton-silk all sit under 900g finished, which makes a real difference across a long event.",
+            cardsLabel: "Lightest on the body",
+            cards: pick("light", "modern"),
+          };
+        }
+        if (/\bbudget|cheap|afford|cost|price|expensive\b/.test(t)) {
+          const b = brief.budget ? `your ${brief.budget} budget` : "your budget";
+          const cheapest = directions.slice().sort((a, x) => a.from - x.from).slice(0, 2);
+          return {
+            text: `Every price shown is landed — fabric, tailoring, ${ship.duty.toLowerCase()} and ${ship.courier.split(" · ")[0]} shipping to ${ship.code}. Nothing is added at checkout. If ${b} is firm, say so and I'll only show directions that finish inside it.`,
+            cardsLabel: `Gentlest on ${brief.budget ? "the budget" : "spend"} · landed to ${ship.code}`,
+            cards: cheapest,
+          };
+        }
+        if (/\btradition|classic|heritage|authentic\b/.test(t)) {
+          return {
+            text: "Then Heritage handloom is your direction. It's a kadhwa Banarasi — the motifs are woven in, not printed or stitched on, so the reverse is as clean as the face. It takes longer on the loom, and it lasts a generation.",
+            cardsLabel: "Woven, not printed",
+            cards: pick("heritage", "regal"),
+          };
+        }
+        if (/\bfit|fitting|measure|measurement|size\b/.test(t)) {
+          return {
+            text: "Two options. Send measurements from a tailor you already trust, or do a 6-minute guided video fitting with one of our drapers — they'll take 14 points and note posture. Either way, you approve photos of the finished piece before it's dispatched, and alterations are covered under the Perfect Fit Guarantee.",
+            steps: [
+              { k: "01", label: "Measure", note: "Your tailor, or a 6-minute video fitting · 14 points" },
+              { k: "02", label: "Approve", note: "Photographs of the finished garment before dispatch" },
+              { k: "03", label: "Alter", note: "Covered under the Perfect Fit Guarantee" },
+            ],
+          };
+        }
+        if (/\btime|when|deadline|rush|urgent|fast|soon\b/.test(t)) {
+          return {
+            text: `Realistic lead time for this brief is ${brief.lead} on the loom, plus ${ship.courier.split(" · ")[1]} in transit to ${ship.code}. If your date is tighter than that, say so now — I'd rather change the direction than promise a date the artisan can't hold.`,
+            cardsLabel: "Ready soonest",
+            cards: pick("light", "modern"),
+          };
+        }
+        return {
+          text: "Got it — that's on the brief. Anything else you'd like me to weigh: colour, weight, budget, or how soon you need it in hand?",
+        };
+      }
+
+      /* ===================================================================
+       PRESENTATIONAL PIECES
+       =================================================================== */
+      function BriefCard({ brief, ship }) {
+        const rows = [
+          { k: "Occasion", v: brief.occasion, fallback: "Not set yet" },
+          { k: "Garment", v: brief.garment, fallback: "Open to suggestions" },
+          {
+            k: "Where",
+            v: brief.city ? brief.city + (brief.month ? ` · ${brief.month}` : "") : null,
+            fallback: "Not set yet",
+          },
+          { k: "Budget", v: brief.budget, fallback: "Not set yet" },
+        ];
+
+        return (
+          <div className="bg-card border border-hairline rounded-2xl p-4 mt-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-hairline">
+              <h3 className="font-display text-[19px] text-ink leading-none">Your brief</h3>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-goldtext">
+                Editable
+              </span>
+            </div>
+            <dl className="mt-2.5 space-y-2 font-sans">
+              {rows.map((r) => (
+                <div key={r.k} className="flex items-baseline justify-between gap-3">
+                  <dt className="font-mono text-[10.5px] uppercase tracking-wider text-muted shrink-0">
+                    {r.k}
+                  </dt>
+                  <dd
+                    className={`text-[13px] text-right ${
+                      r.k === "Budget" && r.v ? "font-mono font-medium text-ink" : r.v ? "text-ink font-medium" : "text-muted italic"
+                    }`}
+                  >
+                    {r.v || r.fallback}
+                  </dd>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-hairline">
+                <dt className="font-mono text-[10.5px] uppercase tracking-wider text-muted shrink-0">
+                  Ship to
+                </dt>
+                <dd className="font-mono text-[12px] text-ink font-medium text-right">
+                  <span aria-hidden="true">{ship.flag}</span> {ship.label} · {ship.duty}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="font-mono text-[10.5px] uppercase tracking-wider text-muted shrink-0">
+                  Lead time
+                </dt>
+                <dd className="font-mono text-[12px] text-ink font-medium text-right">
+                  {brief.lead}
+                  {brief.leadAssumed && (
+                    <span className="block font-sans text-[11px] text-muted font-normal italic">
+                      estimated — confirm your date
+                    </span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        );
+      }
+
+      /* A garment photograph, framed. Falls back to a woven-pattern panel in
+         the direction's own palette if the file is missing. */
+      function Photo({ d, view, alt }) {
+        const [failed, setFailed] = React.useState(false);
+
+        const src = (view && view.image) || d.image;
+
+        if (failed || !src) {
+          return (
+            <div
+              className="w-full h-full"
+              role="img"
+              aria-label={`${d.name} — photograph not yet available`}
+              style={{
+                background: `linear-gradient(150deg, ${d.swatch[0]} 0%, ${d.swatch[2]} 55%, ${d.swatch[1]} 100%)`,
+              }}
+            >
+              <div
+                className="w-full h-full opacity-30"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 7px)",
+                }}
+              />
+            </div>
+          );
+        }
+
+        return (
+          <img
+            src={(view && view.image) || d.image}
+            alt={alt}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="w-full h-full select-none"
+            style={{
+              objectFit: view.fit || "cover",
+              transform: `scale(${view.scale})`,
+              transformOrigin: view.origin,
+            }}
+            draggable="false"
+          />
+        );
+      }
+
+      /* Grid card: photograph first, then one line of title, price, description. */
+      function DirectionCard({ d, ship, onOpen }) {
+        return (
+          <button
+            type="button"
+            onClick={() => onOpen(d)}
+            aria-haspopup="dialog"
+            className="group text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.985] transition-all"
+          >
+            <span className="block relative w-full aspect-[3/4] bg-inset overflow-hidden">
+              <Photo
+                d={d}
+                view={{ ...getViewsForDirection(d)[0], fit: "cover" }}
+                alt={`${d.name} — ${d.short}`}
+              />
+              <span
+                className="absolute bottom-2 right-2 flex gap-1 items-center rounded-full bg-black/45 px-1.5 py-1 border border-white/25"
+                aria-hidden="true"
+              >
+                {d.swatch.map((c, i) => (
+                  <span
+                    key={i}
+                    className="w-2.5 h-2.5 rounded-full border border-white/50"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </span>
+            </span>
+
+            <span className="block px-2.5 py-2.5">
+              <span className="block font-display text-[17px] text-ink leading-tight truncate">
+                {d.name}
+              </span>
+              <span className="block font-mono text-[14px] text-ink font-semibold mt-1">
+                {ship.symbol}
+                {d.from}
+              </span>
+              <span className="block font-sans text-[11.5px] text-muted truncate mt-0.5">{d.short}</span>
+            </span>
+          </button>
+        );
+      }
+
+      /* Full view: slides up from the bottom over 90% of the screen, with a
+         swipeable carousel of framings and a close control at top right. */
+      function DirectionSheet({ d, ship, onClose, onRequest }) {
+        const trackRef = React.useRef(null);
+        const panelRef = React.useRef(null);
+        const restoreRef = React.useRef(null);
+        const [slide, setSlide] = React.useState(0);
+        const views = getViewsForDirection(d);
+
+        React.useEffect(() => {
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+
+          const panel = panelRef.current;
+          const focusables = () =>
+            Array.from(
+              panel.querySelectorAll(
+                'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+              )
+            ).filter((el) => el.offsetParent !== null);
+
+          const first = focusables()[0];
+          if (first) first.focus();
+          else panel.focus();
+
+          const onKeyDown = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose();
+              return;
+            }
+            if (e.key !== "Tab") return;
+            const items = focusables();
+            if (!items.length) return;
+            const a = items[0];
+            const z = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === a) {
+              e.preventDefault();
+              z.focus();
+            } else if (!e.shiftKey && document.activeElement === z) {
+              e.preventDefault();
+              a.focus();
+            }
+          };
+
+          document.addEventListener("keydown", onKeyDown, true);
+          return () => {
+            document.removeEventListener("keydown", onKeyDown, true);
+            document.body.classList.remove("aura-locked");
+            const r = restoreRef.current;
+            if (r && typeof r.focus === "function") r.focus();
+          };
+        }, [onClose]);
+
+        // Derive the active slide from scroll position so a swipe and the dots
+        // always agree about which framing is showing.
+        const onScroll = () => {
+          const el = trackRef.current;
+          if (!el) return;
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== slide) setSlide(Math.max(0, Math.min(views.length - 1, i)));
+        };
+
+        const goTo = (i) => {
+          const el = trackRef.current;
+          const child = el && el.children[i];
+          if (!el || !child) return;
+          setSlide(i);
+          el.scrollTo({
+            left: child.offsetLeft - el.offsetLeft,
+            behavior: reducedMotion() ? "auto" : "smooth",
+          });
+        };
+
+        const rows = [
+          { k: "Fabric", v: d.fabric },
+          { k: "Includes", v: d.includes },
+          { k: "Weight", v: d.weight },
+          { k: "Care", v: d.care },
+          { k: "On the loom", v: d.weeks },
+        ];
+
+        return (
+          <div
+            className="absolute inset-0 z-50 aura-fade-in"
+            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dir-sheet-title"
+              tabIndex={-1}
+              className="absolute inset-x-0 bottom-0 h-[90%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+            >
+              {/* Grabber + close */}
+              <div className="relative shrink-0 pt-2.5 pb-2.5">
+                <span
+                  className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+                  aria-hidden="true"
+                />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={`Close ${d.name}`}
+                  className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto thread-scroll">
+                {/* Swipeable carousel */}
+                <div
+                  ref={trackRef}
+                  onScroll={onScroll}
+                  className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                  role="group"
+                  aria-label={`${d.name} photographs`}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      goTo(Math.min(views.length - 1, slide + 1));
+                    } else if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      goTo(Math.max(0, slide - 1));
+                    }
+                  }}
+                >
+                  {views.map((v) => (
+                    <div key={v.id} className="snap-center shrink-0 w-full px-5">
+                      <div className="relative w-full h-[36vh] rounded-2xl overflow-hidden bg-inset border border-hairline">
+                        <Photo d={d} view={v} alt={`${d.name} — ${v.label}`} />
+                        <span className="absolute bottom-2 left-2 font-mono text-[10px] tracking-wide text-white bg-black/50 px-2 py-0.5 rounded-full border border-white/20">
+                          {v.label}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dots */}
+                <div className="flex items-center justify-center gap-1.5 mt-3">
+                  {views.map((v, i) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => goTo(i)}
+                      aria-label={`Show ${v.label}`}
+                      aria-current={i === slide}
+                      className="w-11 h-8 flex items-center justify-center"
+                    >
+                      <span
+                        className={`block rounded-full transition-all ${
+                          i === slide ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-hairline"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Details */}
+                <div className="px-5 pb-5">
+                  <h2
+                    id="dir-sheet-title"
+                    className="font-display text-[24px] text-ink leading-tight mt-1"
+                  >
+                    {d.name}
+                  </h2>
+                  <p className="font-mono text-[11px] text-goldtext mt-1">{d.craft}</p>
+                  <p className="text-[13.5px] text-ink leading-relaxed mt-3">{d.note}</p>
+
+                  <dl className="mt-4 border-t border-hairline">
+                    {rows.map((r) => (
+                      <div
+                        key={r.k}
+                        className="flex items-baseline justify-between gap-4 py-2.5 border-b border-hairline"
+                      >
+                        <dt className="font-mono text-[10.5px] uppercase tracking-wider text-muted shrink-0">
+                          {r.k}
+                        </dt>
+                        <dd className="text-[13px] text-ink text-right">{r.v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  <div className="flex items-end justify-between gap-3 mt-4">
+                    <div>
+                      <span className="block font-mono text-[10px] uppercase tracking-wider text-muted">
+                        From · landed to {ship.code}
+                      </span>
+                      <span className="block font-mono text-[22px] text-ink font-semibold leading-tight mt-0.5">
+                        {ship.symbol}
+                        {d.from}
+                      </span>
+                      <span className="block font-mono text-[11px] text-muted mt-0.5">
+                        {ship.duty} · {ship.courier}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRequest(d)}
+                      className="min-h-[48px] px-5 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all shrink-0"
+                    >
+                      Request swatches
+                    </button>
+                  </div>
+
+                  <p className="text-[11.5px] text-muted leading-relaxed mt-4">
+                    Nothing is added at checkout. You approve photographs of the finished
+                    garment before it is dispatched, and alterations are covered under the
+                    Perfect Fit Guarantee.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function TypingBubble() {
+        return (
+          <div className="flex items-center gap-1.5 bg-card border border-hairline rounded-2xl rounded-tl-md px-4 py-3.5 w-fit">
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="sr-only">Aura is writing a reply</span>
+          </div>
+        );
+      }
+
+      /* ===================================================================
+       MAIN
+       =================================================================== */
+      function App() {
+        const params = new URLSearchParams(window.location.search);
+        const initialPrompt = (params.get("prompt") || "").trim();
+        const shipCode = (params.get("ship") || "US").toUpperCase();
+        const ship = SHIP_TO[shipCode] || SHIP_TO.US;
+
+        const brief = parseBrief(initialPrompt, ship);
+        const directions = buildDirections(brief, ship);
+
+        const [messages, setMessages] = useState(() => {
+          if (!initialPrompt) return [];
+          return [{ id: "u0", from: "user", text: initialPrompt }];
+        });
+        const [typing, setTyping] = useState(Boolean(initialPrompt));
+        const [showWork, setShowWork] = useState(false);
+        const [inputVal, setInputVal] = useState("");
+        const [isListening, setIsListening] = useState(false);
+        const [toastMsg, setToastMsg] = useState("");
+        const [openDirection, setOpenDirection] = useState(null);
+
+        const threadRef = useRef(null);
+        const bottomRef = useRef(null);
+        const inputRef = useRef(null);
+        const toastTimer = useRef(null);
+        const timers = useRef([]);
+
+        const track = (id) => {
+          timers.current.push(id);
+          return id;
+        };
+
+        useEffect(
+          () => () => {
+            timers.current.forEach(clearTimeout);
+            if (toastTimer.current) clearTimeout(toastTimer.current);
+          },
+          []
+        );
+
+        // The mobile keyboard shrinks the visual viewport without changing
+        // the layout viewport — track it so the composer is never covered.
+        useEffect(() => {
+          const vv = window.visualViewport;
+          if (!vv) return;
+          const root = document.documentElement;
+          const apply = () => {
+            root.style.setProperty("--app-h", vv.height + "px");
+          };
+          apply();
+          vv.addEventListener("resize", apply);
+          vv.addEventListener("scroll", apply);
+          return () => {
+            vv.removeEventListener("resize", apply);
+            vv.removeEventListener("scroll", apply);
+            root.style.removeProperty("--app-h");
+          };
+        }, []);
+
+        const showToast = useCallback((msg) => {
+          setToastMsg(msg);
+          if (toastTimer.current) clearTimeout(toastTimer.current);
+          toastTimer.current = setTimeout(() => setToastMsg(""), 3200);
+        }, []);
+
+        // Opening reply to the brief carried over from the home screen.
+        useEffect(() => {
+          if (!initialPrompt) return;
+          const id = track(
+            setTimeout(
+              () => {
+                setTyping(false);
+                setShowWork(true);
+                setMessages((m) => [
+                  ...m,
+                  {
+                    id: "a0",
+                    from: "aura",
+                    text: brief.occasion
+                      ? `${brief.occasion} — good brief to work with. Here's how I've read it, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold.`
+                      : `Here's how I've read your brief, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold. Tell me what's missing and I'll tighten it.`,
+                    work: true,
+                  },
+                ]);
+              },
+              reducedMotion() ? 120 : 1100
+            )
+          );
+          return () => clearTimeout(id);
+        }, []);
+
+        // Keep the newest message in view without yanking the whole page.
+        useEffect(() => {
+          const el = bottomRef.current;
+          if (!el) return;
+          el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "end" });
+        }, [messages, typing]);
+
+        const send = (raw) => {
+          const text = (raw || "").trim();
+          if (!text) {
+            if (inputRef.current) inputRef.current.focus();
+            return;
+          }
+          const uid = "u" + Date.now();
+          setMessages((m) => [...m, { id: uid, from: "user", text }]);
+          setInputVal("");
+          setTyping(true);
+
+          track(
+            setTimeout(
+              () => {
+                setTyping(false);
+                setMessages((m) => [
+                  ...m,
+                  {
+                    id: "a" + Date.now(),
+                    from: "aura",
+                    ...auraReplyTo(text, brief, ship, directions),
+                  },
+                ]);
+              },
+              reducedMotion() ? 120 : 900
+            )
+          );
+        };
+
+        const handleMic = () => {
+          if (isListening) {
+            setIsListening(false);
+            showToast("Voice input stopped");
+            return;
+          }
+          setIsListening(true);
+          showToast("Listening — English, Hindi or Hinglish");
+          track(
+            setTimeout(() => {
+              setIsListening(false);
+              setInputVal("Kuch lightweight dikhao — the venue gets warm by evening.");
+              showToast("Voice transcribed into the composer");
+              if (inputRef.current) inputRef.current.focus();
+            }, 1800)
+          );
+        };
+
+        const isMultiline = inputVal.includes("\n") || inputVal.length > 35;
+
+        return (
+          <div className="min-h-screen w-full bg-canvas flex justify-center font-sans">
+            <div className="sr-only" role="status" aria-live="polite">
+              {toastMsg}
+            </div>
+            {toastMsg && (
+              <div
+                aria-hidden="true"
+                className="fixed top-5 left-1/2 z-[60] bg-primary text-onprimary text-[12.5px] font-medium px-4 py-2.5 rounded-full shadow-lg border border-gold/40 flex items-center gap-2 aura-toast-in max-w-[92vw]"
+              >
+                <span className="text-gold" aria-hidden="true">
+                  ✦
+                </span>
+                <span className="truncate">{toastMsg}</span>
+              </div>
+            )}
+
+            <div className="app-viewport">
+              {/* ---------- Header ---------- */}
+              <header className="shrink-0 z-20 px-3 pt-3 pb-2.5 flex items-center gap-2 border-b border-hairline bg-canvas">
+                <a
+                  href="index.html"
+                  aria-label="Back to home"
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all shrink-0"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                </a>
+
+                <div className="min-w-0 flex-1">
+                  <h1 className="font-display text-[18px] text-ink leading-tight truncate">
+                    Personal Designer
+                  </h1>
+                  <p className="font-mono text-[10.5px] text-muted truncate">
+                    Meera R. · master draper · replies in minutes
+                  </p>
+                </div>
+              </header>
+
+              {/* ---------- Thread ---------- */}
+              <div ref={threadRef} className="thread-scroll px-4 py-4">
+                <div
+                  className="space-y-3.5"
+                  role="log"
+                  aria-live="polite"
+                  aria-label="Conversation with your stylist"
+                >
+                  {messages.length === 0 && (
+                    <div className="text-center pt-10 px-4">
+                      <h2 className="font-display text-[24px] text-ink leading-tight">
+                        Tell me about the occasion
+                      </h2>
+                      <p className="text-[13px] text-muted mt-2 leading-relaxed max-w-[280px] mx-auto">
+                        Where it is, when it is, and how you want to feel in the room. I'll take it
+                        from there.
+                      </p>
+                    </div>
+                  )}
+
+                  {messages.map((m) => (
+                    <div
+                      key={m.id}
+                      className={m.from === "user" ? "flex justify-end" : "flex justify-start"}
+                    >
+                      <div className={m.from === "user" ? "max-w-[85%]" : "w-full"}>
+                        {m.from === "user" ? (
+                          <p className="aura-msg-in bg-primary text-onprimary text-[13.5px] leading-relaxed px-4 py-3 rounded-2xl rounded-br-md whitespace-pre-line">
+                            {m.text}
+                          </p>
+                        ) : (
+                          <div className="aura-msg-in">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span
+                                aria-hidden="true"
+                                className="w-5 h-5 rounded-full border-[1.5px] border-primary bg-card flex items-center justify-center"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-gold" />
+                              </span>
+                              <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                                Aura
+                              </span>
+                            </div>
+                            <p className="bg-card border border-hairline text-ink text-[13.5px] leading-relaxed px-4 py-3 rounded-2xl rounded-tl-md whitespace-pre-line">
+                              {m.text}
+                            </p>
+
+                            {m.cards && m.cards.length > 0 && (
+                              <div className="mt-2.5">
+                                <h4 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mb-2 px-0.5">
+                                  {m.cardsLabel}
+                                </h4>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  {m.cards.map((d) => (
+                                    <DirectionCard
+                                      key={d.id}
+                                      d={d}
+                                      ship={ship}
+                                      onOpen={setOpenDirection}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {m.steps && (
+                              <ol className="mt-2.5 bg-card border border-hairline rounded-2xl divide-y divide-hairline overflow-hidden">
+                                {m.steps.map((st) => (
+                                  <li key={st.k} className="flex items-start gap-3 px-4 py-3">
+                                    <span
+                                      aria-hidden="true"
+                                      className="font-mono text-[10.5px] text-goldtext pt-0.5 shrink-0"
+                                    >
+                                      {st.k}
+                                    </span>
+                                    <span className="min-w-0">
+                                      <span className="block text-[13px] text-ink font-medium leading-tight">
+                                        {st.label}
+                                      </span>
+                                      <span className="block text-[11.5px] text-muted leading-relaxed mt-0.5">
+                                        {st.note}
+                                      </span>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+
+                            {m.work && showWork && (
+                              <div className="mt-1">
+                                <BriefCard brief={brief} ship={ship} />
+
+                                <h3 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mt-5 mb-2 px-0.5">
+                                  Four directions
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  {directions.map((d) => (
+                                    <DirectionCard
+                                      key={d.id}
+                                      d={d}
+                                      ship={ship}
+                                      onOpen={setOpenDirection}
+                                    />
+                                  ))}
+                                </div>
+
+                                <p className="text-[11.5px] text-muted leading-relaxed mt-3 px-0.5">
+                                  Prices are landed to {ship.code} — {ship.duty.toLowerCase()},{" "}
+                                  {ship.courier}. Nothing is added at checkout. You approve
+                                  photographs of the finished garment before it is dispatched.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {typing && (
+                    <div className="flex justify-start">
+                      <TypingBubble />
+                    </div>
+                  )}
+
+                  <div ref={bottomRef} />
+                </div>
+              </div>
+
+              {/* ---------- Full view: 90% bottom sheet ---------- */}
+            {openDirection && (
+              <DirectionSheet
+                d={openDirection}
+                ship={ship}
+                onClose={() => setOpenDirection(null)}
+                onRequest={(dir) => {
+                  setOpenDirection(null);
+                  showToast(`${dir.name} — swatch box ships free before you commit`);
+                }}
+              />
+            )}
+
+            {/* ---------- Quick replies ---------- */}
+              <div className="shrink-0 px-4 pb-1 pt-2">
+                <div
+                  className="flex gap-2 overflow-x-auto pb-1.5"
+                  style={{ scrollbarWidth: "none" }}
+                  role="group"
+                  aria-label="Suggested replies"
+                >
+                  {QUICK_REPLIES.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => send(q)}
+                      className="reply-chip shrink-0"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ---------- Composer ---------- */}
+              <div className="shrink-0 px-4 pb-2 pt-1 z-30">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    send(inputVal);
+                  }}
+                  className={`composer-bar flex items-center gap-1 pl-4 pr-1.5 py-1.5 transition-all duration-200 ${
+                    isMultiline ? "rounded-[22px]" : "rounded-full"
+                  }`}
+                >
+                  <label htmlFor="aura-reply" className="sr-only">
+                    Reply to your stylist
+                  </label>
+                  <textarea
+                    id="aura-reply"
+                    ref={inputRef}
+                    rows={isMultiline ? 2 : 1}
+                    value={inputVal}
+                    onChange={(e) => setInputVal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        send(inputVal);
+                      }
+                    }}
+                    placeholder="Reply to Meera"
+                    className="w-full bg-transparent text-ink placeholder:text-muted text-[13.5px] focus:outline-none pr-1 resize-none leading-[19px] py-1.5 self-center"
+                  />
+
+                  <div className="flex items-center shrink-0 self-center">
+                    {inputVal.trim() ? (
+                      <button
+                        type="submit"
+                        aria-label="Send reply"
+                        className="w-11 h-11 rounded-full bg-primary text-onprimary flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M5 12h14" />
+                          <path d="m12 5 7 7-7 7" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleMic}
+                        aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                        aria-pressed={isListening}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                          isListening
+                            ? "bg-primary text-onprimary aura-listening"
+                            : "bg-inset text-primary hover:bg-selfill active:scale-95"
+                        }`}
+                      >
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                          <line x1="12" y1="19" x2="12" y2="22" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                <div className="home-pill-line" aria-hidden="true" />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
