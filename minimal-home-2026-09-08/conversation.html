@@ -758,7 +758,7 @@
           <img
             src={(view && view.image) || d.image}
             alt={alt}
-            loading="lazy"
+            loading="eager"
             onError={() => setFailed(true)}
             className="w-full h-full select-none"
             style={{
