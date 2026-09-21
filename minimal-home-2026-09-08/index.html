@@ -61,7 +61,7 @@
        Channels first, then convenience hex aliases for plain CSS.
        =================================================================== */
       :root {
-        --canvas-rgb: 251 248 243; /* #FBF8F3 Soft Ivory · surface-0 */
+        --canvas-rgb: 243 239 231; /* #F3EFE7 Warm Ivory · surface-0 (Figma 1:2285) */
         --card-rgb: 255 255 255; /* #FFFFFF Pristine White · surface-1 */
         --inset-rgb: 243 238 228; /* #F3EEE4 Warm Sand · surface-2 */
         --primary-rgb: 59 42 90; /* #3B2A5A Deep Royal Plum · 11.91:1 on Ivory */
@@ -237,6 +237,32 @@
           0 0 0 3px rgb(var(--primary-rgb) / 0.1);
       }
 
+      /* Attachment popup — Figma 36:1267. Frosted glass over the canvas. */
+      .attachment-popup {
+        background: rgb(255 255 255 / 0.7);
+        border: 1px solid rgb(255 255 255 / 0.6);
+        box-shadow: 0 4px 20px 0 rgb(0 0 0 / 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      /* Without backdrop-filter the 70% white reads as muddy over the wash,
+         so fall back to an opaque card. */
+      @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .attachment-popup {
+          background: var(--card);
+          border-color: rgb(var(--hairline-rgb) / 0.9);
+        }
+      }
+
+      /* Guaranteed regardless of the CDN build's utility coverage. */
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
       .home-pill-line {
         width: 134px;
         height: 5px;
@@ -249,6 +275,17 @@
       /* ===================================================================
        MOTION — every animation below is disabled under reduced-motion
        =================================================================== */
+      @keyframes auraSlideFromLeft {
+        from {
+          transform: translateX(-100%);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
       @keyframes auraSlideFromRight {
         from {
           transform: translateX(100%);
@@ -304,6 +341,9 @@
       .drawer-slide-in {
         animation: auraSlideFromRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
+      .drawer-slide-in-left {
+        animation: auraSlideFromLeft 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
       .aura-fade-in {
         animation: auraFadeIn 0.18s ease-out forwards;
       }
@@ -315,6 +355,15 @@
       }
       .aura-listening {
         animation: auraListenRing 1.5s ease-out infinite;
+      }
+
+      /* Rails scroll by finger, not by a visible bar. */
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -500,6 +549,192 @@
           lead: "6 to 8 weeks",
           prompt:
             "Destination wedding abroad, packing light.\nPieces that travel well and restyle across three events.",
+        },
+      ];
+
+      /* ===================================================================
+       SHIP-TO MARKETS (Figma 31:1282 · drawer footer)
+       Duty wording and courier drive the landed-cost disclosure, so the
+       sentence in the drawer stays true to the selected market.
+       =================================================================== */
+      /* ===================================================================
+       CHAT HISTORY
+       Every conversation starts by handing a prompt to conversation.html,
+       so that is the single place a chat is recorded. This screen only
+       reads the log back and derives a title from the opening prompt.
+
+       Storage is per-browser and best-effort: a private window or blocked
+       site data throws or returns nothing, and the drawer simply shows its
+       empty state rather than failing.
+       =================================================================== */
+      const CHAT_LOG_KEY = "aura.chats";
+
+      function readChatLog() {
+        try {
+          const raw = window.localStorage.getItem(CHAT_LOG_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .filter((c) => c && typeof c.prompt === "string" && c.prompt.trim())
+            .sort((a, b) => (b.at || 0) - (a.at || 0));
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function clearChatLog() {
+        try {
+          window.localStorage.removeItem(CHAT_LOG_KEY);
+        } catch (e) {
+          /* nothing to clear if storage is unavailable */
+        }
+      }
+
+      /* --- Contextual title -------------------------------------------
+       The title answers "which conversation was this?", so it leads with
+       the occasion and qualifies it with the city or the garment — the two
+       things that actually distinguish two wedding briefs from each other.
+       Nothing is invented: if none of it is in the prompt, we fall back to
+       the customer's own opening words with the filler trimmed off.
+       ----------------------------------------------------------------- */
+      const TITLE_OCCASIONS = [
+        { match: /\bsangeet\b/i, label: "Sangeet" },
+        { match: /\bmehendi|mehndi\b/i, label: "Mehendi" },
+        { match: /\bhaldi\b/i, label: "Haldi" },
+        { match: /\breception\b/i, label: "Reception" },
+        { match: /\bcocktail\b/i, label: "Cocktail evening" },
+        { match: /\bdiwali\b/i, label: "Diwali" },
+        { match: /\bannaprashan\b/i, label: "Annaprashan" },
+        { match: /\bgriha|housewarming\b/i, label: "Griha Pravesh" },
+        { match: /\btemple|puja|pooja\b/i, label: "Temple morning" },
+        { match: /\bengagement|roka\b/i, label: "Engagement" },
+        { match: /\bwedding\b/i, label: "Wedding" },
+      ];
+
+      const TITLE_GARMENTS = [
+        { match: /\blehenga\b/i, label: "Lehenga" },
+        { match: /\bsaree|sari\b/i, label: "Saree" },
+        { match: /\bsherwani\b/i, label: "Sherwani" },
+        { match: /\banarkali\b/i, label: "Anarkali" },
+        { match: /\bkurta\b/i, label: "Kurta set" },
+        { match: /\bsuit\b/i, label: "Suit set" },
+        { match: /\bgown\b/i, label: "Gown" },
+      ];
+
+      const TITLE_CITIES = [
+        "Jaipur",
+        "London",
+        "Chicago",
+        "New York",
+        "Chennai",
+        "Toronto",
+        "Delhi",
+        "Mumbai",
+        "Dubai",
+        "Singapore",
+        "Bangalore",
+        "Hyderabad",
+        "San Francisco",
+        "Houston",
+        "Vancouver",
+        "Melbourne",
+        "Sydney",
+        "Varanasi",
+        "Lucknow",
+      ];
+
+      // Openers that carry no meaning in a list of titles.
+      const TITLE_FILLER =
+        /^(?:i(?:'d| would)? ?(?:like|want|need)(?: to)?|i'm |i am |can you |could you |please |help me |looking for |show me |find me |suggest |hi[, ]+|hey[, ]+|hello[, ]+)/i;
+
+      function deriveChatTitle(prompt) {
+        const text = (prompt || "").replace(/\s+/g, " ").trim();
+        if (!text) return "Untitled conversation";
+
+        // A concern raised from Orders names its garment and stage — that is
+        // a better title than the garment alone.
+        const fromOrder = text.match(/^(.+?) \(AUR-\d+\) — about the (.+?) stage\./);
+        if (fromOrder) return `${fromOrder[2]} · ${fromOrder[1]}`;
+
+        const occasion = TITLE_OCCASIONS.find((o) => o.match.test(text));
+        const garment = TITLE_GARMENTS.find((g) => g.match.test(text));
+        const city = TITLE_CITIES.find((c) => new RegExp("\\b" + c + "\\b", "i").test(text));
+        const isGuest = /\bguest\b/i.test(text);
+
+        if (occasion) {
+          const head = isGuest && occasion.label === "Wedding" ? "Wedding guest" : occasion.label;
+          const qualifier = city || (garment && garment.label);
+          return qualifier ? `${head} · ${qualifier}` : head;
+        }
+
+        if (garment) return city ? `${garment.label} · ${city}` : garment.label;
+
+        // No vocabulary matched — use the customer's own words, minus the
+        // filler, capped at a length that still fits one line in the drawer.
+        let rest = text.replace(TITLE_FILLER, "").trim();
+        if (!rest) rest = text;
+        const words = rest.split(" ").slice(0, 6).join(" ");
+        const clipped = words.replace(/[\s,.;:—–-]+$/, "");
+        const title = clipped.charAt(0).toUpperCase() + clipped.slice(1);
+        return rest.split(" ").length > 6 ? title + "…" : title;
+      }
+
+      /* --- Timestamp ---------------------------------------------------
+       Recent chats read better relative ("2h ago"); anything older than a
+       week reads better as a date.
+       ----------------------------------------------------------------- */
+      function formatChatTime(ms) {
+        if (!ms) return "";
+        const then = new Date(ms);
+        if (isNaN(then.getTime())) return "";
+
+        const diff = Date.now() - ms;
+        const min = Math.floor(diff / 60000);
+        const hr = Math.floor(diff / 3600000);
+        const day = Math.floor(diff / 86400000);
+
+        if (diff < 0 || min < 1) return "Just now";
+        if (min < 60) return `${min}m ago`;
+        if (hr < 24) return `${hr}h ago`;
+        if (day === 1) return "Yesterday";
+        if (day < 7) return `${day}d ago`;
+
+        const sameYear = then.getFullYear() === new Date().getFullYear();
+        return then.toLocaleDateString(undefined, {
+          day: "numeric",
+          month: "short",
+          year: sameYear ? undefined : "numeric",
+        });
+      }
+      const SHIP_TO_COUNTRIES = [
+        {
+          code: "US",
+          symbol: "US $",
+          flag: "🇺🇸",
+          duty: "duties prepaid",
+          courier: "DHL Express · 4 days",
+        },
+        {
+          code: "UK",
+          symbol: "UK £",
+          flag: "🇬🇧",
+          duty: "VAT prepaid",
+          courier: "DHL Express · 3 days",
+        },
+        {
+          code: "CA",
+          symbol: "CA $",
+          flag: "🇨🇦",
+          duty: "duties prepaid",
+          courier: "DHL Express · 5 days",
+        },
+        {
+          code: "IN",
+          symbol: "INR ₹",
+          flag: "🇮🇳",
+          duty: "no import duty",
+          courier: "Blue Dart · 2 days",
         },
       ];
 
@@ -770,7 +1005,13 @@
 
         return (
           <div
-            className={`absolute inset-0 z-50 flex aura-fade-in ${align === "end" ? "justify-end" : "items-end justify-center"}`}
+            className={`absolute inset-0 z-50 flex aura-fade-in ${
+              align === "end"
+                ? "justify-end"
+                : align === "start"
+                  ? "justify-start"
+                  : "items-end justify-center"
+            }`}
             style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.45)", backdropFilter: "blur(2px)" }}
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) onClose();
@@ -791,17 +1032,455 @@
       }
 
       /* ===================================================================
+       ATTACHMENT POPUP (Figma 36:1267)
+       Camera / Photos / Files. Frosted card anchored above the ask bar.
+       Icons are the Phosphor vectors exported from the Figma component,
+       recoloured to currentColor so they inherit the plum token.
+       =================================================================== */
+      const ATTACH_ICONS = {
+        camera:
+          "M19.5 5.25H16.9012L15.6234 3.33375C15.555 3.23114 15.4623 3.147 15.3535 3.08879C15.2448 3.03057 15.1233 3.00007 15 3H9C8.87665 3.00007 8.75522 3.03057 8.64648 3.08879C8.53773 3.147 8.44502 3.23114 8.37656 3.33375L7.09781 5.25H4.5C3.90326 5.25 3.33097 5.48705 2.90901 5.90901C2.48705 6.33097 2.25 6.90326 2.25 7.5V18C2.25 18.5967 2.48705 19.169 2.90901 19.591C3.33097 20.0129 3.90326 20.25 4.5 20.25H19.5C20.0967 20.25 20.669 20.0129 21.091 19.591C21.5129 19.169 21.75 18.5967 21.75 18V7.5C21.75 6.90326 21.5129 6.33097 21.091 5.90901C20.669 5.48705 20.0967 5.25 19.5 5.25ZM20.25 18C20.25 18.1989 20.171 18.3897 20.0303 18.5303C19.8897 18.671 19.6989 18.75 19.5 18.75H4.5C4.30109 18.75 4.11032 18.671 3.96967 18.5303C3.82902 18.3897 3.75 18.1989 3.75 18V7.5C3.75 7.30109 3.82902 7.11032 3.96967 6.96967C4.11032 6.82902 4.30109 6.75 4.5 6.75H7.5C7.62351 6.75008 7.74512 6.71966 7.85405 6.66143C7.96297 6.60321 8.05583 6.51899 8.12438 6.41625L9.40125 4.5H14.5978L15.8756 6.41625C15.9442 6.51899 16.037 6.60321 16.146 6.66143C16.2549 6.71966 16.3765 6.75008 16.5 6.75H19.5C19.6989 6.75 19.8897 6.82902 20.0303 6.96967C20.171 7.11032 20.25 7.30109 20.25 7.5V18ZM12 8.25C11.1842 8.25 10.3866 8.49193 9.70827 8.94519C9.02992 9.39845 8.50121 10.0427 8.189 10.7964C7.87679 11.5502 7.7951 12.3796 7.95426 13.1797C8.11343 13.9799 8.50629 14.7149 9.08318 15.2918C9.66008 15.8687 10.3951 16.2616 11.1953 16.4207C11.9954 16.5799 12.8248 16.4982 13.5786 16.186C14.3323 15.8738 14.9766 15.3451 15.4298 14.6667C15.8831 13.9884 16.125 13.1908 16.125 12.375C16.1238 11.2814 15.6888 10.2329 14.9154 9.45955C14.1421 8.68624 13.0936 8.25124 12 8.25ZM12 15C11.4808 15 10.9733 14.846 10.5416 14.5576C10.1099 14.2692 9.7735 13.8592 9.57482 13.3795C9.37614 12.8999 9.32415 12.3721 9.42544 11.8629C9.52672 11.3537 9.77673 10.886 10.1438 10.5188C10.511 10.1517 10.9787 9.90172 11.4879 9.80044C11.9971 9.69915 12.5249 9.75114 13.0045 9.94982C13.4842 10.1485 13.8942 10.4849 14.1826 10.9166C14.471 11.3483 14.625 11.8558 14.625 12.375C14.625 13.0712 14.3484 13.7389 13.8562 14.2312C13.3639 14.7234 12.6962 15 12 15Z",
+        photos:
+          "M19.5 3H4.5C4.10218 3 3.72064 3.15804 3.43934 3.43934C3.15804 3.72064 3 4.10218 3 4.5V19.5C3 19.8978 3.15804 20.2794 3.43934 20.5607C3.72064 20.842 4.10218 21 4.5 21H19.5C19.8978 21 20.2794 20.842 20.5607 20.5607C20.842 20.2794 21 19.8978 21 19.5V4.5C21 4.10218 20.842 3.72064 20.5607 3.43934C20.2794 3.15804 19.8978 3 19.5 3ZM4.5 4.5H19.5V11.7544L17.1853 9.43875C16.904 9.15766 16.5227 8.99976 16.125 8.99976C15.7273 8.99976 15.346 9.15766 15.0647 9.43875L5.00344 19.5H4.5V4.5ZM19.5 19.5H7.125L16.125 10.5L19.5 13.875V19.5ZM9 11.25C9.44501 11.25 9.88002 11.118 10.25 10.8708C10.62 10.6236 10.9084 10.2722 11.0787 9.86104C11.249 9.4499 11.2936 8.9975 11.2068 8.56105C11.12 8.12459 10.9057 7.72368 10.591 7.40901C10.2763 7.09434 9.87541 6.88005 9.43895 6.79323C9.0025 6.70642 8.5501 6.75097 8.13896 6.92127C7.72783 7.09157 7.37643 7.37996 7.12919 7.74997C6.88196 8.11998 6.75 8.55499 6.75 9C6.75 9.59674 6.98705 10.169 7.40901 10.591C7.83097 11.0129 8.40326 11.25 9 11.25ZM9 8.25C9.14834 8.25 9.29334 8.29399 9.41668 8.3764C9.54001 8.45881 9.63614 8.57594 9.69291 8.71299C9.74968 8.85003 9.76453 9.00083 9.73559 9.14632C9.70665 9.2918 9.63522 9.42544 9.53033 9.53033C9.42544 9.63522 9.2918 9.70665 9.14632 9.73559C9.00083 9.76453 8.85003 9.74968 8.71299 9.69291C8.57594 9.63614 8.45881 9.54001 8.3764 9.41668C8.29399 9.29334 8.25 9.14834 8.25 9C8.25 8.80109 8.32902 8.61032 8.46967 8.46967C8.61032 8.32902 8.80109 8.25 9 8.25Z",
+        files:
+          "M18.75 6.89297C18.7186 7.98098 18.2713 9.01554 17.5 9.78359L14.7852 12.5C14.3898 12.8976 13.9194 13.2128 13.4014 13.4273C12.8833 13.6419 12.3279 13.7516 11.7672 13.75H11.7633C11.193 13.7496 10.6286 13.6349 10.1034 13.4127C9.57814 13.1905 9.10279 12.8653 8.70536 12.4563C8.30794 12.0473 7.99652 11.5628 7.78949 11.0314C7.58246 10.5 7.48403 9.93256 7.5 9.3625C7.50466 9.19674 7.57498 9.03962 7.69549 8.92571C7.81599 8.81179 7.97682 8.75042 8.14258 8.75508C8.30834 8.75974 8.46546 8.83006 8.57937 8.95057C8.69328 9.07107 8.75466 9.2319 8.75 9.39766C8.73862 9.80072 8.80815 10.202 8.95447 10.5777C9.1008 10.9535 9.32096 11.2961 9.60194 11.5853C9.88292 11.8745 10.219 12.1044 10.5904 12.2616C10.9617 12.4187 11.3608 12.4997 11.7641 12.5C12.1604 12.501 12.5531 12.4234 12.9193 12.2718C13.2855 12.1201 13.6181 11.8974 13.8977 11.6164L16.6125 8.90156C17.1726 8.33438 17.4856 7.56863 17.4831 6.77149C17.4806 5.97435 17.1629 5.21057 16.5992 4.64691C16.0355 4.08324 15.2717 3.76547 14.4746 3.76298C13.6775 3.76049 12.9117 4.07347 12.3445 4.63359L11.4852 5.49297C11.367 5.60523 11.2096 5.66689 11.0467 5.66481C10.8837 5.66272 10.728 5.59705 10.6127 5.4818C10.4975 5.36655 10.4318 5.21083 10.4297 5.04786C10.4276 4.88488 10.4893 4.72754 10.6016 4.60938L11.4609 3.75C11.8574 3.35338 12.3282 3.03876 12.8463 2.82411C13.3643 2.60945 13.9197 2.49897 14.4805 2.49897C15.0413 2.49897 15.5966 2.60945 16.1147 2.82411C16.6328 3.03876 17.1035 3.35338 17.5 3.75C17.9107 4.16169 18.2333 4.65263 18.4482 5.19296C18.6631 5.73329 18.7658 6.31169 18.75 6.89297ZM8.51562 14.5047L7.65625 15.3641C7.37596 15.6462 7.04237 15.8698 6.67488 16.0219C6.30739 16.174 5.91334 16.2516 5.51562 16.25C4.91899 16.2495 4.33588 16.0722 3.83997 15.7405C3.34407 15.4087 2.95762 14.9374 2.72946 14.3861C2.50131 13.8348 2.44167 13.2283 2.5581 12.6431C2.67453 12.0579 2.96179 11.5204 3.38359 11.0984L6.09375 8.38359C6.52061 7.95448 7.06665 7.66363 7.66093 7.54882C8.25521 7.43401 8.87029 7.50055 9.42627 7.73979C9.98226 7.97903 10.4535 8.37992 10.7787 8.8904C11.1039 9.40087 11.2681 9.99734 11.25 10.6023C11.2453 10.7681 11.3067 10.9289 11.4206 11.0494C11.5345 11.1699 11.6917 11.2403 11.8574 11.2449C12.0232 11.2496 12.184 11.1882 12.3045 11.0743C12.425 10.9604 12.4953 10.8033 12.5 10.6375C12.515 10.0571 12.4119 9.47977 12.1971 8.94043C11.9822 8.4011 11.66 7.91105 11.25 7.5C10.4494 6.69971 9.36367 6.25014 8.23164 6.25014C7.09961 6.25014 6.01392 6.69971 5.21328 7.5L2.5 10.2148C1.90331 10.8113 1.49681 11.5712 1.33188 12.3986C1.16696 13.2261 1.251 14.0838 1.5734 14.8634C1.8958 15.6431 2.44207 16.3097 3.1432 16.779C3.84432 17.2482 4.66882 17.4992 5.5125 17.5C6.07334 17.5016 6.62892 17.392 7.14709 17.1774C7.66527 16.9628 8.13573 16.6476 8.53125 16.25L9.39062 15.3906C9.49177 15.2715 9.54461 15.1188 9.53873 14.9626C9.53285 14.8064 9.46867 14.6581 9.35885 14.5469C9.24903 14.4357 9.10154 14.3697 8.94545 14.3619C8.78936 14.3541 8.63601 14.405 8.51562 14.5047Z",
+      };
+
+      const ATTACH_OPTIONS = [
+        { id: "camera", label: "Camera", box: 24, hint: "Take a photo of the piece or the fabric" },
+        {
+          id: "photos",
+          label: "Photos",
+          box: 24,
+          hint: "Choose a saved reference from your library",
+        },
+        { id: "files", label: "Files", box: 20, hint: "Attach a document or a link" },
+      ];
+
+      function AttachmentPopup({ onPick }) {
+        return (
+          <div
+            role="menu"
+            aria-label="Add an attachment"
+            className="attachment-popup aura-fade-in absolute bottom-[calc(100%+10px)] left-0 w-[260px] p-3 rounded-[20px] z-40"
+          >
+            {ATTACH_OPTIONS.map((opt, i) => (
+              <React.Fragment key={opt.id}>
+                {i > 0 && (
+                  <div className="h-px w-full bg-[rgb(204_204_204_/_0.5)]" aria-hidden="true" />
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => onPick(opt)}
+                  className="w-full flex items-center gap-4 px-2 py-3 rounded-xl text-left hover:bg-[rgb(var(--primary-rgb)_/_0.06)] active:scale-[0.99] transition-colors"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="w-10 h-10 shrink-0 rounded-full bg-[rgb(232_232_232_/_0.8)] flex items-center justify-center text-primary"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox={`0 0 ${opt.box} ${opt.box}`}
+                      fill="currentColor"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d={ATTACH_ICONS[opt.id]} />
+                    </svg>
+                  </span>
+                  <span className="text-[17px] text-ink leading-none">{opt.label}</span>
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        );
+      }
+
+      /* ===================================================================
+       HOME BROWSE SURFACE
+       The categories are the same five curates Discover lists, so the rail
+       on home and the sections on Discover can never drift apart. Tapping
+       one opens that category's page; tapping a garment opens a
+       conversation about it rather than a product page — Aura sells through
+       the stylist, not through a catalogue.
+       =================================================================== */
+      const HOME_CATEGORIES = [
+        {
+          id: "curated",
+          label: "Curated collection",
+          note: "Edits our stylists are building now",
+          image: "images/regal_zardozi.jpg",
+          swatch: ["#3B1220", "#C89B3C", "#8A2740"],
+        },
+        {
+          id: "editorial",
+          label: "Editorial stories",
+          note: "How the craft actually works",
+          image: "images/heritage_banarasi.jpg",
+          swatch: ["#7B1E3B", "#C89B3C", "#E8D9B5"],
+        },
+        {
+          id: "designers",
+          label: "Designer spotlights",
+          note: "The hands behind the cloth",
+          image: "images/modern_chanderi.jpg",
+          swatch: ["#4A2B6B", "#B9A7D0", "#EFE9F3"],
+        },
+        {
+          id: "inspiration",
+          label: "Inspiration feed",
+          note: "Colour and cloth, by occasion",
+          image: "images/featherweight_organza.jpg",
+          swatch: ["#D8C7E4", "#C89B3C", "#F3EEE4"],
+        },
+        {
+          id: "community",
+          label: "Community looks",
+          note: "Worn by Aura customers",
+          image: "images/jewelry_regal.jpg",
+          swatch: ["#0E5B4A", "#C89B3C", "#E4D2A8"],
+        },
+      ];
+
+      const HOME_RAILS = [
+        {
+          id: "wedding-lehenga",
+          title: "Wedding Lehanga",
+          items: [
+            {
+              id: "regal-lehenga",
+              name: "Regal zardozi",
+              craft: "Zardozi handwork \u00b7 Lucknow",
+              image: "images/regal_zardozi.jpg",
+              swatch: ["#3B1220", "#C89B3C", "#8A2740"],
+            },
+            {
+              id: "heritage-lehenga",
+              name: "Heritage handloom",
+              craft: "Banarasi kadhwa weave \u00b7 Varanasi",
+              image: "images/heritage_banarasi.jpg",
+              swatch: ["#7B1E3B", "#C89B3C", "#E8D9B5"],
+            },
+            {
+              id: "featherweight-lehenga",
+              name: "Featherweight festive",
+              craft: "Hand aari work \u00b7 Mumbai",
+              image: "images/featherweight_organza.jpg",
+              swatch: ["#D8C7E4", "#C89B3C", "#F3EEE4"],
+            },
+            {
+              id: "kundan-bridal",
+              name: "Velvet bridal, kundan set",
+              craft: "Zardozi bodice \u00b7 Lucknow",
+              image: "images/jewelry_heritage.jpg",
+              swatch: ["#5A1226", "#C89B3C", "#E8D9B5"],
+            },
+          ],
+        },
+        {
+          id: "wedding-sarees",
+          title: "Wedding Sarees",
+          items: [
+            {
+              id: "modern-saree",
+              name: "Modern sculptural",
+              craft: "Structured drape \u00b7 Bhopal",
+              image: "images/modern_chanderi.jpg",
+              swatch: ["#4A2B6B", "#B9A7D0", "#EFE9F3"],
+            },
+            {
+              id: "kanjivaram-saree",
+              name: "Temple border Kanjivaram",
+              craft: "Korvai join \u00b7 Kanchipuram",
+              image: "images/kanjivaram_gold.png",
+              swatch: ["#7B1E3B", "#C89B3C", "#E4D2A8"],
+            },
+            {
+              id: "family-silks",
+              name: "Gold tissue silks",
+              craft: "Family commission \u00b7 Kanchipuram",
+              image: "images/family_silks.png",
+              swatch: ["#C89B3C", "#E8D9B5", "#F3EEE4"],
+            },
+            {
+              id: "blush-pastel",
+              name: "Blush silk, pastel set",
+              craft: "Meenakari pairing \u00b7 Jaipur",
+              image: "images/jewelry_featherweight.jpg",
+              swatch: ["#E9C9CE", "#C89B3C", "#F4EEE8"],
+            },
+          ],
+        },
+      ];
+
+      /* Same gradient fallback the catalogue uses, so a missing photograph
+         still reads as cloth rather than as a broken box. */
+      function HomeImage({ item, alt, className }) {
+        const [failed, setFailed] = useState(false);
+        const sw = item.swatch || ["#E5DFD5", "#C89B3C", "#F3EEE4"];
+
+        if (failed || !item.image) {
+          return (
+            <span
+              className={className}
+              role="img"
+              aria-label={alt + " \u2014 photograph not yet available"}
+              style={{
+                background:
+                  "linear-gradient(150deg, " +
+                  sw[0] +
+                  " 0%, " +
+                  sw[2] +
+                  " 55%, " +
+                  sw[1] +
+                  " 100%)",
+              }}
+            />
+          );
+        }
+        return (
+          <img
+            src={item.image}
+            alt={alt}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className={className + " object-cover select-none"}
+            draggable="false"
+          />
+        );
+      }
+
+      /* The hero is a deck rather than a strip: the live category sits in
+         front, and the one before and after it are tucked behind its edges,
+         turned away from the reader so only a sliver of each shows. Moving
+         on rotates the whole deck by one.
+
+         Cards are positioned by transform, never by scrollLeft. An animated
+         scroll fires onScroll the whole way there and those half-way
+         positions round back to the slide we just left, so the index and the
+         picture end up fighting each other. A transform has no such
+         feedback. Swipe is handled directly since there is no native
+         scrolling left to do it.
+
+         It advances on its own every five seconds, stops the moment the
+         reader touches it, and never starts at all for anyone who has asked
+         the system to reduce motion. */
+      function CategoryCarousel({ items, onOpen, paused }) {
+        const [slide, setSlide] = useState(0);
+        const [focusHeld, setFocusHeld] = useState(false);
+        const dragRef = useRef(null);
+        // Steering it by hand defers the next turn rather than ending it, so
+        // a tap on a dot can never leave the deck stopped for good.
+        const deferRef = useRef(0);
+        const defer = () => {
+          deferRef.current = Date.now() + 9000;
+        };
+
+        const reduced =
+          typeof window !== "undefined" &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // It keeps turning on its own. Reduce-motion takes away the sliding,
+        // not the rotation itself — the deck still cycles, it just cuts
+        // between cards instead of travelling between them.
+        useEffect(() => {
+          if (focusHeld || paused || items.length < 2) return;
+          const t = window.setInterval(() => {
+            if (Date.now() < deferRef.current) return;
+            setSlide((i) => (i + 1) % items.length);
+          }, 3800);
+          return () => window.clearInterval(t);
+        }, [focusHeld, paused, items.length]);
+
+        const count = items.length;
+        const go = (i) => setSlide(((i % count) + count) % count);
+
+        // How far a card sits from the front of the deck, counted the short
+        // way round so the last card is the first one's left-hand neighbour.
+        const offsetOf = (i) => {
+          let off = i - slide;
+          if (off > count / 2) off -= count;
+          if (off < -count / 2) off += count;
+          return off;
+        };
+
+        // A short horizontal drag turns the deck; anything less is a tap and
+        // belongs to the card underneath.
+        const onPointerDown = (e) => {
+          defer();
+          dragRef.current = { x: e.clientX, y: e.clientY };
+        };
+        const onPointerUp = (e) => {
+          const from = dragRef.current;
+          dragRef.current = null;
+          if (!from) return;
+          const dx = e.clientX - from.x;
+          if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(e.clientY - from.y)) return;
+          go(slide + (dx < 0 ? 1 : -1));
+        };
+
+        const current = items[slide] || items[0];
+
+        return (
+          <section aria-labelledby="home-category-title" aria-roledescription="carousel">
+            <h2
+              id="home-category-title"
+              aria-live="polite"
+              className="font-display text-[22px] leading-tight text-ink text-center mb-2.5"
+            >
+              {current.label}
+            </h2>
+
+            {/* The cards waiting their turn sit far off to either side. They
+                are invisible but still count towards scrollable width, so the
+                deck is clipped at the gutter — with room left for the front
+                card's shadow. */}
+            <div className="-mx-5 px-5 -my-4 py-4 overflow-hidden">
+              <div
+                className="relative mx-auto w-[68%] aspect-[7/5]"
+                style={{ perspective: "1100px" }}
+                onPointerDown={onPointerDown}
+                onPointerUp={onPointerUp}
+                onPointerCancel={() => (dragRef.current = null)}
+                onFocusCapture={() => setFocusHeld(true)}
+                onBlurCapture={() => setFocusHeld(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    go(slide + 1);
+                  } else if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    go(slide - 1);
+                  }
+                }}
+              >
+                {items.map((c, i) => {
+                  const off = offsetOf(i);
+                  const front = off === 0;
+                  const buried = Math.abs(off) > 1;
+                  const side = off < 0 ? -1 : 1;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="absolute inset-0"
+                      aria-hidden={front ? undefined : true}
+                      style={{
+                        transform:
+                          "translateX(" +
+                          off * 42 +
+                          "%) rotateY(" +
+                          (front ? 0 : side * 38) +
+                          "deg) scale(" +
+                          (front ? 1 : 0.88) +
+                          ")",
+                        zIndex: 10 - Math.abs(off),
+                        opacity: buried ? 0 : 1,
+                        pointerEvents: front ? "auto" : "none",
+                        transition: reduced
+                          ? "none"
+                          : "transform 0.62s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.62s ease",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onOpen(c)}
+                        tabIndex={front ? 0 : -1}
+                        aria-label={"Open " + c.label + " \u2014 " + c.note}
+                        className={
+                          "block w-full h-full rounded-2xl overflow-hidden bg-inset border border-hairline " +
+                          (front
+                            ? "shadow-[0_10px_30px_-12px_rgb(var(--ink-rgb)/0.45)] hover:border-primary/45"
+                            : "shadow-none")
+                        }
+                      >
+                        <HomeImage item={c} alt={c.label} className="block w-full h-full" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              {items.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    defer();
+                    go(i);
+                  }}
+                  aria-label={"Show " + c.label}
+                  aria-current={i === slide}
+                  className="w-6 h-6 flex items-center justify-center"
+                >
+                  <span
+                    className={
+                      "block rounded-full transition-all " +
+                      (i === slide ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-hairline")
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      /* A rail of garments. Every tile opens a conversation, so its label is
+         phrased as the question it will ask on your behalf. */
+      function GarmentRail({ rail, onPick }) {
+        const headingId = "rail-" + rail.id;
+        return (
+          <section aria-labelledby={headingId} className="mt-4">
+            <h2 id={headingId} className="text-[14px] font-medium text-ink mb-2">
+              {rail.title}
+            </h2>
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-5 px-5 pb-1">
+              {rail.items.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => onPick(g)}
+                  aria-label={"Ask Aura about " + g.name + " \u2014 " + g.craft}
+                  className="shrink-0 w-[92px] text-left rounded-xl overflow-hidden bg-inset border border-hairline hover:border-primary/45 hover:shadow-md active:scale-[0.98] transition-all"
+                >
+                  <HomeImage item={g} alt={g.name} className="block w-full aspect-[3/4]" />
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      /* ===================================================================
        MAIN APPLICATION
        =================================================================== */
       function App() {
         const [drawerOpen, setDrawerOpen] = useState(() => {
-          try { return new URLSearchParams(window.location.search).get("drawer") === "true"; } catch (e) { return false; }
+          try {
+            return new URLSearchParams(window.location.search).get("drawer") === "true";
+          } catch (e) {
+            return false;
+          }
         });
         const [moreOpen, setMoreOpen] = useState(() => {
-          try { return new URLSearchParams(window.location.search).get("more") === "true"; } catch (e) { return false; }
+          try {
+            return new URLSearchParams(window.location.search).get("more") === "true";
+          } catch (e) {
+            return false;
+          }
         });
         const [selectedChipId, setSelectedChipId] = useState(() => {
-          try { return new URLSearchParams(window.location.search).get("chip") || null; } catch (e) { return null; }
+          try {
+            return new URLSearchParams(window.location.search).get("chip") || null;
+          } catch (e) {
+            return null;
+          }
         });
         const [inputVal, setInputVal] = useState(() => {
           try {
@@ -815,24 +1494,30 @@
           return "";
         });
         const [isListening, setIsListening] = useState(false);
-        const [activeCountry, setActiveCountry] = useState({
-          code: "US",
-          symbol: "US $",
-          flag: "🇺🇸",
-        });
+        const [activeCountry, setActiveCountry] = useState(SHIP_TO_COUNTRIES[0]);
         const [toastMsg, setToastMsg] = useState("");
         // Compose mode: the text editor is active, so the orb, headline and
         // chips clear out and the bar rides just above the keyboard.
         const [composing, setComposing] = useState(false);
 
+        // Attachment popup (Figma 36:1267) — Camera / Photos / Files.
+        const [attachOpen, setAttachOpen] = useState(false);
+
+        // Chat history drawer, opened from the Aura wordmark. The log is read
+        // on open so it reflects conversations started since this page loaded.
+        const [historyOpen, setHistoryOpen] = useState(false);
+        const [chatLog, setChatLog] = useState([]);
+
         const inputRef = useRef(null);
+        const attachRef = useRef(null);
         const toastTimer = useRef(null);
         const micTimer = useRef(null);
 
         // All selectable occasion chips for lookup
         const allOccasions = [...CHIPS_DATA, ...MORE_OCCASIONS];
         const selectedChip = allOccasions.find((c) => c.id === selectedChipId);
-        const isCardExpanded = Boolean(selectedChipId) || inputVal.includes("\n") || inputVal.length > 35;
+        const isCardExpanded =
+          Boolean(selectedChipId) || inputVal.includes("\n") || inputVal.length > 35;
 
         // Track the visual viewport. When the mobile keyboard opens it
         // shrinks the visual viewport without changing the layout viewport,
@@ -858,6 +1543,44 @@
           if (inputRef.current) inputRef.current.blur();
           setComposing(false);
         };
+
+        // Read the log at open time rather than on mount: a chat started in
+        // this tab and navigated back from should already be in the list.
+        const openHistory = () => {
+          setChatLog(readChatLog());
+          setHistoryOpen(true);
+        };
+
+        const openChat = (chat) => {
+          window.location.href =
+            "conversation.html?prompt=" +
+            encodeURIComponent(chat.prompt) +
+            "&ship=" +
+            encodeURIComponent(chat.ship || activeCountry.code);
+        };
+
+        // Attachment popup dismisses on Escape or a click outside it. The
+        // popup is a menu, not a dialog, so it does not trap focus.
+        useEffect(() => {
+          if (!attachOpen) return;
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setAttachOpen(false);
+            }
+          };
+          const onPointer = (e) => {
+            if (attachRef.current && !attachRef.current.contains(e.target)) {
+              setAttachOpen(false);
+            }
+          };
+          document.addEventListener("keydown", onKey);
+          document.addEventListener("pointerdown", onPointer);
+          return () => {
+            document.removeEventListener("keydown", onKey);
+            document.removeEventListener("pointerdown", onPointer);
+          };
+        }, [attachOpen]);
 
         // A single pending toast at a time — a new message replaces the old
         // timer rather than racing it.
@@ -893,6 +1616,29 @@
             setIsListening(false);
             showToast("Voice transcribed into the conversation bar");
           }, 1800);
+        };
+
+        // A category is a Discover section; home only ever links into it.
+        const openCategory = (cat) => {
+          window.location.href = "collection.html?section=" + encodeURIComponent(cat.id);
+        };
+
+        // Garments have no product page here. Tapping one hands the stylist
+        // an opening line about that piece.
+        const startGarmentChat = (g) => {
+          const prompt = "Tell me about the " + g.name + " \u2014 " + g.craft + ".";
+          showToast("Opening your stylist conversation\u2026");
+          setTimeout(() => {
+            // The piece travels with the prompt so the chat can show what you
+            // tapped, and open its details when you tap it again.
+            window.location.href =
+              "conversation.html?prompt=" +
+              encodeURIComponent(prompt) +
+              "&piece=" +
+              encodeURIComponent(g.id) +
+              "&ship=" +
+              encodeURIComponent(activeCountry.code);
+          }, 400);
         };
 
         const handleAsk = (text) => {
@@ -958,125 +1704,73 @@
 
             <div className="app-viewport">
               <div className="canvas-wash" aria-hidden="true" />
-
               {/* ---------- 1. Header (hidden while composing) ---------- */}
               {!composing && (
-              <header className="relative px-5 pt-4 pb-2 flex items-center justify-between z-20 shrink-0">
-                <div className="flex items-center gap-2.5 select-none">
-                  <span
-                    aria-hidden="true"
-                    className="relative w-8 h-8 rounded-full border-[2.5px] border-primary flex items-center justify-center bg-card shadow-sm"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full bg-gold" />
-                  </span>
-                  <span className="font-display text-[22px] leading-none tracking-[0.01em] text-ink pt-[3px]">
-                    Aura
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => showToast("Stylist Desk — 3 master drapers available today")}
-                    className="h-11 px-4 rounded-full bg-inset hover:bg-selfill active:scale-95 text-primary text-[13px] font-medium transition-all duration-150 border border-hairline"
-                  >
-                    Stylist Desk
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDrawerOpen(true)}
-                    aria-label="Open navigation menu"
-                    aria-haspopup="dialog"
-                    aria-expanded={drawerOpen}
-                    className="w-11 h-11 rounded-full bg-card border border-hairline flex items-center justify-center text-ink shadow-sm hover:border-primary/40 active:scale-95 transition-all"
-                  >
-                    <svg
-                      width="17"
-                      height="17"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.1"
-                      strokeLinecap="round"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <line x1="4" y1="7" x2="20" y2="7" />
-                      <line x1="4" y1="12" x2="20" y2="12" />
-                      <line x1="4" y1="17" x2="20" y2="17" />
-                    </svg>
-                  </button>
-                </div>
-              </header>
-              )}
-
-              {/* ---------- 2. Ethereal body (hidden while composing) ---------- */}
-              {!composing ? (
-              <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col justify-center items-center px-5 pt-1 pb-4 text-center z-10">
-                <TransparentFluidOrb isListening={isListening} onActivate={handleMic} />
-
-                <h1 className="font-display text-[36px] sm:text-[39px] leading-[1.1] text-ink tracking-[-0.012em] mt-7 mb-1.5">
-                  What can I help you
-                  <br />
-                  with today&thinsp;?
-                </h1>
-
-                {!isCardExpanded && (
-                  <p className="text-[12.5px] text-muted leading-relaxed max-w-[290px] mb-7">
-                    English, Hindi or Hinglish — Aura shapes the rest.
-                  </p>
-                )}
-
-                {/* Occasion chips: show all or only the selected chip */}
-                {selectedChipId && selectedChip ? (
-                  <div className="flex items-center justify-center gap-2 max-w-[392px] mx-auto w-full aura-fade-in my-1">
-                    <div className="minimal-chip bg-card border-primary text-primary font-medium flex items-center gap-2 px-4 py-2 shadow-sm cursor-default">
-                      <span className="chip-icon text-primary">{selectedChip.icon || "✦"}</span>
-                      <span>{selectedChip.label}</span>
-                    </div>
+                <header className="relative px-5 pt-4 pb-2 flex items-end justify-between z-20 shrink-0">
+                  <div className="flex items-center select-none">
                     <button
                       type="button"
-                      onClick={handleDeselectChip}
-                      aria-label="Remove occasion filter and show all chips"
-                      className="h-9 px-3 rounded-full bg-inset hover:bg-selfill active:scale-95 text-muted hover:text-ink border border-hairline text-[12px] font-medium transition-all flex items-center gap-1.5"
+                      onClick={openHistory}
+                      aria-label="Open your conversation history"
+                      aria-haspopup="dialog"
+                      aria-expanded={historyOpen}
+                      className="min-h-[44px] -my-2 -ml-1 px-1 flex items-center rounded-lg hover:opacity-70 active:scale-95 transition-all duration-150"
                     >
-                      <span className="text-[11px]">✕</span>
-                      <span>Reset</span>
+                      <span className="font-display text-[28px] leading-[22px] tracking-[0.22px] text-ink pt-[3px]">
+                        Aura
+                      </span>
                     </button>
                   </div>
-                ) : isCardExpanded ? null : (
-                  <div className="flex flex-col items-center gap-2.5 max-w-[392px] mx-auto w-full transition-all duration-200">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      {CHIPS_DATA.slice(0, 3).map((chip) => (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          onClick={() => handleChipClick(chip)}
-                          className="minimal-chip"
-                        >
-                          <span className="chip-icon">{chip.icon}</span>
-                          <span>{chip.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      {CHIPS_DATA.slice(3).map((chip) => (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          onClick={() => handleChipClick(chip)}
-                          className="minimal-chip"
-                          aria-haspopup={chip.isMore ? "dialog" : undefined}
-                        >
-                          <span className="chip-icon">{chip.icon}</span>
-                          <span>{chip.label}</span>
-                        </button>
-                      ))}
-                    </div>
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => showToast("Stylist Desk — 3 master drapers available today")}
+                      className="min-h-[44px] -my-2 px-1 flex items-center rounded-lg text-primary text-[16px] font-medium hover:text-ink active:scale-95 transition-all duration-150"
+                    >
+                      Stylist Desk
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDrawerOpen(true)}
+                      aria-label="Open navigation menu"
+                      aria-haspopup="dialog"
+                      aria-expanded={drawerOpen}
+                      className="w-11 h-11 -my-2 -mr-2.5 rounded-lg flex items-center justify-center text-ink hover:text-primary active:scale-95 transition-all"
+                    >
+                      <svg
+                        width="22"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.1"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <line x1="3" y1="7" x2="21" y2="7" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="17" x2="21" y2="17" />
+                      </svg>
+                    </button>
                   </div>
-                )}
-              </main>
+                </header>
+              )}
+              {/* ---------- 2. Ethereal body (hidden while composing) ---------- */}
+              {!composing ? (
+                <main className="relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 pt-7 pb-5 z-10">
+                  <CategoryCarousel
+                    items={HOME_CATEGORIES}
+                    onOpen={openCategory}
+                    paused={drawerOpen || historyOpen || moreOpen || attachOpen}
+                  />
+
+                  {HOME_RAILS.map((rail) => (
+                    <GarmentRail key={rail.id} rail={rail} onPick={startGarmentChat} />
+                  ))}
+                </main>
               ) : (
                 /* Empty ground above the composer — tapping it dismisses the
                    keyboard and restores the home screen. */
@@ -1089,9 +1783,18 @@
                   aria-hidden="true"
                 />
               )}
-
               {/* ---------- 3. Floating conversation card ---------- */}
-              <div className="relative px-4 pb-2 pt-1 z-30 shrink-0">
+              <div className="relative px-4 pb-2 pt-1 z-40 shrink-0" ref={attachRef}>
+                {attachOpen && (
+                  <div className="absolute left-4 right-4 bottom-full z-50">
+                    <AttachmentPopup
+                      onPick={(opt) => {
+                        setAttachOpen(false);
+                        showToast(opt.hint);
+                      }}
+                    />
+                  </div>
+                )}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1100,9 +1803,39 @@
                   className={`minimal-floating-bar transition-all duration-300 ${
                     isCardExpanded
                       ? "flex flex-col justify-between p-4 sm:p-5 rounded-[26px] min-h-[148px] shadow-lg border-primary/40"
-                      : `flex items-center gap-1 pl-4 pr-1.5 py-1.5 ${isMultiline ? "rounded-[22px]" : "rounded-full"}`
+                      : `flex items-center gap-1 pl-1.5 pr-1.5 py-1.5 ${isMultiline ? "rounded-[22px]" : "rounded-full"}`
                   }`}
                 >
+                  {!isCardExpanded && (
+                    <button
+                      type="button"
+                      onClick={() => setAttachOpen((v) => !v)}
+                      aria-label="Add an attachment"
+                      aria-haspopup="menu"
+                      aria-expanded={attachOpen}
+                      className={`w-11 h-11 shrink-0 self-center rounded-full flex items-center justify-center transition-colors ${
+                        attachOpen
+                          ? "bg-primary text-onprimary"
+                          : "text-primary hover:bg-inset active:scale-95"
+                      }`}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                  )}
+
                   <label htmlFor="aura-ask" className="sr-only">
                     Describe your occasion for the Aura stylist
                   </label>
@@ -1257,7 +1990,6 @@
 
                 {!composing && <div className="home-pill-line" aria-hidden="true" />}
               </div>
-
               {/* ---------- More occasions sheet ---------- */}
               <Overlay
                 open={moreOpen}
@@ -1273,11 +2005,11 @@
                     <div>
                       <h2
                         id="more-sheet-title"
-                        className="font-display text-[21px] text-ink leading-tight"
+                        className="text-[22px] font-semibold text-ink leading-tight tracking-[-0.01em]"
                       >
                         More occasions
                       </h2>
-                      <p className="text-[12px] text-muted mt-0.5">
+                      <p className="text-[12.5px] text-muted leading-snug mt-1">
                         Pick one to load a starting brief — you can edit every word.
                       </p>
                     </div>
@@ -1317,7 +2049,7 @@
                         >
                           <span className="text-[14.5px] text-ink font-medium">{o.label}</span>
                           <span className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-[10.5px] text-muted">{o.lead}</span>
+                            <span className="text-[12.5px] text-muted">{o.lead}</span>
                             <svg
                               width="15"
                               height="15"
@@ -1339,12 +2071,105 @@
                     ))}
                   </ul>
 
-                  <p className="font-mono text-[10.5px] text-muted text-center mt-4">
+                  <p className="text-[11.5px] text-muted text-center mt-4">
                     Lead times shown for {activeCountry.flag} {activeCountry.symbol} delivery
                   </p>
                 </div>
               </Overlay>
+              {/* ---------- Chat history drawer (left) ---------- */}
+              <Overlay
+                open={historyOpen}
+                onClose={() => setHistoryOpen(false)}
+                labelledBy="history-title"
+                align="start"
+              >
+                <div className="bg-card w-4/5 max-w-xs h-full flex flex-col border-r border-hairline shadow-2xl drawer-slide-in-left">
+                  <div className="shrink-0 flex items-start justify-between gap-2 px-5 pt-5 pb-3 border-b border-hairline">
+                    <div className="min-w-0">
+                      <h2
+                        id="history-title"
+                        className="font-display text-[22px] text-ink leading-tight"
+                      >
+                        Your conversations
+                      </h2>
+                      <p className="text-[11.5px] text-muted leading-snug mt-0.5">
+                        {chatLog.length
+                          ? "Pick one up where you left it."
+                          : "Briefs you start will be listed here."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryOpen(false)}
+                      aria-label="Close conversation history"
+                      className="w-11 h-11 -mr-2 -mt-2 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset transition-colors shrink-0"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </div>
 
+                  <div className="flex-1 overflow-y-auto px-2 py-2">
+                    {chatLog.length === 0 ? (
+                      <p className="px-3 py-8 text-[13px] text-muted leading-relaxed text-center">
+                        No conversations yet. Tell Aura about an occasion and it will appear here.
+                      </p>
+                    ) : (
+                      <ul className="space-y-0.5">
+                        {chatLog.map((chat) => (
+                          <li key={chat.id}>
+                            <button
+                              type="button"
+                              onClick={() => openChat(chat)}
+                              className="w-full text-left px-3 py-2.5 min-h-[56px] rounded-xl hover:bg-inset active:scale-[0.99] transition-colors"
+                            >
+                              <span className="flex items-baseline justify-between gap-3">
+                                <span className="text-[13.5px] font-medium text-ink truncate">
+                                  {deriveChatTitle(chat.prompt)}
+                                </span>
+                                <span className="font-mono text-[10.5px] text-muted shrink-0">
+                                  {formatChatTime(chat.at)}
+                                </span>
+                              </span>
+                              <span className="block text-[11.5px] text-muted leading-snug mt-0.5 line-clamp-2">
+                                {chat.prompt}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {chatLog.length > 0 && (
+                    <div className="shrink-0 px-5 py-3 border-t border-hairline">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearChatLog();
+                          setChatLog([]);
+                          showToast("Conversation history cleared");
+                        }}
+                        className="min-h-[44px] -my-1 text-[12px] text-muted hover:text-ink transition-colors"
+                      >
+                        Clear history
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Overlay>
               {/* ---------- Navigation drawer ---------- */}
               <Overlay
                 open={drawerOpen}
@@ -1360,17 +2185,45 @@
                         <div className="flex items-center gap-3">
                           <span
                             aria-hidden="true"
-                            className="relative w-12 h-12 rounded-full bg-primary text-onprimary font-display text-[19px] border-2 border-gold/70 flex items-center justify-center shadow-sm"
+                            className="relative w-12 h-12 rounded-full bg-gold text-ink font-display text-[19px] flex items-center justify-center shadow-sm"
                           >
                             PS
-                            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#3F7A4B] border-2 border-card" />
                           </span>
                           <span className="flex flex-col">
-                            <span
-                              id="drawer-title"
-                              className="font-semibold text-[16px] text-ink leading-tight tracking-tight"
-                            >
-                              Priya Sharma
+                            <span className="flex items-center gap-1">
+                              <span
+                                id="drawer-title"
+                                className="font-semibold text-[16px] text-ink leading-tight tracking-tight"
+                              >
+                                Priya Sharma
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => (window.location.href = "profile.html")}
+                                aria-label="Edit your profile"
+                                className="w-11 h-11 -my-3 -ml-1 -mr-2.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset active:scale-95 transition-colors shrink-0"
+                              >
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path d="M12 20h9" />
+                                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                </svg>
+                              </button>
+                              <span
+                                className="w-2 h-2 rounded-full bg-[#3F7A4B] shrink-0"
+                                role="img"
+                                aria-label="Your stylist is online"
+                              />
                             </span>
                             <span className="font-mono text-[11px] text-muted mt-0.5">
                               Toronto, ON
@@ -1415,18 +2268,25 @@
                           {
                             id: "discover",
                             label: "02 · Discover",
+                            link: "discover.html",
                             desc: "Craft & regional provenance",
                           },
                           {
                             id: "design",
                             label: "03 · Design",
-                            link: "conversation.html",
-                            desc: "Active stylist workbench",
+                            link: "designers.html",
+                            desc: "The makers behind the cloth",
                           },
-                          { id: "wardrobe", label: "04 · Wardrobe", desc: "Memory & measurements" },
+                          {
+                            id: "wardrobe",
+                            label: "04 · Wardrobe",
+                            link: "wardrobe.html",
+                            desc: "Memory & measurements",
+                          },
                           {
                             id: "orders",
                             label: "05 · Orders",
+                            link: "orders.html",
                             desc: "Live artisan production tracker",
                           },
                         ].map((item) => (
@@ -1442,10 +2302,10 @@
                                 setDrawerOpen(false);
                                 showToast(`${item.label.split("· ")[1]} opens in the next release`);
                               }}
-                              className={`w-full text-left p-2.5 min-h-[52px] rounded-xl transition-colors ${
+                              className={`w-full text-left p-2.5 min-h-[52px] rounded-r-xl transition-colors border-l-[3px] ${
                                 item.active
-                                  ? "bg-inset text-primary font-semibold"
-                                  : "hover:bg-selfill text-ink"
+                                  ? "bg-inset text-primary font-semibold border-primary"
+                                  : "hover:bg-selfill text-ink border-transparent"
                               }`}
                             >
                               <span className="block text-[14px]">{item.label}</span>
@@ -1471,12 +2331,7 @@
                         role="group"
                         aria-labelledby="ship-to-label"
                       >
-                        {[
-                          { code: "US", symbol: "US $", flag: "🇺🇸" },
-                          { code: "UK", symbol: "UK £", flag: "🇬🇧" },
-                          { code: "CA", symbol: "CA $", flag: "🇨🇦" },
-                          { code: "IN", symbol: "INR ₹", flag: "🇮🇳" },
-                        ].map((c) => (
+                        {SHIP_TO_COUNTRIES.map((c) => (
                           <button
                             key={c.code}
                             type="button"
@@ -1495,15 +2350,21 @@
                           </button>
                         ))}
                       </div>
-                      <p className="text-[11px] text-muted leading-snug pt-1">
-                        Landed duties, taxes and feasible artisan lead times update automatically.
-                      </p>
                     </div>
                   </div>
 
-                  <p className="pt-6 mt-4 border-t border-hairline text-center text-muted text-[11px] font-mono">
-                    Aura v1.0 · Perfect Fit Guarantee
-                  </p>
+                  {/* Landed-cost disclosure sits at the foot of the drawer
+                      (Figma 31:1282) and restates the selected market. */}
+                  <div className="pt-6">
+                    <p className="text-[11px] text-muted leading-snug">
+                      Prices are landed to {activeCountry.code} — {activeCountry.duty},{" "}
+                      {activeCountry.courier}. Nothing is added at checkout.
+                    </p>
+                    <div className="flex items-center justify-between gap-3 pt-3 mt-3 border-t border-hairline text-muted text-[11px] font-mono">
+                      <span>Aura v1.0</span>
+                      <span className="text-ink">Perfect Fit Guarantee</span>
+                    </div>
+                  </div>
                 </div>
               </Overlay>
             </div>

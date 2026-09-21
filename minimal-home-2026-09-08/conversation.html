@@ -54,7 +54,7 @@
 
     <style>
       :root {
-        --canvas-rgb: 251 248 243;
+        --canvas-rgb: 243 239 231; /* #F3EFE7 Warm Ivory · surface-0 (Figma 1:2285) */
         --card-rgb: 255 255 255;
         --inset-rgb: 243 238 228;
         --primary-rgb: 59 42 90;
@@ -198,11 +198,40 @@
           border-color 0.22s ease;
       }
 
+      /* Attachment popup — Figma 36:1267. Frosted glass over the canvas. */
+      .attachment-popup {
+        background: rgb(255 255 255 / 0.7);
+        border: 1px solid rgb(255 255 255 / 0.6);
+        box-shadow: 0 4px 20px 0 rgb(0 0 0 / 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .attachment-popup {
+          background: var(--card);
+          border-color: rgb(var(--hairline-rgb) / 0.9);
+        }
+      }
+
       .composer-bar:focus-within {
         border-color: rgb(var(--primary-rgb) / 0.75);
         box-shadow:
           0 16px 40px -8px rgb(var(--primary-rgb) / 0.2),
           0 0 0 3px rgb(var(--primary-rgb) / 0.1);
+      }
+
+      /* The reply field is measured in JS to grow it line by line, so its
+         metrics live here rather than in Tailwind's async JIT sheet -- those
+         classes land after the first measurement and size it short. */
+      .aura-reply-field {
+        font-size: 16px;
+        line-height: 22px;
+        padding: 6px 44px 6px 0;
+      }
+
+      .aura-reply-field.is-open {
+        padding: 2px 32px 2px 0;
       }
 
       .home-pill-line {
@@ -306,6 +335,34 @@
         animation-delay: 0.32s;
       }
 
+      @keyframes auraSlideFromRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .drawer-slide-in {
+        animation: auraSlideFromRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .aura-fade-in {
+        animation: auraFadeIn 0.18s ease-out forwards;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -328,7 +385,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useState, useRef, useEffect, useCallback } = React;
+      const { useState, useRef, useEffect, useLayoutEffect, useCallback } = React;
 
       const reducedMotion = () =>
         typeof window.matchMedia === "function" &&
@@ -503,7 +560,8 @@
               type: "Antique Choker & Jhumka Set",
               craft: "Uncut Polki & Colombian emerald bead drops",
               image: "images/jewelry_heritage.jpg",
-              pairingNote: "Antique 22k gold tones harmonize with Varanasi kadhwa gold zari weaving.",
+              pairingNote:
+                "Antique 22k gold tones harmonize with Varanasi kadhwa gold zari weaving.",
             },
             note: `${piece} in pure mulberry silk with a restrained gold zari border. Weight and drape that photograph beautifully in warm light.`,
             fabric: "Pure mulberry silk, kadhwa woven zari",
@@ -547,7 +605,8 @@
               type: "Meenakari Chandbalis & Choker",
               craft: "Hand-painted enamel & tourmaline drops",
               image: "images/jewelry_featherweight.jpg",
-              pairingNote: "Airy pastel hues match lightweight organza and delicate hand Chikankari.",
+              pairingNote:
+                "Airy pastel hues match lightweight organza and delicate hand Chikankari.",
             },
             note: `Built for long events and warm rooms. Under 900g finished, packs flat, and holds its shape after a full day of wear.`,
             fabric: "Silk organza, hand aari embroidery",
@@ -569,7 +628,8 @@
               type: "Heritage Hasli & Earring Set",
               craft: "Cabochon rubies & 22k antique gold Jadau",
               image: "images/jewelry_regal.jpg",
-              pairingNote: "Regal ruby warmth anchors deep wine velvet and raised metallic zardozi.",
+              pairingNote:
+                "Regal ruby warmth anchors deep wine velvet and raised metallic zardozi.",
             },
             note: `The most formal of the four — silk velvet carrying raised zardozi on the bodice and hem. Built for evening light and photographs.`,
             fabric: "Silk velvet, raised zardozi handwork",
@@ -584,18 +644,963 @@
       }
 
       /* Framings of the garment photograph and the paired jewelry close-up. */
+      /* ===================================================================
+       PIECES YOU CAN ARRIVE WITH
+       Tapping a garment on home opens this screen with that piece attached
+       to your opening line. Four of them are the same pieces the stylist
+       offers as directions, so they reuse those records rather than
+       restating them; the rest are described here.
+       =================================================================== */
+      const TILE_TO_DIRECTION = {
+        "regal-lehenga": "regal",
+        "heritage-lehenga": "heritage",
+        "featherweight-lehenga": "light",
+        "modern-saree": "modern",
+      };
+
+      const EXTRA_PIECES = {
+        "kundan-bridal": {
+          id: "kundan-bridal",
+          name: "Velvet bridal, kundan set",
+          short: "Velvet bodice with kundan",
+          craft: "Zardozi bodice \u00b7 Lucknow",
+          image: "images/jewelry_heritage.jpg",
+          note: "A wine velvet bodice worked in raised zardozi, shown with the uncut kundan collar it was built around. The two are cut and set together so the necklace sits above the work rather than on it.",
+          fabric: "Silk velvet, raised zardozi, 22k-plated kundan",
+          weight: "Approx. 2.4 kg finished",
+          care: "Dry clean only \u00b7 never fold across the work",
+          includes: "Bodice, skirt, dupatta \u00b7 jewellery sold separately",
+          from: 980,
+          weeks: "5 to 7 weeks",
+          swatch: ["#5A1226", "#C89B3C", "#E8D9B5"],
+        },
+        "kanjivaram-saree": {
+          id: "kanjivaram-saree",
+          name: "Temple border Kanjivaram",
+          short: "Korvai join, temple border",
+          craft: "Korvai join \u00b7 Kanchipuram",
+          image: "images/kanjivaram_gold.png",
+          note: "Body and border woven separately and joined by hand at the loom \u2014 the korvai join is what gives the border its weight and that clean colour break. Heavy, and meant to be.",
+          fabric: "Pure mulberry silk, three-ply zari",
+          weight: "Approx. 800 g",
+          care: "Dry clean \u00b7 rotate folds every few months",
+          includes: "Saree with unstitched blouse piece",
+          from: 710,
+          weeks: "3 to 5 weeks",
+          swatch: ["#7B1E3B", "#C89B3C", "#E4D2A8"],
+        },
+        "family-silks": {
+          id: "family-silks",
+          name: "Gold tissue silks",
+          short: "Matched family commission",
+          craft: "Family commission \u00b7 Kanchipuram",
+          image: "images/family_silks.png",
+          note: "One warp, cut for a whole family \u2014 saree, sherwani and two smaller pieces, all from the same tissue so the gold reads identically across every photograph.",
+          fabric: "Gold tissue silk, matched dye lot",
+          weight: "Varies by piece",
+          care: "Dry clean only \u00b7 store flat in muslin",
+          includes: "Priced per piece \u00b7 measured together",
+          from: 540,
+          weeks: "6 to 8 weeks",
+          swatch: ["#C89B3C", "#E8D9B5", "#F3EEE4"],
+        },
+        "blush-pastel": {
+          id: "blush-pastel",
+          name: "Blush silk, pastel set",
+          short: "Raw silk with meenakari",
+          craft: "Meenakari pairing \u00b7 Jaipur",
+          image: "images/jewelry_featherweight.jpg",
+          note: "Blush raw silk paired with hand-enamelled meenakari and freshwater pearl. Built for daytime \u2014 mehendi, haldi, a morning ceremony where heavy gold reads wrong.",
+          fabric: "Raw silk, hand-enamelled meenakari, pearl",
+          weight: "Under 700 g",
+          care: "Dry clean \u00b7 keep enamel away from scent",
+          includes: "Drape and blouse \u00b7 jewellery sold separately",
+          from: 460,
+          weeks: "3 to 4 weeks",
+          swatch: ["#E9C9CE", "#C89B3C", "#F4EEE8"],
+        },
+      };
+
+      // Null whenever the key names nothing we can actually describe, so the
+      // attachment stays a picture rather than a button that opens nothing.
+      function pieceFor(key, directions) {
+        if (!key) return null;
+        const dirId = TILE_TO_DIRECTION[key];
+        if (dirId) return directions.find((d) => d.id === dirId) || null;
+        return EXTRA_PIECES[key] || null;
+      }
+
+      /* ===================================================================
+       SEE FIT
+       The measurements a piece would be cut to, shown before anything is
+       cut. They come from the same store the Profile and Wardrobe screens
+       write to, so all three agree. You either confirm them or replace them.
+       =================================================================== */
+      const FIT_STORE = "aura.profile.v1";
+
+      const FIT_ROWS = [
+        { k: "bust", label: "Bust" },
+        { k: "waist", label: "Waist" },
+        { k: "hip", label: "Hip" },
+        { k: "shoulder", label: "Shoulder" },
+        { k: "sleeve", label: "Sleeve length" },
+        { k: "length", label: "Garment length" },
+        { k: "height", label: "Height" },
+      ];
+
+      // What the Profile screen starts from, so the thread never shows blanks
+      // to somebody who has simply never opened Profile.
+      const FIT_SEED = {
+        unit: "in",
+        bust: "36",
+        waist: "30",
+        hip: "39",
+        shoulder: "15",
+        sleeve: "22",
+        length: "41",
+        height: "5'5\"",
+        fitNote: "",
+      };
+
+      function readFit() {
+        try {
+          const raw = window.localStorage.getItem(FIT_STORE);
+          const saved = raw ? JSON.parse(raw) : null;
+          return Object.assign({}, FIT_SEED, saved && typeof saved === "object" ? saved : {});
+        } catch (e) {
+          return Object.assign({}, FIT_SEED);
+        }
+      }
+
+      /* Family members and their measurements, as the Wardrobe screen keeps
+         them. Read-only here — this screen only picks from the list. */
+      const FIT_FAMILY_STORE = "aura.family.v1";
+
+      function readFitPeople() {
+        const self = readFit();
+        const people = [
+          {
+            id: "self",
+            name: "Your measurements",
+            relation: "",
+            m: self,
+            values:
+              self.measuredCount !== undefined
+                ? self.measuredCount
+                : FIT_ROWS.filter((r) => (self[r.k] || "").trim()).length,
+            updated: self.measuredAt || "",
+          },
+        ];
+
+        try {
+          const raw = window.localStorage.getItem(FIT_FAMILY_STORE);
+          const saved = raw ? JSON.parse(raw) : null;
+          if (Array.isArray(saved)) {
+            saved.forEach((f) => {
+              people.push({
+                id: f.id,
+                name: f.name,
+                relation: f.relation || "",
+                m: Object.assign({}, FIT_SEED, f.m || {}),
+                values: f.values || 0,
+                updated: f.updated || "",
+              });
+            });
+          }
+        } catch (e) {
+          /* nobody saved yet, or storage is blocked */
+        }
+
+        return people;
+      }
+
+      function writeFit(values) {
+        try {
+          const raw = window.localStorage.getItem(FIT_STORE);
+          const saved = raw ? JSON.parse(raw) : {};
+          const next = Object.assign({}, saved, values, {
+            measuredAt: fitStamp(),
+            measuredCount: FIT_ROWS.filter((r) => (values[r.k] || "").trim()).length,
+          });
+          window.localStorage.setItem(FIT_STORE, JSON.stringify(next));
+          return next;
+        } catch (e) {
+          return Object.assign({}, values);
+        }
+      }
+
+      function fitStamp() {
+        const d = new Date();
+        const m = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        return "Updated " + d.getDate() + " " + m[d.getMonth()] + " " + d.getFullYear();
+      }
+
+      /* ===================================================================
+       CHECKOUT
+       Reached by confirming the measurements a piece will be cut to. Every
+       price in Aura is landed, so there is nothing to add here — the summary
+       restates what was agreed and the order is placed against it.
+       =================================================================== */
+      /* Which kind of payment, not the credentials. Card and account numbers
+         are taken by the payment provider on its own screen, never here. */
+      const PAY_METHODS = [
+        { id: "credit", label: "Credit card", note: "Visa, Mastercard, Amex" },
+        { id: "debit", label: "Debit card", note: "Visa, Mastercard, RuPay" },
+        { id: "upi", label: "UPI", note: "Any UPI app" },
+      ];
+
+      function CheckoutPanel({ piece, who, ship, onBack, onPlace }) {
+        const panelRef = useRef(null);
+        const restoreRef = useRef(null);
+        const [placing, setPlacing] = useState(false);
+        const [payOpen, setPayOpen] = useState(false);
+        const [payMethod, setPayMethod] = useState("credit");
+        const [card, setCard] = useState({ number: "", name: "", exp: "", cvc: "" });
+        const [upi, setUpi] = useState("");
+        const chosenPay =
+          PAY_METHODS.find((m) => m.id === payMethod) || PAY_METHODS[0];
+
+        const isCard = payMethod === "credit" || payMethod === "debit";
+        const digits = card.number.replace(/\D/g, "");
+
+        /* Enough to know the field was filled in, not a validity check — a
+           real one belongs to the payment provider, along with the details
+           themselves. */
+        const payReady = isCard
+          ? digits.length >= 12 &&
+            card.name.trim().length > 1 &&
+            /^\d{2}\/\d{2}$/.test(card.exp) &&
+            /^\d{3,4}$/.test(card.cvc)
+          : /^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upi.trim());
+
+        const setCardField = (k) => (v) =>
+          setCard((c) => Object.assign({}, c, { [k]: v }));
+
+        useEffect(() => {
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+          if (panelRef.current) panelRef.current.focus();
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onBack();
+            }
+          };
+          document.addEventListener("keydown", onKey, true);
+          return () => {
+            document.removeEventListener("keydown", onKey, true);
+            document.body.classList.remove("aura-locked");
+            const r = restoreRef.current;
+            if (r && typeof r.focus === "function") r.focus();
+          };
+        }, [onBack]);
+
+        const [courierName, courierDays] = (ship.courier || " · ").split(" · ");
+        const total = piece.from ? ship.symbol + piece.from : "—";
+        const cutFor = who.id === "self" ? "your measurements" : who.name + "'s measurements";
+
+        return (
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-title"
+            tabIndex={-1}
+            className="absolute inset-0 z-50 bg-canvas flex flex-col focus:outline-none aura-fade-in"
+          >
+            <header className="shrink-0 flex items-center gap-1 px-2 pt-3 pb-2 border-b border-hairline bg-canvas">
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label="Back to your conversation"
+                className="flex items-center gap-1 min-h-[44px] pl-1.5 pr-3 rounded-full text-ink hover:bg-inset active:scale-95 transition-all shrink-0"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+                <span className="text-[13.5px] font-medium">Back to chat</span>
+              </button>
+              <div className="min-w-0 flex-1 text-right pr-2">
+                <h1
+                  id="checkout-title"
+                  className="font-display text-[20px] text-primary leading-tight truncate"
+                >
+                  Checkout
+                </h1>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto thread-scroll px-4 pt-4 pb-6">
+              <h2 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mb-2">
+                Order summary
+              </h2>
+
+              <div className="bg-card border border-hairline rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-3 p-3">
+                  <span className="shrink-0 w-[58px] h-[76px] rounded-xl overflow-hidden bg-inset border border-hairline">
+                    {piece.image ? (
+                      <img
+                        src={piece.image}
+                        alt={piece.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className="block w-full h-full"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 7px)",
+                        }}
+                      />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-medium text-ink leading-snug">
+                      {piece.name}
+                    </span>
+                    {piece.craft && (
+                      <span className="block text-[11.5px] text-muted leading-snug mt-0.5">
+                        {piece.craft}
+                      </span>
+                    )}
+                    <span className="block font-mono text-[10.5px] text-muted mt-1.5">
+                      Cut to {cutFor}
+                    </span>
+                  </span>
+                </div>
+
+                <dl className="border-t border-hairline divide-y divide-hairline">
+                  <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                    <dt className="text-[12.5px] text-muted">Garment, cut to measure</dt>
+                    <dd className="font-mono text-[13px] text-ink">{total}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                    <dt className="text-[12.5px] text-muted">{ship.duty}</dt>
+                    <dd className="font-mono text-[13px] text-muted">Included</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                    <dt className="text-[12.5px] text-muted">{courierName}</dt>
+                    <dd className="font-mono text-[13px] text-muted">Included</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3 px-4 py-3 bg-inset/50">
+                    <dt className="text-[13px] font-medium text-ink">Total, landed</dt>
+                    <dd className="font-mono text-[17px] text-ink">{total}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <h2 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mt-5 mb-2">
+                Delivery
+              </h2>
+              <div className="bg-card border border-hairline rounded-2xl px-4 py-3">
+                <p className="text-[13px] text-ink leading-snug">{courierName}</p>
+                <p className="font-mono text-[10.5px] text-muted mt-1">
+                  {courierDays} once the piece is approved and dispatched
+                </p>
+              </div>
+
+              <h2 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mt-5 mb-2">
+                Payment
+              </h2>
+              <div className="bg-card border border-hairline rounded-2xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPayOpen((v) => !v)}
+                  aria-expanded={payOpen}
+                  aria-controls="pay-methods"
+                  className="w-full text-left px-4 py-3 flex items-center justify-between gap-3 hover:bg-inset/50 transition-all"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[13px] text-ink leading-snug">
+                      {chosenPay.label}
+                    </span>
+                    <span className="block font-mono text-[10.5px] text-muted mt-1 truncate">
+                      {chosenPay.note}
+                    </span>
+                  </span>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                    className={
+                      "shrink-0 text-muted transition-transform " +
+                      (payOpen ? "rotate-180" : "")
+                    }
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+
+                {payOpen && (
+                  <div
+                    id="pay-methods"
+                    role="radiogroup"
+                    aria-label="Payment method"
+                    className="border-t border-hairline p-2 flex flex-col gap-1.5 aura-fade-in"
+                  >
+                    {PAY_METHODS.map((pm) => {
+                      const on = pm.id === payMethod;
+                      return (
+                        <button
+                          key={pm.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => {
+                            setPayMethod(pm.id);
+                            setPayOpen(false);
+                          }}
+                          className={
+                            "w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.99] " +
+                            (on
+                              ? "border-primary bg-inset/60"
+                              : "border-hairline hover:border-primary/45")
+                          }
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={
+                              "shrink-0 w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center " +
+                              (on ? "border-primary" : "border-ctrl")
+                            }
+                          >
+                            {on && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-medium text-ink truncate">
+                              {pm.label}
+                            </span>
+                            <span className="block font-mono text-[10px] text-muted truncate mt-0.5">
+                              {pm.note}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {isCard ? (
+                <div className="bg-card border border-hairline rounded-2xl p-4 mt-2.5 aura-fade-in">
+                  <label
+                    htmlFor="pay-number"
+                    className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                  >
+                    Card number
+                  </label>
+                  <input
+                    id="pay-number"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    value={card.number}
+                    onChange={(e) =>
+                      setCardField("number")(
+                        e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 16)
+                          .replace(/(.{4})/g, "$1 ")
+                          .trim()
+                      )
+                    }
+                    placeholder="0000 0000 0000 0000"
+                    style={{ fontSize: 16 }}
+                    className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink font-mono placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+                  />
+
+                  <label
+                    htmlFor="pay-name"
+                    className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5 mt-3.5"
+                  >
+                    Name on card
+                  </label>
+                  <input
+                    id="pay-name"
+                    type="text"
+                    autoComplete="cc-name"
+                    value={card.name}
+                    onChange={(e) => setCardField("name")(e.target.value)}
+                    placeholder="As printed on the card"
+                    style={{ fontSize: 16 }}
+                    className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+                  />
+
+                  <div className="grid grid-cols-2 gap-3 mt-3.5">
+                    <div>
+                      <label
+                        htmlFor="pay-exp"
+                        className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                      >
+                        Expiry
+                      </label>
+                      <input
+                        id="pay-exp"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-exp"
+                        value={card.exp}
+                        onChange={(e) => {
+                          const d = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setCardField("exp")(
+                            d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d
+                          );
+                        }}
+                        placeholder="MM/YY"
+                        style={{ fontSize: 16 }}
+                        className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink font-mono placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="pay-cvc"
+                        className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                      >
+                        CVC
+                      </label>
+                      <input
+                        id="pay-cvc"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-csc"
+                        value={card.cvc}
+                        onChange={(e) =>
+                          setCardField("cvc")(e.target.value.replace(/\D/g, "").slice(0, 4))
+                        }
+                        placeholder="123"
+                        style={{ fontSize: 16 }}
+                        className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink font-mono placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-card border border-hairline rounded-2xl p-4 mt-2.5 aura-fade-in">
+                  <label
+                    htmlFor="pay-upi"
+                    className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                  >
+                    UPI ID
+                  </label>
+                  <input
+                    id="pay-upi"
+                    type="text"
+                    inputMode="email"
+                    autoComplete="off"
+                    value={upi}
+                    onChange={(e) => setUpi(e.target.value)}
+                    placeholder="yourname@bank"
+                    style={{ fontSize: 16 }}
+                    className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink font-mono placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+                  />
+                  <p className="text-[11.5px] text-muted leading-relaxed mt-2">
+                    You will approve the request in your UPI app.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-[11.5px] text-muted leading-relaxed mt-4">
+                Nothing is charged until Meera confirms the brief. You approve photographs of the
+                finished garment before it is dispatched.
+              </p>
+            </div>
+
+            <div className="shrink-0 px-4 py-3 bg-canvas">
+              <button
+                type="button"
+                disabled={placing || !payReady}
+                onClick={() => {
+                  setPlacing(true);
+                  onPlace();
+                }}
+                className="w-full min-h-[52px] rounded-full bg-primary text-onprimary text-[14.5px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
+              >
+                {placing
+                  ? "Placing\u2026"
+                  : payReady
+                    ? "Place order"
+                    : isCard
+                      ? "Add card details"
+                      : "Add your UPI ID"}
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      /* Every set on file — yours and each family member's — so the piece can
+         be cut for whoever it is actually for. Picking one shows its figures. */
+      function FitCard({ people, chosenId, onChoose, pieceName }) {
+        const chosen = people.find((p) => p.id === chosenId) || people[0];
+        const fit = chosen.m;
+
+        return (
+          <div className="mt-2.5 bg-card border border-hairline rounded-2xl overflow-hidden">
+            <div className="px-4 pt-3 pb-2">
+              <h4 className="font-display text-[16px] text-ink leading-tight">
+                Whose measurements?
+              </h4>
+            </div>
+
+            <div
+              className="px-3 pb-3 flex flex-col gap-1.5"
+              role="radiogroup"
+              aria-label="Measurements on file"
+            >
+              {people.map((p) => {
+                const on = p.id === chosen.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => onChoose(p.id)}
+                    className={
+                      "w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all active:scale-[0.99] " +
+                      (on
+                        ? "border-primary bg-inset/60"
+                        : "border-hairline hover:border-primary/45")
+                    }
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={
+                        "shrink-0 w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center " +
+                        (on ? "border-primary" : "border-ctrl")
+                      }
+                    >
+                      {on && <span className="w-2 h-2 rounded-full bg-primary" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-medium text-ink truncate">
+                        {p.name}
+                        {p.relation && (
+                          <span className="text-muted font-normal">{" \u00b7 " + p.relation}</span>
+                        )}
+                      </span>
+                      <span className="block font-mono text-[10px] text-muted truncate mt-0.5">
+                        {p.values
+                          ? p.values + " values" + (p.updated ? " \u00b7 " + p.updated : "")
+                          : "No measurements yet"}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="px-4 pt-3 pb-2 flex items-baseline justify-between gap-3 border-t border-hairline">
+              <h4 className="font-display text-[16px] text-ink leading-tight truncate">
+                {chosen.name}
+              </h4>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted shrink-0">
+                {fit.unit === "cm" ? "Centimetres" : "Inches"}
+              </span>
+            </div>
+            <dl className="divide-y divide-hairline border-t border-hairline">
+              {FIT_ROWS.map((r) => (
+                <div key={r.k} className="flex items-baseline justify-between gap-3 px-4 py-2">
+                  <dt className="font-mono text-[10.5px] uppercase tracking-wider text-muted">
+                    {r.label}
+                  </dt>
+                  <dd className="font-mono text-[13px] text-ink">
+                    {(fit[r.k] || "").trim() || "—"}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {fit.fitNote && (fit.fitNote || "").trim() ? (
+              <p className="px-4 py-2.5 text-[12px] text-muted leading-relaxed border-t border-hairline">
+                {fit.fitNote}
+              </p>
+            ) : null}
+            {pieceName && (
+              <p className="px-4 py-2.5 font-mono text-[10px] text-muted border-t border-hairline">
+                {pieceName} would be cut to these
+              </p>
+            )}
+          </div>
+        );
+      }
+
+      /* Confirm them, or replace them. Nothing is cut until one is chosen. */
+      function FitChoiceCard({ onApprove, onUpdate }) {
+        return (
+          <div className="mt-2.5 bg-inset/60 border border-hairline rounded-2xl p-4">
+            <p className="text-[13px] text-ink leading-relaxed">
+              Are these still right? A piece is cut to them once you confirm.
+            </p>
+            <div className="flex flex-col gap-2 mt-3">
+              <button
+                type="button"
+                onClick={onApprove}
+                className="w-full min-h-[48px] px-4 rounded-full bg-primary text-onprimary text-[13.5px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+              >
+                Yes, cut to these
+              </button>
+              <button
+                type="button"
+                onClick={onUpdate}
+                aria-haspopup="dialog"
+                className="w-full min-h-[48px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium hover:bg-inset active:scale-95 transition-all"
+              >
+                Add new measurements
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      /* The same seven points the Profile screen asks for. */
+      function FitSheet({ initial, onClose, onSave }) {
+        const panelRef = useRef(null);
+        const restoreRef = useRef(null);
+        const [form, setForm] = useState(() => Object.assign({}, FIT_SEED, initial || {}));
+        const set = (k) => (v) => setForm((f) => Object.assign({}, f, { [k]: v }));
+
+        useEffect(() => {
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+          if (panelRef.current) panelRef.current.focus();
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose();
+            }
+          };
+          document.addEventListener("keydown", onKey, true);
+          return () => {
+            document.removeEventListener("keydown", onKey, true);
+            document.body.classList.remove("aura-locked");
+            const r = restoreRef.current;
+            if (r && typeof r.focus === "function") r.focus();
+          };
+        }, [onClose]);
+
+        return (
+          <div
+            className="absolute inset-0 z-50 aura-fade-in"
+            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="fit-sheet-title"
+              tabIndex={-1}
+              className="absolute inset-x-0 bottom-0 h-[92%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+            >
+              <div className="relative shrink-0 pt-2.5 pb-1">
+                <span
+                  className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+                  aria-hidden="true"
+                />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close without changing your measurements"
+                  className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto thread-scroll px-5 pt-2 pb-6">
+                <h2
+                  id="fit-sheet-title"
+                  className="font-display text-[22px] leading-tight text-ink mb-4"
+                >
+                  New measurements
+                </h2>
+
+                <span
+                  id="fit-unit-label"
+                  className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                >
+                  Units
+                </span>
+                <div
+                  className="flex items-stretch border-b border-hairline mb-3.5"
+                  role="group"
+                  aria-labelledby="fit-unit-label"
+                >
+                  {[
+                    { id: "in", label: "Inches" },
+                    { id: "cm", label: "Centimetres" },
+                  ].map((u) => {
+                    const on = form.unit === u.id;
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => set("unit")(u.id)}
+                        className={
+                          "relative min-h-[44px] px-4 -mb-px border-b-2 text-[13px] font-mono transition-colors " +
+                          (on
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted hover:text-ink")
+                        }
+                      >
+                        {u.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {FIT_ROWS.filter((r) => r.k !== "height").map((r) => (
+                    <div key={r.k}>
+                      <label
+                        htmlFor={"fit-" + r.k}
+                        className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                      >
+                        {r.label} ({form.unit})
+                      </label>
+                      <input
+                        id={"fit-" + r.k}
+                        type="text"
+                        inputMode="decimal"
+                        value={form[r.k] || ""}
+                        onChange={(e) => set(r.k)(e.target.value)}
+                        style={{ fontSize: 16 }}
+                        className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3.5">
+                  <label
+                    htmlFor="fit-height"
+                    className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                  >
+                    Height
+                  </label>
+                  <input
+                    id="fit-height"
+                    type="text"
+                    value={form.height || ""}
+                    onChange={(e) => set("height")(e.target.value)}
+                    style={{ fontSize: 16 }}
+                    className="w-full min-h-[48px] px-3.5 rounded-xl border border-hairline bg-card text-ink focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+
+                <div className="mt-3.5">
+                  <label
+                    htmlFor="fit-note"
+                    className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+                  >
+                    Fit notes
+                  </label>
+                  <textarea
+                    id="fit-note"
+                    rows={3}
+                    value={form.fitNote || ""}
+                    onChange={(e) => set("fitNote")(e.target.value)}
+                    placeholder="Anything a draper should know — posture, a shoulder that sits lower, sleeves you prefer looser."
+                    style={{ fontSize: 16 }}
+                    className="w-full px-3.5 py-3 rounded-xl border border-hairline bg-card text-ink placeholder:text-muted resize-none focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="shrink-0 border-t border-hairline px-5 py-3 flex items-center gap-2.5 bg-card">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="min-h-[48px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13px] font-medium hover:bg-inset active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSave(form)}
+                  className="flex-1 min-h-[48px] px-5 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+                >
+                  Save and use these
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       function getViewsForDirection(d) {
         return [
-          { id: "full", label: "Full length", image: d.image, scale: 1, origin: "50% 50%", fit: "contain" },
-          { id: "bodice", label: "Bodice & neckline", image: d.image, scale: 2.1, origin: "50% 20%" },
+          {
+            id: "full",
+            label: "Full length",
+            image: d.image,
+            scale: 1,
+            origin: "50% 50%",
+            fit: "contain",
+          },
+          {
+            id: "bodice",
+            label: "Bodice & Neckline",
+            image: d.image,
+            scale: 2.1,
+            origin: "50% 20%",
+          },
           {
             id: "jewelry",
-            label: "✨ Jewelry Pairing · Close-up",
+            label: "Jewellery pairing",
             image: d.jewelry && d.jewelry.image ? d.jewelry.image : d.image,
             isJewelry: true,
             fit: "cover",
           },
-          { id: "hem", label: "Hem & border", image: d.image, scale: 2.1, origin: "50% 86%" },
+          { id: "hem", label: "Hem & Border", image: d.image, scale: 2.1, origin: "50% 86%" },
         ];
       }
 
@@ -626,7 +1631,10 @@
         }
         if (/\bbudget|cheap|afford|cost|price|expensive\b/.test(t)) {
           const b = brief.budget ? `your ${brief.budget} budget` : "your budget";
-          const cheapest = directions.slice().sort((a, x) => a.from - x.from).slice(0, 2);
+          const cheapest = directions
+            .slice()
+            .sort((a, x) => a.from - x.from)
+            .slice(0, 2);
           return {
             text: `Every price shown is landed — fabric, tailoring, ${ship.duty.toLowerCase()} and ${ship.courier.split(" · ")[0]} shipping to ${ship.code}. Nothing is added at checkout. If ${b} is firm, say so and I'll only show directions that finish inside it.`,
             cardsLabel: `Gentlest on ${brief.budget ? "the budget" : "spend"} · landed to ${ship.code}`,
@@ -644,8 +1652,16 @@
           return {
             text: "Two options. Send measurements from a tailor you already trust, or do a 6-minute guided video fitting with one of our drapers — they'll take 14 points and note posture. Either way, you approve photos of the finished piece before it's dispatched, and alterations are covered under the Perfect Fit Guarantee.",
             steps: [
-              { k: "01", label: "Measure", note: "Your tailor, or a 6-minute video fitting · 14 points" },
-              { k: "02", label: "Approve", note: "Photographs of the finished garment before dispatch" },
+              {
+                k: "01",
+                label: "Measure",
+                note: "Your tailor, or a 6-minute video fitting · 14 points",
+              },
+              {
+                k: "02",
+                label: "Approve",
+                note: "Photographs of the finished garment before dispatch",
+              },
               { k: "03", label: "Alter", note: "Covered under the Perfect Fit Guarantee" },
             ],
           };
@@ -665,6 +1681,114 @@
       /* ===================================================================
        PRESENTATIONAL PIECES
        =================================================================== */
+      /* ===================================================================
+       WISHLIST
+       Saved pieces, shared by every surface that shows a garment — the
+       suggestion cards, the list rows and the detail sheet. Kept in
+       localStorage so a heart tapped on Discover is still filled when the
+       same piece turns up in a conversation.
+
+       Storage is best-effort: a private window or blocked site data throws,
+       and the hearts simply behave as an unsaved session.
+       =================================================================== */
+      const WISHLIST_KEY = "aura.wishlist";
+
+      function readWishlist() {
+        try {
+          const raw = window.localStorage.getItem(WISHLIST_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function writeWishlist(ids) {
+        try {
+          window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+        } catch (e) {
+          /* saving is a convenience, never a blocker */
+        }
+      }
+
+      // One source of truth per screen, so a heart tapped on a card updates
+      // the sheet sitting on top of it and vice versa.
+      function useWishlist() {
+        const [ids, setIds] = useState(readWishlist);
+
+        const toggle = useCallback((id) => {
+          if (!id) return;
+          setIds((cur) => {
+            const next = cur.indexOf(id) === -1 ? cur.concat(id) : cur.filter((x) => x !== id);
+            writeWishlist(next);
+            return next;
+          });
+        }, []);
+
+        // Another tab, or a return trip through the back button.
+        useEffect(() => {
+          const sync = (e) => {
+            if (!e || e.key === WISHLIST_KEY) setIds(readWishlist());
+          };
+          window.addEventListener("storage", sync);
+          window.addEventListener("pageshow", sync);
+          return () => {
+            window.removeEventListener("storage", sync);
+            window.removeEventListener("pageshow", sync);
+          };
+        }, []);
+
+        return {
+          ids,
+          saved: (id) => ids.indexOf(id) !== -1,
+          toggle,
+        };
+      }
+
+      /* `tone="overlay"` sits on a photograph; `tone="plain"` on a light
+         surface. Saved flips to a filled plum heart on white either way. */
+      function HeartButton({ saved, onToggle, name, tone, className }) {
+        const overlay = tone !== "plain";
+        const base =
+          "shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90";
+        const skin = saved
+          ? "bg-card text-primary shadow-sm border border-hairline"
+          : overlay
+            ? "bg-black/35 text-white border border-white/25 hover:bg-black/55"
+            : "bg-card text-muted border border-hairline hover:text-primary hover:border-primary/45";
+
+        return (
+          <button
+            type="button"
+            aria-pressed={saved}
+            aria-label={
+              saved ? `Remove ${name} from your wishlist` : `Save ${name} to your wishlist`
+            }
+            onClick={(e) => {
+              // Cards are buttons themselves; never open the sheet from here.
+              e.preventDefault();
+              e.stopPropagation();
+              onToggle();
+            }}
+            className={`${base} ${skin} ${className || ""}`}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill={saved ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={saved ? 0 : 1.9}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M12 20.5 3.9 12.6a5 5 0 0 1 7.1-7.1l1 1 1-1a5 5 0 0 1 7.1 7.1Z" />
+            </svg>
+          </button>
+        );
+      }
       function BriefCard({ brief, ship }) {
         const rows = [
           { k: "Occasion", v: brief.occasion, fallback: "Not set yet" },
@@ -693,7 +1817,11 @@
                   </dt>
                   <dd
                     className={`text-[13px] text-right ${
-                      r.k === "Budget" && r.v ? "font-mono font-medium text-ink" : r.v ? "text-ink font-medium" : "text-muted italic"
+                      r.k === "Budget" && r.v
+                        ? "font-mono font-medium text-ink"
+                        : r.v
+                          ? "text-ink font-medium"
+                          : "text-muted italic"
                     }`}
                   >
                     {r.v || r.fallback}
@@ -772,51 +1900,126 @@
       }
 
       /* Grid card: photograph first, then one line of title, price, description. */
-      function DirectionCard({ d, ship, onOpen }) {
+      function DirectionCard({ d, ship, onOpen, saved, onSave }) {
         return (
-          <button
-            type="button"
-            onClick={() => onOpen(d)}
-            aria-haspopup="dialog"
-            className="group text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.985] transition-all"
-          >
-            <span className="block relative w-full aspect-[3/4] bg-inset overflow-hidden">
-              <Photo
-                d={d}
-                view={{ ...getViewsForDirection(d)[0], fit: "cover" }}
-                alt={`${d.name} — ${d.short}`}
-              />
-              <span
-                className="absolute bottom-2 right-2 flex gap-1 items-center rounded-full bg-black/45 px-1.5 py-1 border border-white/25"
-                aria-hidden="true"
-              >
-                {d.swatch.map((c, i) => (
-                  <span
-                    key={i}
-                    className="w-2.5 h-2.5 rounded-full border border-white/50"
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => onOpen(d)}
+              aria-haspopup="dialog"
+              className="group block w-full text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.985] transition-all"
+            >
+              <span className="block relative w-full aspect-[3/4] bg-inset overflow-hidden">
+                <Photo
+                  d={d}
+                  view={{ ...getViewsForDirection(d)[0], fit: "cover" }}
+                  alt={`${d.name} — ${d.short}`}
+                />
+                <span
+                  className="absolute bottom-2 right-2 flex gap-1 items-center rounded-full bg-black/45 px-1.5 py-1 border border-white/25"
+                  aria-hidden="true"
+                >
+                  {d.swatch.map((c, i) => (
+                    <span
+                      key={i}
+                      className="w-2.5 h-2.5 rounded-full border border-white/50"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </span>
               </span>
-            </span>
 
-            <span className="block px-2.5 py-2.5">
-              <span className="block font-display text-[17px] text-ink leading-tight truncate">
-                {d.name}
+              <span className="block px-2.5 py-2.5">
+                <span className="block font-display text-[17px] text-ink leading-tight truncate">
+                  {d.name}
+                </span>
+                <span className="block font-mono text-[14px] text-ink font-semibold mt-1">
+                  {ship.symbol}
+                  {d.from}
+                </span>
+                <span className="block font-sans text-[11.5px] text-muted truncate mt-0.5">
+                  {d.short}
+                </span>
               </span>
-              <span className="block font-mono text-[14px] text-ink font-semibold mt-1">
-                {ship.symbol}
-                {d.from}
-              </span>
-              <span className="block font-sans text-[11.5px] text-muted truncate mt-0.5">{d.short}</span>
-            </span>
-          </button>
+            </button>
+
+            {onSave && (
+              <HeartButton
+                saved={saved}
+                onToggle={onSave}
+                name={d.name}
+                className="absolute top-2 right-2"
+              />
+            )}
+          </div>
         );
       }
 
       /* Full view: slides up from the bottom over 90% of the screen, with a
          swipeable carousel of framings and a close control at top right. */
-      function DirectionSheet({ d, ship, onClose, onRequest }) {
+      /* What you tapped, carried into the conversation. It opens the piece's
+         details when there are details to open. */
+      function MessageAttachment({ context, directions, onOpen }) {
+        // A name is enough to show something; not every piece has a
+        // photograph yet, and a woven placeholder reads better than nothing.
+        if (!context || (!context.image && !context.name)) return null;
+        const piece = pieceFor(context.piece, directions);
+
+        const inner = (
+          <React.Fragment>
+            {context.image ? (
+              <img
+                src={context.image}
+                alt={context.name + " \u2014 " + (context.label || "")}
+                loading="eager"
+                className="block w-full h-[112px] object-cover"
+              />
+            ) : (
+              <span
+                role="img"
+                aria-label={context.name + " \u2014 photograph not yet available"}
+                className="block w-full h-[112px] bg-inset"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 7px)",
+                }}
+              />
+            )}
+            <span className="block px-2.5 py-1.5">
+              <span className="block text-[11.5px] text-ink font-medium leading-tight truncate">
+                {context.name}
+              </span>
+              <span className="block font-mono text-[10px] text-muted truncate mt-0.5">
+                {piece ? "Tap for details" : context.label}
+              </span>
+            </span>
+          </React.Fragment>
+        );
+
+        const skin =
+          "mb-1.5 ml-auto w-[136px] rounded-2xl overflow-hidden border border-hairline bg-card shadow-sm";
+
+        if (!piece) {
+          return <figure className={skin}>{inner}</figure>;
+        }
+
+        return (
+          <button
+            type="button"
+            onClick={() => onOpen(piece)}
+            aria-haspopup="dialog"
+            aria-label={"Open details for " + piece.name}
+            className={
+              skin +
+              " block text-left hover:border-primary/45 hover:shadow-md active:scale-[0.98] transition-all"
+            }
+          >
+            {inner}
+          </button>
+        );
+      }
+
+      function DirectionSheet({ d, ship, onClose, onRequest, onAsk, saved, onSave }) {
         const trackRef = React.useRef(null);
         const panelRef = React.useRef(null);
         const restoreRef = React.useRef(null);
@@ -896,6 +2099,10 @@
           { k: "On the loom", v: d.weeks },
         ];
 
+        /* "DHL Express · 4 days" — the courier sits with the duty line, the
+           transit time drops to its own line under it. */
+        const [courierName, courierDays] = ship.courier.split(" · ");
+
         return (
           <div
             className="absolute inset-0 z-50 aura-fade-in"
@@ -964,7 +2171,7 @@
                     <div key={v.id} className="snap-center shrink-0 w-full px-5">
                       <div className="relative w-full h-[36vh] rounded-2xl overflow-hidden bg-inset border border-hairline">
                         <Photo d={d} view={v} alt={`${d.name} — ${v.label}`} />
-                        <span className="absolute bottom-2 left-2 font-mono text-[10px] tracking-wide text-white bg-black/50 px-2 py-0.5 rounded-full border border-white/20">
+                        <span className="absolute bottom-3 left-3 text-[12px] font-medium text-white bg-black/60 px-3 py-1.5 rounded-lg">
                           {v.label}
                         </span>
                       </div>
@@ -994,13 +2201,28 @@
 
                 {/* Details */}
                 <div className="px-5 pb-5">
-                  <h2
-                    id="dir-sheet-title"
-                    className="font-display text-[24px] text-ink leading-tight mt-1"
-                  >
-                    {d.name}
-                  </h2>
-                  <p className="font-mono text-[11px] text-goldtext mt-1">{d.craft}</p>
+                  {/* Save sits with the name it applies to, rather than up
+                      in the sheet chrome next to Close. */}
+                  <div className="flex items-start justify-between gap-3 mt-1">
+                    <h2
+                      id="dir-sheet-title"
+                      className="font-display text-[24px] text-ink leading-tight"
+                    >
+                      {d.name}
+                    </h2>
+                    {onSave && (
+                      <HeartButton
+                        saved={saved}
+                        onToggle={onSave}
+                        name={d.name}
+                        tone="plain"
+                        className="mt-0.5"
+                      />
+                    )}
+                  </div>
+                  <p className="font-mono text-[11px] uppercase tracking-wider text-goldtext mt-1.5">
+                    {d.craft}
+                  </p>
                   <p className="text-[13.5px] text-ink leading-relaxed mt-3">{d.note}</p>
 
                   <dl className="mt-4 border-t border-hairline">
@@ -1017,34 +2239,36 @@
                     ))}
                   </dl>
 
-                  <div className="flex items-end justify-between gap-3 mt-4">
-                    <div>
-                      <span className="block font-mono text-[10px] uppercase tracking-wider text-muted">
-                        From · landed to {ship.code}
-                      </span>
-                      <span className="block font-mono text-[22px] text-ink font-semibold leading-tight mt-0.5">
-                        {ship.symbol}
-                        {d.from}
-                      </span>
-                      <span className="block font-mono text-[11px] text-muted mt-0.5">
-                        {ship.duty} · {ship.courier}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onRequest(d)}
-                      className="min-h-[48px] px-5 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all shrink-0"
-                    >
-                      Request swatches
-                    </button>
-                  </div>
-
                   <p className="text-[11.5px] text-muted leading-relaxed mt-4">
-                    Nothing is added at checkout. You approve photographs of the finished
-                    garment before it is dispatched, and alterations are covered under the
-                    Perfect Fit Guarantee.
+                    Nothing is added at checkout. You approve photographs of the finished garment
+                    before it is dispatched, and alterations are covered under the Perfect Fit
+                    Guarantee.
                   </p>
                 </div>
+              </div>
+
+              {/* Price stays put while everything above it scrolls. */}
+              <div className="shrink-0 border-t border-hairline bg-card px-5 pt-3.5 pb-5 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="block font-mono text-[26px] text-ink font-semibold leading-none">
+                    {ship.symbol}
+                    {d.from}
+                  </span>
+                  <span className="block font-mono text-[11px] text-muted leading-snug mt-1.5">
+                    {ship.duty} · {courierName}
+                  </span>
+                  <span className="block font-mono text-[11px] text-muted leading-snug">
+                    {courierDays}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onRequest(d)}
+                  className="shrink-0 min-h-[48px] px-7 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+                >
+                  See Fit
+                </button>
               </div>
             </div>
           </div>
@@ -1063,20 +2287,266 @@
       }
 
       /* ===================================================================
+         COMPONENT: OVERLAY — same contract as the home screen's drawer.
+         Escape to close, background scroll lock, focus moved in on open
+         and restored to the trigger on close, focus kept inside while open.
+         =================================================================== */
+      function Overlay({ open, onClose, labelledBy, align, children }) {
+        const panelRef = useRef(null);
+        const restoreRef = useRef(null);
+
+        useEffect(() => {
+          if (!open) return;
+
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+
+          const panel = panelRef.current;
+          const focusables = () =>
+            Array.from(
+              panel.querySelectorAll(
+                'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+              )
+            ).filter((el) => el.offsetParent !== null);
+
+          const first = focusables()[0];
+          if (first) first.focus();
+          else panel.focus();
+
+          const onKeyDown = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose();
+              return;
+            }
+            if (e.key !== "Tab") return;
+            const items = focusables();
+            if (items.length === 0) return;
+            const firstEl = items[0];
+            const lastEl = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === firstEl) {
+              e.preventDefault();
+              lastEl.focus();
+            } else if (!e.shiftKey && document.activeElement === lastEl) {
+              e.preventDefault();
+              firstEl.focus();
+            }
+          };
+
+          document.addEventListener("keydown", onKeyDown, true);
+          return () => {
+            document.removeEventListener("keydown", onKeyDown, true);
+            document.body.classList.remove("aura-locked");
+            const restore = restoreRef.current;
+            if (restore && typeof restore.focus === "function") restore.focus();
+          };
+        }, [open, onClose]);
+
+        if (!open) return null;
+
+        return (
+          <div
+            className={`absolute inset-0 z-50 flex aura-fade-in ${align === "end" ? "justify-end" : "items-end justify-center"}`}
+            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.45)", backdropFilter: "blur(2px)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={labelledBy}
+              tabIndex={-1}
+              className="focus:outline-none contents"
+            >
+              {children}
+            </div>
+          </div>
+        );
+      }
+      /* ===================================================================
+       ATTACHMENT POPUP (Figma 36:1267)
+       Camera / Photos / Files. Frosted card anchored above the ask bar.
+       Icons are the Phosphor vectors exported from the Figma component,
+       recoloured to currentColor so they inherit the plum token.
+       =================================================================== */
+      const ATTACH_ICONS = {
+        camera:
+          "M19.5 5.25H16.9012L15.6234 3.33375C15.555 3.23114 15.4623 3.147 15.3535 3.08879C15.2448 3.03057 15.1233 3.00007 15 3H9C8.87665 3.00007 8.75522 3.03057 8.64648 3.08879C8.53773 3.147 8.44502 3.23114 8.37656 3.33375L7.09781 5.25H4.5C3.90326 5.25 3.33097 5.48705 2.90901 5.90901C2.48705 6.33097 2.25 6.90326 2.25 7.5V18C2.25 18.5967 2.48705 19.169 2.90901 19.591C3.33097 20.0129 3.90326 20.25 4.5 20.25H19.5C20.0967 20.25 20.669 20.0129 21.091 19.591C21.5129 19.169 21.75 18.5967 21.75 18V7.5C21.75 6.90326 21.5129 6.33097 21.091 5.90901C20.669 5.48705 20.0967 5.25 19.5 5.25ZM20.25 18C20.25 18.1989 20.171 18.3897 20.0303 18.5303C19.8897 18.671 19.6989 18.75 19.5 18.75H4.5C4.30109 18.75 4.11032 18.671 3.96967 18.5303C3.82902 18.3897 3.75 18.1989 3.75 18V7.5C3.75 7.30109 3.82902 7.11032 3.96967 6.96967C4.11032 6.82902 4.30109 6.75 4.5 6.75H7.5C7.62351 6.75008 7.74512 6.71966 7.85405 6.66143C7.96297 6.60321 8.05583 6.51899 8.12438 6.41625L9.40125 4.5H14.5978L15.8756 6.41625C15.9442 6.51899 16.037 6.60321 16.146 6.66143C16.2549 6.71966 16.3765 6.75008 16.5 6.75H19.5C19.6989 6.75 19.8897 6.82902 20.0303 6.96967C20.171 7.11032 20.25 7.30109 20.25 7.5V18ZM12 8.25C11.1842 8.25 10.3866 8.49193 9.70827 8.94519C9.02992 9.39845 8.50121 10.0427 8.189 10.7964C7.87679 11.5502 7.7951 12.3796 7.95426 13.1797C8.11343 13.9799 8.50629 14.7149 9.08318 15.2918C9.66008 15.8687 10.3951 16.2616 11.1953 16.4207C11.9954 16.5799 12.8248 16.4982 13.5786 16.186C14.3323 15.8738 14.9766 15.3451 15.4298 14.6667C15.8831 13.9884 16.125 13.1908 16.125 12.375C16.1238 11.2814 15.6888 10.2329 14.9154 9.45955C14.1421 8.68624 13.0936 8.25124 12 8.25ZM12 15C11.4808 15 10.9733 14.846 10.5416 14.5576C10.1099 14.2692 9.7735 13.8592 9.57482 13.3795C9.37614 12.8999 9.32415 12.3721 9.42544 11.8629C9.52672 11.3537 9.77673 10.886 10.1438 10.5188C10.511 10.1517 10.9787 9.90172 11.4879 9.80044C11.9971 9.69915 12.5249 9.75114 13.0045 9.94982C13.4842 10.1485 13.8942 10.4849 14.1826 10.9166C14.471 11.3483 14.625 11.8558 14.625 12.375C14.625 13.0712 14.3484 13.7389 13.8562 14.2312C13.3639 14.7234 12.6962 15 12 15Z",
+        photos:
+          "M19.5 3H4.5C4.10218 3 3.72064 3.15804 3.43934 3.43934C3.15804 3.72064 3 4.10218 3 4.5V19.5C3 19.8978 3.15804 20.2794 3.43934 20.5607C3.72064 20.842 4.10218 21 4.5 21H19.5C19.8978 21 20.2794 20.842 20.5607 20.5607C20.842 20.2794 21 19.8978 21 19.5V4.5C21 4.10218 20.842 3.72064 20.5607 3.43934C20.2794 3.15804 19.8978 3 19.5 3ZM4.5 4.5H19.5V11.7544L17.1853 9.43875C16.904 9.15766 16.5227 8.99976 16.125 8.99976C15.7273 8.99976 15.346 9.15766 15.0647 9.43875L5.00344 19.5H4.5V4.5ZM19.5 19.5H7.125L16.125 10.5L19.5 13.875V19.5ZM9 11.25C9.44501 11.25 9.88002 11.118 10.25 10.8708C10.62 10.6236 10.9084 10.2722 11.0787 9.86104C11.249 9.4499 11.2936 8.9975 11.2068 8.56105C11.12 8.12459 10.9057 7.72368 10.591 7.40901C10.2763 7.09434 9.87541 6.88005 9.43895 6.79323C9.0025 6.70642 8.5501 6.75097 8.13896 6.92127C7.72783 7.09157 7.37643 7.37996 7.12919 7.74997C6.88196 8.11998 6.75 8.55499 6.75 9C6.75 9.59674 6.98705 10.169 7.40901 10.591C7.83097 11.0129 8.40326 11.25 9 11.25ZM9 8.25C9.14834 8.25 9.29334 8.29399 9.41668 8.3764C9.54001 8.45881 9.63614 8.57594 9.69291 8.71299C9.74968 8.85003 9.76453 9.00083 9.73559 9.14632C9.70665 9.2918 9.63522 9.42544 9.53033 9.53033C9.42544 9.63522 9.2918 9.70665 9.14632 9.73559C9.00083 9.76453 8.85003 9.74968 8.71299 9.69291C8.57594 9.63614 8.45881 9.54001 8.3764 9.41668C8.29399 9.29334 8.25 9.14834 8.25 9C8.25 8.80109 8.32902 8.61032 8.46967 8.46967C8.61032 8.32902 8.80109 8.25 9 8.25Z",
+        files:
+          "M18.75 6.89297C18.7186 7.98098 18.2713 9.01554 17.5 9.78359L14.7852 12.5C14.3898 12.8976 13.9194 13.2128 13.4014 13.4273C12.8833 13.6419 12.3279 13.7516 11.7672 13.75H11.7633C11.193 13.7496 10.6286 13.6349 10.1034 13.4127C9.57814 13.1905 9.10279 12.8653 8.70536 12.4563C8.30794 12.0473 7.99652 11.5628 7.78949 11.0314C7.58246 10.5 7.48403 9.93256 7.5 9.3625C7.50466 9.19674 7.57498 9.03962 7.69549 8.92571C7.81599 8.81179 7.97682 8.75042 8.14258 8.75508C8.30834 8.75974 8.46546 8.83006 8.57937 8.95057C8.69328 9.07107 8.75466 9.2319 8.75 9.39766C8.73862 9.80072 8.80815 10.202 8.95447 10.5777C9.1008 10.9535 9.32096 11.2961 9.60194 11.5853C9.88292 11.8745 10.219 12.1044 10.5904 12.2616C10.9617 12.4187 11.3608 12.4997 11.7641 12.5C12.1604 12.501 12.5531 12.4234 12.9193 12.2718C13.2855 12.1201 13.6181 11.8974 13.8977 11.6164L16.6125 8.90156C17.1726 8.33438 17.4856 7.56863 17.4831 6.77149C17.4806 5.97435 17.1629 5.21057 16.5992 4.64691C16.0355 4.08324 15.2717 3.76547 14.4746 3.76298C13.6775 3.76049 12.9117 4.07347 12.3445 4.63359L11.4852 5.49297C11.367 5.60523 11.2096 5.66689 11.0467 5.66481C10.8837 5.66272 10.728 5.59705 10.6127 5.4818C10.4975 5.36655 10.4318 5.21083 10.4297 5.04786C10.4276 4.88488 10.4893 4.72754 10.6016 4.60938L11.4609 3.75C11.8574 3.35338 12.3282 3.03876 12.8463 2.82411C13.3643 2.60945 13.9197 2.49897 14.4805 2.49897C15.0413 2.49897 15.5966 2.60945 16.1147 2.82411C16.6328 3.03876 17.1035 3.35338 17.5 3.75C17.9107 4.16169 18.2333 4.65263 18.4482 5.19296C18.6631 5.73329 18.7658 6.31169 18.75 6.89297ZM8.51562 14.5047L7.65625 15.3641C7.37596 15.6462 7.04237 15.8698 6.67488 16.0219C6.30739 16.174 5.91334 16.2516 5.51562 16.25C4.91899 16.2495 4.33588 16.0722 3.83997 15.7405C3.34407 15.4087 2.95762 14.9374 2.72946 14.3861C2.50131 13.8348 2.44167 13.2283 2.5581 12.6431C2.67453 12.0579 2.96179 11.5204 3.38359 11.0984L6.09375 8.38359C6.52061 7.95448 7.06665 7.66363 7.66093 7.54882C8.25521 7.43401 8.87029 7.50055 9.42627 7.73979C9.98226 7.97903 10.4535 8.37992 10.7787 8.8904C11.1039 9.40087 11.2681 9.99734 11.25 10.6023C11.2453 10.7681 11.3067 10.9289 11.4206 11.0494C11.5345 11.1699 11.6917 11.2403 11.8574 11.2449C12.0232 11.2496 12.184 11.1882 12.3045 11.0743C12.425 10.9604 12.4953 10.8033 12.5 10.6375C12.515 10.0571 12.4119 9.47977 12.1971 8.94043C11.9822 8.4011 11.66 7.91105 11.25 7.5C10.4494 6.69971 9.36367 6.25014 8.23164 6.25014C7.09961 6.25014 6.01392 6.69971 5.21328 7.5L2.5 10.2148C1.90331 10.8113 1.49681 11.5712 1.33188 12.3986C1.16696 13.2261 1.251 14.0838 1.5734 14.8634C1.8958 15.6431 2.44207 16.3097 3.1432 16.779C3.84432 17.2482 4.66882 17.4992 5.5125 17.5C6.07334 17.5016 6.62892 17.392 7.14709 17.1774C7.66527 16.9628 8.13573 16.6476 8.53125 16.25L9.39062 15.3906C9.49177 15.2715 9.54461 15.1188 9.53873 14.9626C9.53285 14.8064 9.46867 14.6581 9.35885 14.5469C9.24903 14.4357 9.10154 14.3697 8.94545 14.3619C8.78936 14.3541 8.63601 14.405 8.51562 14.5047Z",
+      };
+
+      const ATTACH_OPTIONS = [
+        { id: "camera", label: "Camera", box: 24, hint: "Take a photo of the piece or the fabric" },
+        {
+          id: "photos",
+          label: "Photos",
+          box: 24,
+          hint: "Choose a saved reference from your library",
+        },
+        { id: "files", label: "Files", box: 20, hint: "Attach a document or a link" },
+      ];
+
+      function AttachmentPopup({ onPick }) {
+        return (
+          <div
+            role="menu"
+            aria-label="Add an attachment"
+            className="attachment-popup aura-fade-in absolute bottom-[calc(100%+10px)] left-0 w-[260px] p-3 rounded-[20px] z-40"
+          >
+            {ATTACH_OPTIONS.map((opt, i) => (
+              <React.Fragment key={opt.id}>
+                {i > 0 && (
+                  <div className="h-px w-full bg-[rgb(204_204_204_/_0.5)]" aria-hidden="true" />
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => onPick(opt)}
+                  className="w-full flex items-center gap-4 px-2 py-3 rounded-xl text-left hover:bg-[rgb(var(--primary-rgb)_/_0.06)] active:scale-[0.99] transition-colors"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="w-10 h-10 shrink-0 rounded-full bg-[rgb(232_232_232_/_0.8)] flex items-center justify-center text-primary"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox={`0 0 ${opt.box} ${opt.box}`}
+                      fill="currentColor"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d={ATTACH_ICONS[opt.id]} />
+                    </svg>
+                  </span>
+                  <span className="text-[17px] text-ink leading-none">{opt.label}</span>
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        );
+      }
+
+      /* ===================================================================
+       CHAT HISTORY
+       Every conversation arrives here with its opening prompt in the URL —
+       from the home screen, or from a Request on Discover — so this is the
+       one place a chat needs recording. The home screen reads the log back
+       and derives the titles.
+
+       Storage is per-browser and best-effort: in a private window or with
+       site data blocked this throws, and the log is simply not kept.
+       =================================================================== */
+      const CHAT_LOG_KEY = "aura.chats";
+      const CHAT_LOG_LIMIT = 30;
+
+      function recordChat(prompt, shipCode) {
+        const text = (prompt || "").replace(/\s+/g, " ").trim();
+        if (!text) return;
+        try {
+          const raw = window.localStorage.getItem(CHAT_LOG_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          const log = Array.isArray(parsed) ? parsed : [];
+
+          // Re-opening or reloading the same brief bumps the existing entry
+          // rather than stacking duplicates in the drawer.
+          const existing = log.find((c) => c && c.prompt === text);
+          if (existing) {
+            existing.at = Date.now();
+            existing.ship = shipCode;
+          } else {
+            log.push({
+              id: "c" + Date.now().toString(36),
+              prompt: text,
+              ship: shipCode,
+              at: Date.now(),
+            });
+          }
+
+          log.sort((a, b) => (b.at || 0) - (a.at || 0));
+          window.localStorage.setItem(CHAT_LOG_KEY, JSON.stringify(log.slice(0, CHAT_LOG_LIMIT)));
+        } catch (e) {
+          /* history is a convenience, never a blocker for the conversation */
+        }
+      }
+
+      /* ===================================================================
        MAIN
        =================================================================== */
       function App() {
+        const wish = useWishlist();
         const params = new URLSearchParams(window.location.search);
         const initialPrompt = (params.get("prompt") || "").trim();
-        const shipCode = (params.get("ship") || "US").toUpperCase();
+        const [shipCode, setShipCode] = useState(() => (params.get("ship") || "US").toUpperCase());
         const ship = SHIP_TO[shipCode] || SHIP_TO.US;
 
         const brief = parseBrief(initialPrompt, ship);
         const directions = buildDirections(brief, ship);
 
+        // Keep the key we arrived with: the record it resolves to may be a
+        // design direction whose own id ("regal") is not the key ("regal-lehenga").
+        const openingPieceKey = (params.get("piece") || "").trim();
+        const openingPiece = pieceFor(openingPieceKey, directions);
+
+        /* The screen that sent us here knows the piece even when this one
+           does not, so fall back to what it put in the URL. */
+        const openingContext = openingPiece
+          ? {
+              image: openingPiece.image,
+              name: openingPiece.name,
+              label: openingPiece.craft,
+              piece: openingPieceKey,
+            }
+          : (params.get("name") || "").trim()
+            ? {
+                image: (params.get("img") || "").trim(),
+                name: (params.get("name") || "").trim(),
+                label: (params.get("craft") || "").trim(),
+                piece: openingPieceKey,
+              }
+            : undefined;
+
+        // What checkout needs to restate the order.
+        const openingPieceRecord = openingContext
+          ? {
+              name: openingContext.name,
+              craft: openingContext.label,
+              image: openingContext.image,
+              from: (openingPiece && openingPiece.from) || Number(params.get("from")) || null,
+            }
+          : null;
+
+        // "See Fit" opens the thread on measurements instead of on a brief.
+        const isFit = params.get("fit") === "1";
+        const fitPieceName =
+          (openingContext && openingContext.name) ||
+          (initialPrompt.match(/See how the (.+) fits me\./) || [])[1] ||
+          "";
+        const [fit, setFit] = useState(readFit);
+        const [fitPeople, setFitPeople] = useState(readFitPeople);
+        const [checkout, setCheckout] = useState(null);
+        const [fitWho, setFitWho] = useState("self");
+        // A thread can hold more than one fit check, so which card is settled
+        // and which one opened the sheet are both tracked per message.
+        const [fitSheet, setFitSheet] = useState(null);
+        const [settledFits, setSettledFits] = useState({});
+
         const [messages, setMessages] = useState(() => {
           if (!initialPrompt) return [];
-          return [{ id: "u0", from: "user", text: initialPrompt }];
+          return [
+            {
+              id: "u0",
+              from: "user",
+              text: initialPrompt,
+              // Arriving from a garment: show it, and let it be opened.
+              context: openingContext,
+            },
+          ];
         });
         const [typing, setTyping] = useState(Boolean(initialPrompt));
         const [showWork, setShowWork] = useState(false);
@@ -1084,7 +2554,12 @@
         const [isListening, setIsListening] = useState(false);
         const [toastMsg, setToastMsg] = useState("");
         const [openDirection, setOpenDirection] = useState(null);
+        const [drawerOpen, setDrawerOpen] = useState(false);
+        const [composerExpanded, setComposerExpanded] = useState(false);
+        // Attachment popup (Figma 36:1267) — Camera / Photos / Files.
+        const [attachOpen, setAttachOpen] = useState(false);
 
+        const attachRef = useRef(null);
         const threadRef = useRef(null);
         const bottomRef = useRef(null);
         const inputRef = useRef(null);
@@ -1095,6 +2570,35 @@
           timers.current.push(id);
           return id;
         };
+
+        // Log the opening brief once per mount so it appears in the home
+        // screen's history drawer.
+        useEffect(() => {
+          recordChat(initialPrompt, shipCode);
+        }, [initialPrompt, shipCode]);
+
+        // Attachment popup dismisses on Escape or a click outside it. The
+        // popup is a menu, not a dialog, so it does not trap focus.
+        useEffect(() => {
+          if (!attachOpen) return;
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setAttachOpen(false);
+            }
+          };
+          const onPointer = (e) => {
+            if (attachRef.current && !attachRef.current.contains(e.target)) {
+              setAttachOpen(false);
+            }
+          };
+          document.addEventListener("keydown", onKey);
+          document.addEventListener("pointerdown", onPointer);
+          return () => {
+            document.removeEventListener("keydown", onKey);
+            document.removeEventListener("pointerdown", onPointer);
+          };
+        }, [attachOpen]);
 
         useEffect(
           () => () => {
@@ -1136,17 +2640,29 @@
             setTimeout(
               () => {
                 setTyping(false);
-                setShowWork(true);
+                setShowWork(!isFit);
                 setMessages((m) => [
                   ...m,
-                  {
-                    id: "a0",
-                    from: "aura",
-                    text: brief.occasion
-                      ? `${brief.occasion} — good brief to work with. Here's how I've read it, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold.`
-                      : `Here's how I've read your brief, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold. Tell me what's missing and I'll tighten it.`,
-                    work: true,
-                  },
+                  isFit
+                    ? {
+                        id: "a0",
+                        from: "aura",
+                        text: fitPieceName
+                          ? `Here are the measurements the ${fitPieceName} would be cut to.`
+                          : "Here are the measurements this piece would be cut to.",
+                        fit: true,
+                        fitChoice: true,
+                        fitPiece: fitPieceName,
+                        fitRecord: openingPieceRecord,
+                      }
+                    : {
+                        id: "a0",
+                        from: "aura",
+                        text: brief.occasion
+                          ? `${brief.occasion} — good brief to work with. Here's how I've read it, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold.`
+                          : `Here's how I've read your brief, and four directions that answer it differently. Every price is landed to ${ship.code}, and every lead time is what the artisan can actually hold. Tell me what's missing and I'll tighten it.`,
+                        work: true,
+                      },
                 ]);
               },
               reducedMotion() ? 120 : 1100
@@ -1162,15 +2678,18 @@
           el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "end" });
         }, [messages, typing]);
 
-        const send = (raw) => {
+        /* `context` attaches the photograph the question came from, so the
+           thread shows what was being looked at and Meera answers about it. */
+        const send = (raw, context) => {
           const text = (raw || "").trim();
           if (!text) {
             if (inputRef.current) inputRef.current.focus();
             return;
           }
           const uid = "u" + Date.now();
-          setMessages((m) => [...m, { id: uid, from: "user", text }]);
+          setMessages((m) => [...m, { id: uid, from: "user", text, context }]);
           setInputVal("");
+          setComposerExpanded(false);
           setTyping(true);
 
           track(
@@ -1182,7 +2701,9 @@
                   {
                     id: "a" + Date.now(),
                     from: "aura",
-                    ...auraReplyTo(text, brief, ship, directions),
+                    ...(context && context.replyWith
+                      ? context.replyWith
+                      : auraReplyTo(text, brief, ship, directions)),
                   },
                 ]);
               },
@@ -1209,7 +2730,99 @@
           );
         };
 
-        const isMultiline = inputVal.includes("\n") || inputVal.length > 35;
+        const hasText = inputVal.trim().length > 0;
+        const composerOpen = hasText || composerExpanded;
+
+        /* One mic, two homes: inside the resting pill, or in the button row
+           once the composer has opened up. */
+        const renderMic = (inRow) => (
+          <button
+            type="button"
+            onClick={handleMic}
+            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+            aria-pressed={isListening}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+              isListening
+                ? "bg-primary text-onprimary aura-listening"
+                : inRow
+                  ? "text-muted hover:text-ink hover:bg-inset active:scale-95"
+                  : "bg-inset text-primary hover:bg-selfill active:scale-95"
+            }`}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
+          </button>
+        );
+
+        /* Grow the field to fit what has been typed, then scroll inside it. */
+        const fitComposer = useCallback(() => {
+          const el = inputRef.current;
+          if (!el) return;
+          if (!composerOpen) {
+            el.style.height = "";
+            el.style.overflowY = "hidden";
+            return;
+          }
+          el.style.height = "auto";
+          const full = el.scrollHeight;
+          const max = composerExpanded ? Math.round(window.innerHeight * 0.55) : 198;
+          el.style.height = Math.min(full, max) + "px";
+          el.style.overflowY = full > max ? "auto" : "hidden";
+        }, [composerOpen, composerExpanded]);
+
+        useLayoutEffect(() => {
+          fitComposer();
+          const frame = requestAnimationFrame(fitComposer);
+          window.addEventListener("resize", fitComposer);
+          return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("resize", fitComposer);
+          };
+        }, [inputVal, fitComposer]);
+
+        /* Webfonts land after first paint and reflow the reply taller, so
+           measure again once they have settled. */
+        useEffect(() => {
+          if (!document.fonts || !document.fonts.ready) return;
+          let live = true;
+          document.fonts.ready.then(() => {
+            if (live) fitComposer();
+          });
+          return () => {
+            live = false;
+          };
+        }, [fitComposer]);
+
+        /* Rotation, a late stylesheet or a resized window all change how the
+           reply wraps -- re-fit on width changes only, never on our own
+           height writes. */
+        useEffect(() => {
+          const el = inputRef.current;
+          if (!el || typeof ResizeObserver === "undefined") return;
+          let lastWidth = el.clientWidth;
+          const ro = new ResizeObserver((entries) => {
+            const width = entries[0].contentRect.width;
+            if (Math.abs(width - lastWidth) < 0.5) return;
+            lastWidth = width;
+            fitComposer();
+          });
+          ro.observe(el);
+          return () => ro.disconnect();
+        }, [fitComposer]);
 
         return (
           <div className="min-h-screen w-full bg-canvas flex justify-center font-sans">
@@ -1260,6 +2873,31 @@
                     Meera R. · master draper · replies in minutes
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(true)}
+                  aria-label="Open navigation menu"
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerOpen}
+                  className="w-11 h-11 mr-1 rounded-full bg-card border border-hairline flex items-center justify-center text-ink shadow-sm hover:border-primary/40 active:scale-95 transition-all shrink-0"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <line x1="4" y1="7" x2="20" y2="7" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="17" x2="20" y2="17" />
+                  </svg>
+                </button>
               </header>
 
               {/* ---------- Thread ---------- */}
@@ -1289,9 +2927,16 @@
                     >
                       <div className={m.from === "user" ? "max-w-[85%]" : "w-full"}>
                         {m.from === "user" ? (
-                          <p className="aura-msg-in bg-primary text-onprimary text-[13.5px] leading-relaxed px-4 py-3 rounded-2xl rounded-br-md whitespace-pre-line">
-                            {m.text}
-                          </p>
+                          <div className="aura-msg-in">
+                            <MessageAttachment
+                              context={m.context}
+                              directions={directions}
+                              onOpen={setOpenDirection}
+                            />
+                            <p className="bg-primary text-onprimary text-[13.5px] leading-relaxed px-4 py-3 rounded-2xl rounded-br-md whitespace-pre-line">
+                              {m.text}
+                            </p>
+                          </div>
                         ) : (
                           <div className="aura-msg-in">
                             <div className="flex items-center gap-2 mb-1.5">
@@ -1317,6 +2962,8 @@
                                 <div className="grid grid-cols-2 gap-2.5">
                                   {m.cards.map((d) => (
                                     <DirectionCard
+                                      saved={wish.saved(d.name)}
+                                      onSave={() => wish.toggle(d.name)}
                                       key={d.id}
                                       d={d}
                                       ship={ship}
@@ -1350,6 +2997,76 @@
                               </ol>
                             )}
 
+                            {m.order && !m.orderPlaced && (
+                              <button
+                                type="button"
+                                onClick={() => setCheckout(m.order)}
+                                aria-haspopup="dialog"
+                                className="mt-2.5 w-full min-h-[48px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium hover:bg-inset active:scale-95 transition-all"
+                              >
+                                Review order
+                              </button>
+                            )}
+
+                            {m.fit && (
+                              <FitCard
+                                people={fitPeople}
+                                chosenId={fitWho}
+                                onChoose={setFitWho}
+                                pieceName={m.fitPiece}
+                              />
+                            )}
+
+                            {m.fitChoice && !settledFits[m.id] && (
+                              <FitChoiceCard
+                                onApprove={() => {
+                                  setSettledFits((f) => Object.assign({}, f, { [m.id]: true }));
+                                  const who =
+                                    fitPeople.find((p) => p.id === fitWho) || fitPeople[0];
+                                  // "Meera R." already ends in a stop; do not
+                                  // give the sentence a second one.
+                                  const forWhom =
+                                    who.id === "self" ? "me" : who.name.replace(/\.$/, "");
+                                  send(
+                                    m.fitPiece
+                                      ? `These are right — cut the ${m.fitPiece} for ${forWhom}.`
+                                      : `These are right — cut for ${forWhom}.`,
+                                    {
+                                      replyWith: {
+                                        text:
+                                          "Noted \u2014 cutting to " +
+                                          (who.id === "self"
+                                            ? "your measurements"
+                                            : who.name + "'s measurements") +
+                                          ". Here is what you are placing.",
+                                        order: m.fitRecord
+                                          ? { piece: m.fitRecord, who: who }
+                                          : null,
+                                      },
+                                    }
+                                  );
+                                  if (m.fitRecord) {
+                                    setCheckout({ piece: m.fitRecord, who: who });
+                                  }
+                                }}
+                                onUpdate={() => setFitSheet({ id: m.id, piece: m.fitPiece })}
+                              />
+                            )}
+
+                            {/* Measurements can change after the piece is
+                                agreed, so the way to replace them stays put
+                                however far the conversation runs on. */}
+                            {m.fit && (!m.fitChoice || settledFits[m.id]) && (
+                              <button
+                                type="button"
+                                onClick={() => setFitSheet({ id: m.id, piece: m.fitPiece })}
+                                aria-haspopup="dialog"
+                                className="mt-2.5 w-full min-h-[48px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium hover:bg-inset active:scale-95 transition-all"
+                              >
+                                Add new measurements
+                              </button>
+                            )}
+
                             {m.work && showWork && (
                               <div className="mt-1">
                                 <BriefCard brief={brief} ship={ship} />
@@ -1360,6 +3077,8 @@
                                 <div className="grid grid-cols-2 gap-2.5">
                                   {directions.map((d) => (
                                     <DirectionCard
+                                      saved={wish.saved(d.name)}
+                                      onSave={() => wish.toggle(d.name)}
                                       key={d.id}
                                       d={d}
                                       ship={ship}
@@ -1392,127 +3111,513 @@
               </div>
 
               {/* ---------- Full view: 90% bottom sheet ---------- */}
-            {openDirection && (
-              <DirectionSheet
-                d={openDirection}
-                ship={ship}
-                onClose={() => setOpenDirection(null)}
-                onRequest={(dir) => {
-                  setOpenDirection(null);
-                  showToast(`${dir.name} — swatch box ships free before you commit`);
-                }}
-              />
-            )}
+              {openDirection && (
+                <DirectionSheet
+                  saved={wish.saved(openDirection.name)}
+                  onSave={() => wish.toggle(openDirection.name)}
+                  d={openDirection}
+                  ship={ship}
+                  onClose={() => setOpenDirection(null)}
+                  onRequest={(dir) => {
+                    // Already in the thread, so the fit check happens here
+                    // rather than by navigating to a fresh one.
+                    setOpenDirection(null);
+                    send(`See how the ${dir.name} fits me.`, {
+                      image: dir.image,
+                      name: dir.name,
+                      label: dir.craft,
+                      replyWith: {
+                        text: `Here are the measurements the ${dir.name} would be cut to.`,
+                        fit: true,
+                        fitChoice: true,
+                        fitPiece: dir.name,
+                        fitRecord: {
+                          name: dir.name,
+                          craft: dir.craft,
+                          image: dir.image,
+                          from: dir.from,
+                        },
+                      },
+                    });
+                  }}
+                  onAsk={(dir, view) => {
+                    setOpenDirection(null);
+                    const isJewellery = view.id === "jewelry" && dir.jewelry;
+                    send(
+                      view.id === "full"
+                        ? `Tell me more about ${dir.name}`
+                        : `Tell me more about the ${view.label.toLowerCase()} of ${dir.name}`,
+                      {
+                        image: view.image,
+                        label: view.label,
+                        name: dir.name,
+                        replyWith: {
+                          text: isJewellery
+                            ? `${dir.jewelry.name} — ${dir.jewelry.craft}. ${dir.jewelry.pairingNote}`
+                            : `${dir.craft}. ${dir.note} It is ${dir.weeks.toLowerCase()} on the loom once you approve the direction.`,
+                          cardsLabel: "The piece you asked about",
+                          cards: [dir],
+                        },
+                      }
+                    );
+                  }}
+                />
+              )}
 
-            {/* ---------- Quick replies ---------- */}
-              <div className="shrink-0 px-4 pb-1 pt-2">
-                <div
-                  className="flex gap-2 overflow-x-auto pb-1.5"
-                  style={{ scrollbarWidth: "none" }}
-                  role="group"
-                  aria-label="Suggested replies"
-                >
-                  {QUICK_REPLIES.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => send(q)}
-                      className="reply-chip shrink-0"
-                    >
-                      {q}
-                    </button>
-                  ))}
+              {/* ---------- Quick replies ---------- */}
+              {!composerOpen && (
+                <div className="shrink-0 px-4 pb-1 pt-2">
+                  <div
+                    className="flex gap-2 overflow-x-auto pb-1.5"
+                    style={{ scrollbarWidth: "none" }}
+                    role="group"
+                    aria-label="Suggested replies"
+                  >
+                    {QUICK_REPLIES.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => send(q)}
+                        className="reply-chip shrink-0"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* ---------- Composer ---------- */}
-              <div className="shrink-0 px-4 pb-2 pt-1 z-30">
+              {/* ---------- Composer ----------
+               Rests as a single-line pill. The moment there is text it opens
+               into a card: the reply grows upward line by line, and the
+               controls move to their own row underneath it. */}
+              <div className="relative shrink-0 px-4 pb-2 pt-1 z-40" ref={attachRef}>
+                {attachOpen && (
+                  <div className="absolute left-4 right-4 bottom-full z-50">
+                    <AttachmentPopup
+                      onPick={(opt) => {
+                        setAttachOpen(false);
+                        showToast(opt.hint);
+                      }}
+                    />
+                  </div>
+                )}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     send(inputVal);
                   }}
-                  className={`composer-bar flex items-center gap-1 pl-4 pr-1.5 py-1.5 transition-all duration-200 ${
-                    isMultiline ? "rounded-[22px]" : "rounded-full"
+                  className={`composer-bar transition-[border-radius,box-shadow] duration-200 ${
+                    composerOpen
+                      ? "rounded-[26px] px-3.5 pt-3 pb-2"
+                      : "flex items-center gap-1 rounded-full pl-1.5 pr-2 py-1.5"
                   }`}
                 >
+                  {!composerOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setAttachOpen((v) => !v)}
+                      aria-label="Add an attachment"
+                      aria-haspopup="menu"
+                      aria-expanded={attachOpen}
+                      className={`w-11 h-11 shrink-0 self-center rounded-full flex items-center justify-center transition-colors ${
+                        attachOpen
+                          ? "bg-primary text-onprimary"
+                          : "text-primary hover:bg-inset active:scale-95"
+                      }`}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                  )}
+
                   <label htmlFor="aura-reply" className="sr-only">
                     Reply to your stylist
                   </label>
-                  <textarea
-                    id="aura-reply"
-                    ref={inputRef}
-                    rows={isMultiline ? 2 : 1}
-                    value={inputVal}
-                    onChange={(e) => setInputVal(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        send(inputVal);
-                      }
-                    }}
-                    placeholder="Reply to Meera"
-                    className="w-full bg-transparent text-ink placeholder:text-muted text-[13.5px] focus:outline-none pr-1 resize-none leading-[19px] py-1.5 self-center"
-                  />
 
-                  <div className="flex items-center shrink-0 self-center">
-                    {inputVal.trim() ? (
+                  <div
+                    className={`relative ${composerOpen ? "" : "flex flex-1 min-w-0 items-center min-h-[40px]"}`}
+                  >
+                    <textarea
+                      id="aura-reply"
+                      ref={inputRef}
+                      rows={1}
+                      value={inputVal}
+                      onChange={(e) => setInputVal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && !composerExpanded) {
+                          e.preventDefault();
+                          send(inputVal);
+                        }
+                      }}
+                      placeholder="Reply to Meera"
+                      className={`aura-reply-field w-full bg-transparent text-ink placeholder:text-muted focus:outline-none resize-none ${
+                        composerOpen ? "is-open" : ""
+                      }`}
+                    />
+
+                    {composerOpen && (
                       <button
-                        type="submit"
-                        aria-label="Send reply"
-                        className="w-11 h-11 rounded-full bg-primary text-onprimary flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+                        type="button"
+                        onClick={() => setComposerExpanded((v) => !v)}
+                        aria-label={
+                          composerExpanded ? "Shrink the reply box" : "Expand the reply box"
+                        }
+                        aria-pressed={composerExpanded}
+                        className="absolute -top-2.5 -right-1.5 w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:text-ink hover:bg-inset active:scale-95 transition"
                       >
                         <svg
-                          width="16"
-                          height="16"
+                          width="14"
+                          height="14"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2.4"
+                          strokeWidth="2.1"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           aria-hidden="true"
                           focusable="false"
                         >
-                          <path d="M5 12h14" />
-                          <path d="m12 5 7 7-7 7" />
+                          {composerExpanded ? (
+                            <React.Fragment>
+                              <path d="M10 4v6H4" />
+                              <path d="M14 20v-6h6" />
+                              <path d="m3 21 7-7" />
+                              <path d="m21 3-7 7" />
+                            </React.Fragment>
+                          ) : (
+                            <React.Fragment>
+                              <path d="M15 3h6v6" />
+                              <path d="M9 21H3v-6" />
+                              <path d="m21 3-7 7" />
+                              <path d="m3 21 7-7" />
+                            </React.Fragment>
+                          )}
                         </svg>
                       </button>
-                    ) : (
+                    )}
+
+                    {!composerOpen && (
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                        {renderMic(false)}
+                      </div>
+                    )}
+                  </div>
+
+                  {composerOpen && (
+                    <div className="flex items-center justify-between pt-2">
                       <button
                         type="button"
-                        onClick={handleMic}
-                        aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                        aria-pressed={isListening}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                          isListening
-                            ? "bg-primary text-onprimary aura-listening"
-                            : "bg-inset text-primary hover:bg-selfill active:scale-95"
-                        }`}
+                        onClick={() => showToast("Attach a photo of a piece you already love")}
+                        aria-label="Attach a photo or file"
+                        className="w-11 h-11 -ml-2.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset active:scale-95 transition"
                       >
                         <svg
-                          width="17"
-                          height="17"
+                          width="19"
+                          height="19"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
-                          strokeLinejoin="round"
                           aria-hidden="true"
                           focusable="false"
                         >
-                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                          <line x1="12" y1="19" x2="12" y2="22" />
+                          <path d="M12 5v14" />
+                          <path d="M5 12h14" />
                         </svg>
                       </button>
-                    )}
-                  </div>
+
+                      <div className="flex items-center gap-1">
+                        {renderMic(true)}
+                        {hasText && (
+                          <button
+                            type="submit"
+                            aria-label="Send reply"
+                            className="w-11 h-11 rounded-full bg-primary text-onprimary flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+                          >
+                            <svg
+                              width="17"
+                              height="17"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 19V5" />
+                              <path d="m5 12 7-7 7 7" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </form>
 
                 <div className="home-pill-line" aria-hidden="true" />
               </div>
+
+              {checkout && (
+                <CheckoutPanel
+                  piece={checkout.piece}
+                  who={checkout.who}
+                  ship={ship}
+                  onBack={() => setCheckout(null)}
+                  onPlace={() => {
+                    const ref = "AUR-" + String(1000 + Math.floor(Math.random() * 9000));
+                    setCheckout(null);
+                    // The order is placed; its card must not offer a second go.
+                    setMessages((ms) =>
+                      ms.map((x) => (x.order ? Object.assign({}, x, { orderPlaced: true }) : x))
+                    );
+                    send(`Place the order for the ${checkout.piece.name}.`, {
+                      replyWith: {
+                        text:
+                          "Order " +
+                          ref +
+                          " is placed. Meera starts on it today, and you will see each stage photographed in Orders before anything ships.",
+                      },
+                    });
+                  }}
+                />
+              )}
+
+              {fitSheet && (
+                <FitSheet
+                  initial={fit}
+                  onClose={() => setFitSheet(null)}
+                  onSave={(values) => {
+                    const next = writeFit(values);
+                    const from = fitSheet;
+                    setFit(next);
+                    setFitPeople(readFitPeople());
+                    setFitWho("self");
+                    setFitSheet(null);
+                    setSettledFits((f) => Object.assign({}, f, { [from.id]: true }));
+                    send("I've measured again — use these instead.", {
+                      replyWith: {
+                        text: "Updated. Meera will cut to the new figures and send photographs before dispatch.",
+                        fit: true,
+                        fitPiece: from.piece,
+                      },
+                    });
+                  }}
+                />
+              )}
+
+              {/* ---------- Navigation drawer ---------- */}
+              <Overlay
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                labelledBy="drawer-title"
+                align="end"
+              >
+                <div className="bg-card w-4/5 max-w-xs h-full p-5 flex flex-col justify-between border-l border-hairline shadow-2xl drawer-slide-in overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* Profile */}
+                    <div className="pb-3.5 border-b border-hairline">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <span
+                            aria-hidden="true"
+                            className="relative w-12 h-12 rounded-full bg-gold text-ink font-display text-[19px] flex items-center justify-center shadow-sm"
+                          >
+                            PS
+                          </span>
+                          <span className="flex flex-col">
+                            <span className="flex items-center gap-1">
+                              <span
+                                id="drawer-title"
+                                className="font-semibold text-[16px] text-ink leading-tight tracking-tight"
+                              >
+                                Priya Sharma
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => (window.location.href = "profile.html")}
+                                aria-label="Edit your profile"
+                                className="w-11 h-11 -my-3 -ml-1 -mr-2.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset active:scale-95 transition-colors shrink-0"
+                              >
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path d="M12 20h9" />
+                                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                </svg>
+                              </button>
+                              <span
+                                className="w-2 h-2 rounded-full bg-[#3F7A4B] shrink-0"
+                                role="img"
+                                aria-label="Your stylist is online"
+                              />
+                            </span>
+                            <span className="font-mono text-[11px] text-muted mt-0.5">
+                              Toronto, ON
+                            </span>
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setDrawerOpen(false)}
+                          aria-label="Close navigation menu"
+                          className="w-11 h-11 -mr-2 -mt-1.5 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset transition-colors shrink-0"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 5 primary tabs */}
+                    <nav aria-label="Primary">
+                      <ul className="space-y-1">
+                        {[
+                          {
+                            id: "home",
+                            label: "01 · Home",
+                            link: "index.html",
+                            desc: "Occasion-first landing",
+                          },
+                          {
+                            id: "discover",
+                            label: "02 · Discover",
+                            link: "discover.html",
+                            desc: "Craft & regional provenance",
+                          },
+                          {
+                            id: "design",
+                            label: "03 · Design",
+                            link: "designers.html",
+                            desc: "The makers behind the cloth",
+                          },
+                          {
+                            id: "wardrobe",
+                            label: "04 · Wardrobe",
+                            link: "wardrobe.html",
+                            desc: "Memory & measurements",
+                          },
+                          {
+                            id: "orders",
+                            label: "05 · Orders",
+                            link: "orders.html",
+                            desc: "Live artisan production tracker",
+                          },
+                        ].map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              aria-current={item.active ? "page" : undefined}
+                              onClick={() => {
+                                if (item.link) {
+                                  window.location.href = item.link;
+                                  return;
+                                }
+                                setDrawerOpen(false);
+                                showToast(`${item.label.split("· ")[1]} opens in the next release`);
+                              }}
+                              className={`w-full text-left p-2.5 min-h-[52px] rounded-r-xl transition-colors border-l-[3px] ${
+                                item.active
+                                  ? "bg-inset text-primary font-semibold border-primary"
+                                  : "hover:bg-selfill text-ink border-transparent"
+                              }`}
+                            >
+                              <span className="block text-[14px]">{item.label}</span>
+                              <span className="block text-[11px] text-muted font-normal mt-0.5">
+                                {item.desc}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+
+                    {/* Dual-geography */}
+                    <div className="pt-4 border-t border-hairline space-y-2">
+                      <span
+                        id="ship-to-label"
+                        className="font-mono text-[10.5px] uppercase tracking-wider text-muted font-medium block"
+                      >
+                        Ship to
+                      </span>
+                      <div
+                        className="flex items-center gap-1.5"
+                        role="group"
+                        aria-labelledby="ship-to-label"
+                      >
+                        {Object.values(SHIP_TO).map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            aria-pressed={shipCode === c.code}
+                            onClick={() => {
+                              setShipCode(c.code);
+                              showToast(`Ship-to ${c.code} — duties and lead times recalculated`);
+                            }}
+                            className={`flex-1 min-h-[44px] px-1 rounded-lg border text-[11.5px] font-mono transition-colors ${
+                              shipCode === c.code
+                                ? "border-primary bg-primary text-onprimary"
+                                : "border-hairline bg-inset text-ink hover:border-ctrl"
+                            }`}
+                          >
+                            <span aria-hidden="true">{c.flag}</span> {c.code}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Landed-cost disclosure sits at the foot of the drawer
+                      (Figma 31:1282) and restates the selected market. */}
+                  <div className="pt-6">
+                    <p className="text-[11px] text-muted leading-snug">
+                      Prices are landed to {shipCode} — {ship.duty}, {ship.courier}. Nothing is
+                      added at checkout.
+                    </p>
+                    <div className="flex items-center justify-between gap-3 pt-3 mt-3 border-t border-hairline text-muted text-[11px] font-mono">
+                      <span>Aura v1.0</span>
+                      <span className="text-ink">Perfect Fit Guarantee</span>
+                    </div>
+                  </div>
+                </div>
+              </Overlay>
             </div>
           </div>
         );
