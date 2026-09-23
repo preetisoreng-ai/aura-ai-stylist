@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F3EFE7" />
+    <title>Aura — Design</title>
+    <meta
+      name="description"
+      content="Aura Discover — the catalogue of bespoke directions by garment category, with craft provenance and landed pricing."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      /* Same channel-based token strategy as index.html so Tailwind's
+       `/opacity` modifier resolves against CSS variables. */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas: "rgb(var(--canvas-rgb) / <alpha-value>)",
+              card: "rgb(var(--card-rgb) / <alpha-value>)",
+              inset: "rgb(var(--inset-rgb) / <alpha-value>)",
+              primary: "rgb(var(--primary-rgb) / <alpha-value>)",
+              onprimary: "rgb(var(--onprimary-rgb) / <alpha-value>)",
+              selfill: "rgb(var(--sel-fill-rgb) / <alpha-value>)",
+              ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+              muted: "rgb(var(--muted-rgb) / <alpha-value>)",
+              hairline: "rgb(var(--hairline-rgb) / <alpha-value>)",
+              ctrl: "rgb(var(--ctrl-border-rgb) / <alpha-value>)",
+              gold: "rgb(var(--gold-rgb) / <alpha-value>)",
+              goldtext: "rgb(var(--gold-text-rgb) / <alpha-value>)",
+            },
+            fontFamily: {
+              display: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
+              sans: ['"DM Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+              mono: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        --canvas-rgb: 243 239 231; /* #F3EFE7 Warm Ivory · surface-0 (Figma 1:2285) */
+        --card-rgb: 255 255 255;
+        --inset-rgb: 243 238 228;
+        --primary-rgb: 59 42 90;
+        --onprimary-rgb: 255 255 255;
+        --sel-fill-rgb: 245 244 247;
+        --ink-rgb: 30 27 46;
+        --muted-rgb: 90 84 104;
+        --hairline-rgb: 229 223 213;
+        --ctrl-border-rgb: 124 123 134;
+        --gold-rgb: 200 155 60;
+        --gold-text-rgb: 120 93 36;
+
+        --canvas: rgb(var(--canvas-rgb));
+        --card: rgb(var(--card-rgb));
+        --ink: rgb(var(--ink-rgb));
+
+        --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+        --e-float:
+          0 14px 34px -8px rgb(var(--primary-rgb) / 0.16),
+          0 3px 10px -2px rgb(var(--ink-rgb) / 0.05), 0 1px 2px rgb(var(--ink-rgb) / 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html {
+        background-color: var(--canvas);
+      }
+
+      body {
+        background-color: var(--canvas);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body.aura-locked {
+        overflow: hidden;
+      }
+
+      :focus-visible {
+        outline: 2px solid rgb(var(--primary-rgb));
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .app-viewport {
+        width: 100%;
+        max-width: 430px;
+        /* --app-h follows window.visualViewport so the composer stays above
+           the on-screen keyboard; the thread scrolls in the space left. */
+        height: var(--app-h, 100vh);
+        height: var(--app-h, 100dvh);
+        margin: 0 auto;
+        background: var(--canvas);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Guaranteed regardless of the CDN build's utility coverage. */
+      .line-clamp-1,
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .line-clamp-1 {
+        -webkit-line-clamp: 1;
+      }
+      .line-clamp-2 {
+        -webkit-line-clamp: 2;
+      }
+
+      .thread-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+      }
+
+      .thread-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .thread-scroll::-webkit-scrollbar-thumb {
+        background: rgb(var(--hairline-rgb));
+        border-radius: 9999px;
+      }
+
+      /* Reuse the home screen's chip geometry — 44px minimum target. */
+      .reply-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 9999px;
+        background: rgb(var(--card-rgb) / 0.9);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        color: rgb(var(--ink-rgb));
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition:
+          border-color 0.2s ease,
+          background-color 0.2s ease,
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        box-shadow: 0 1px 2px rgb(var(--ink-rgb) / 0.03);
+      }
+
+      .reply-chip:hover {
+        border-color: rgb(var(--primary-rgb) / 0.55);
+        background: rgb(var(--card-rgb));
+        color: rgb(var(--primary-rgb));
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -4px rgb(var(--primary-rgb) / 0.14);
+      }
+
+      .reply-chip:active {
+        transform: scale(0.975);
+      }
+
+      .composer-bar {
+        background: var(--card);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        box-shadow: var(--e-float);
+        transition:
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
+      }
+
+      .composer-bar:focus-within {
+        border-color: rgb(var(--primary-rgb) / 0.75);
+        box-shadow:
+          0 16px 40px -8px rgb(var(--primary-rgb) / 0.2),
+          0 0 0 3px rgb(var(--primary-rgb) / 0.1);
+      }
+
+      /* The reply field is measured in JS to grow it line by line, so its
+         metrics live here rather than in Tailwind's async JIT sheet -- those
+         classes land after the first measurement and size it short. */
+      .aura-reply-field {
+        font-size: 16px;
+        line-height: 22px;
+        padding: 6px 44px 6px 0;
+      }
+
+      .aura-reply-field.is-open {
+        padding: 2px 32px 2px 0;
+      }
+
+      .home-pill-line {
+        width: 134px;
+        height: 5px;
+        background: var(--ink);
+        opacity: 0.2;
+        border-radius: 9999px;
+        margin: 10px auto 4px auto;
+      }
+
+      /* ---------- Motion ---------- */
+      @keyframes auraMsgIn {
+        from {
+          transform: translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraToastIn {
+        from {
+          transform: translate(-50%, -14px);
+          opacity: 0;
+        }
+        to {
+          transform: translate(-50%, 0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraTypingDot {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.35;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraListenRing {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(var(--primary-rgb) / 0.35);
+        }
+        50% {
+          box-shadow: 0 0 0 7px rgb(var(--primary-rgb) / 0);
+        }
+      }
+
+      @keyframes auraSheetUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .aura-sheet-up {
+        animation: auraSheetUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Carousel track: swipeable, but without a visible scrollbar. */
+      .no-scrollbar {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .aura-msg-in {
+        animation: auraMsgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-toast-in {
+        animation: auraToastIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-listening {
+        animation: auraListenRing 1.5s ease-out infinite;
+      }
+
+      .typing-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 9999px;
+        background: rgb(var(--primary-rgb));
+        animation: auraTypingDot 1.3s ease-in-out infinite;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.16s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.32s;
+      }
+
+      @keyframes auraSlideFromRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .drawer-slide-in {
+        animation: auraSlideFromRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .aura-fade-in {
+        animation: auraFadeIn 0.18s ease-out forwards;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+        .reply-chip:hover {
+          transform: none;
+        }
+        .typing-dot {
+          opacity: 0.7;
+        }
+      }
+      /* ---- Overlay motion: the scrim fades on its own, panels only move.
+         Transform-only animation stays on the compositor, so the slide is
+         smooth; closing plays the same motion in reverse before unmount. */
+      html {
+        scrollbar-gutter: stable;
+      }
+      .drawer-slide-in {
+        animation: auraDrawerIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      .aura-scrim {
+        animation: auraScrimIn 0.3s ease-out both;
+      }
+      .aura-leaving {
+        pointer-events: none;
+      }
+      .aura-leaving .aura-scrim {
+        animation: auraScrimOut 0.26s ease-in both;
+      }
+      .aura-leaving .drawer-slide-in {
+        animation: auraDrawerOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      .aura-leaving .drawer-slide-in-left {
+        animation: auraDrawerOutLeft 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      .aura-leaving .aura-sheet-up {
+        animation: auraSheetOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraDrawerIn {
+        from {
+          transform: translate3d(100%, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      @keyframes auraDrawerOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(100%, 0, 0);
+        }
+      }
+      @keyframes auraDrawerOutLeft {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-100%, 0, 0);
+        }
+      }
+      @keyframes auraSheetOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 100%, 0);
+        }
+      }
+      @keyframes auraScrimIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes auraScrimOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .drawer-slide-in,
+        .aura-scrim,
+        .aura-leaving .aura-scrim,
+        .aura-leaving .drawer-slide-in,
+        .aura-leaving .drawer-slide-in-left,
+        .aura-leaving .aura-sheet-up {
+          animation-duration: 1ms;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+            const { useState, useRef, useEffect, useCallback } = React;
+
+      /* ===================================================================
+       WHERE "BACK" GOES
+       Every screen is reachable from several others now — the drawer opens
+       Discover from home, from a chat, from the wardrobe — so a hard-coded
+       destination sends people somewhere they have never been. Read the page
+       we actually arrived from and name it, so the control tells the truth.
+
+       Falls back to the old fixed destination when there is no referrer to
+       read: a bookmark, a typed URL, or a cross-origin arrival.
+       =================================================================== */
+      const BACK_LABELS = {
+        "index.html": "home",
+        "conversation.html": "chat",
+        "discover.html": "Discover",
+        "collection.html": "the collection",
+        "wardrobe.html": "wardrobe",
+        "orders.html": "orders",
+        "profile.html": "profile",
+      };
+
+      /* The browser's own history is the one thing that is always right,
+         and it works when the referrer does not — opening these files
+         straight off disk (file://) sends no referrer at all. So history
+         decides WHERE back goes; the referrer only decides what we CALL it,
+         and we say plain "Back" when we cannot name the place. */
+      const CAN_GO_BACK = (function () {
+        try {
+          return window.history.length > 1;
+        } catch (e) {
+          return false;
+        }
+      })();
+
+      const BACK_FROM_REFERRER = (function () {
+        try {
+          const ref = document.referrer;
+          if (!ref) return null;
+          const u = new URL(ref);
+          if (u.origin !== window.location.origin) return null;
+          const file = u.pathname.split("/").pop() || "index.html";
+          const here = window.location.pathname.split("/").pop() || "index.html";
+          // A reload, or a jump within the same screen, is not a way back.
+          if (file === here) return null;
+          if (!BACK_LABELS[file]) return null;
+          return { href: file, label: BACK_LABELS[file] };
+        } catch (e) {
+          return null;
+        }
+      })();
+
+      function backTarget(fallbackHref, fallbackLabel) {
+        // Name it from the referrer when we have one. With history to fall
+        // back on we stay honest and say "Back"; with neither, the old fixed
+        // destination is all that is left, so name that.
+        const named =
+          BACK_FROM_REFERRER ||
+          (CAN_GO_BACK ? null : { href: fallbackHref, label: fallbackLabel });
+
+        return {
+          href: (named && named.href) || fallbackHref,
+          label: named && named.label,
+          text: named ? "Back to " + named.label : "Back",
+          short: (named && named.label) || "Back",
+          useHistory: CAN_GO_BACK,
+        };
+      }
+            const SHIP_TO = [
+              {
+                code: "US",
+                symbol: "$",
+                label: "US $",
+                flag: "🇺🇸",
+                duty: "Duties prepaid",
+                courier: "DHL Express · 4 days",
+              },
+              {
+                code: "UK",
+                symbol: "£",
+                label: "UK £",
+                flag: "🇬🇧",
+                duty: "VAT prepaid",
+                courier: "DHL Express · 3 days",
+              },
+              {
+                code: "CA",
+                symbol: "C$",
+                label: "CA $",
+                flag: "🇨🇦",
+                duty: "Duties prepaid",
+                courier: "DHL Express · 5 days",
+              },
+              {
+                code: "IN",
+                symbol: "₹",
+                label: "INR ₹",
+                flag: "🇮🇳",
+                duty: "No import duty",
+                courier: "Blue Dart · 2 days",
+              },
+            ];
+
+            /* ===================================================================
+                     COMPONENT: OVERLAY — same contract as the home screen's drawer.
+                     Escape to close, background scroll lock, focus moved in on open
+                     and restored to the trigger on close, focus kept inside while open.
+                     =================================================================== */
+            function Overlay({ open, onClose, labelledBy, align, children }) {
+              const panelRef = useRef(null);
+              const restoreRef = useRef(null);
+              // Stays mounted briefly after closing so the panel can move back out.
+              const [shown, setShown] = useState(open);
+              useEffect(() => {
+                if (open) {
+                  setShown(true);
+                  return;
+                }
+                const t = setTimeout(() => setShown(false), 260);
+                return () => clearTimeout(t);
+              }, [open]);
+
+              useEffect(() => {
+                if (!open) return;
+
+                restoreRef.current = document.activeElement;
+                document.body.classList.add("aura-locked");
+
+                const panel = panelRef.current;
+                const focusables = () =>
+                  Array.from(
+                    panel.querySelectorAll(
+                      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+                    )
+                  ).filter((el) => el.offsetParent !== null);
+
+                const first = focusables()[0];
+                if (first) first.focus({ preventScroll: true });
+                else panel.focus({ preventScroll: true });
+
+                const onKeyDown = (e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    onClose();
+                    return;
+                  }
+                  if (e.key !== "Tab") return;
+                  const items = focusables();
+                  if (items.length === 0) return;
+                  const firstEl = items[0];
+                  const lastEl = items[items.length - 1];
+                  if (e.shiftKey && document.activeElement === firstEl) {
+                    e.preventDefault();
+                    lastEl.focus();
+                  } else if (!e.shiftKey && document.activeElement === lastEl) {
+                    e.preventDefault();
+                    firstEl.focus();
+                  }
+                };
+
+                document.addEventListener("keydown", onKeyDown, true);
+                return () => {
+                  document.removeEventListener("keydown", onKeyDown, true);
+                  document.body.classList.remove("aura-locked");
+                  const restore = restoreRef.current;
+                  if (restore && typeof restore.focus === "function") restore.focus({ preventScroll: true });
+                };
+              }, [open, onClose]);
+
+              if (!open && !shown) return null;
+
+              return (
+                <div
+                  className={`absolute inset-0 z-50 flex ${open ? "" : "aura-leaving "}${align === "end" ? "justify-end" : "items-end justify-center"}`}
+                  onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) onClose();
+                  }}
+                >
+                  <div
+                    className="aura-scrim absolute inset-0 -z-10"
+                    style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.45)" }}
+                    onMouseDown={onClose}
+                    aria-hidden="true"
+                  />
+                  <div
+                    ref={panelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={labelledBy}
+                    tabIndex={-1}
+                    className="focus:outline-none contents"
+                  >
+                    {children}
+                  </div>
+                </div>
+              );
+            }
+
+            /* ===================================================================
+             THE DESIGNERS BEHIND THE CLOTH
+             Aura warehouses nothing. It curates a vetted network of independent
+             boutiques, regional artisans and specialists — and every one of them
+             has a face, a workshop and a story. This screen surfaces that
+             generously, because a person is easier to trust than a catalogue.
+
+             Three views, one screen: the feed you browse, the profile you open,
+             and the checklist that explains what "verified" actually means.
+             =================================================================== */
+            const DESIGNER_FILTERS = [
+              "All",
+              "Bridal",
+              "Handloom",
+              "Zardosi",
+              "Menswear",
+              "Kids",
+              "Under 2 wks",
+            ];
+
+            const DESIGNERS = [
+              {
+                id: "aisha",
+                name: "Aisha's Boutique",
+                city: "Mumbai",
+                est: "2012",
+                artisans: 18,
+                rating: 4.9,
+                orders: 214,
+                ships: "Ships worldwide",
+                specialty: "Silk Anarkali",
+                lead: "5 wks",
+                leadWeeks: 5,
+                crafts: ["Bridal", "Silk Anarkali", "Zardosi"],
+                tags: ["Bridal", "Zardosi"],
+                first: "Aisha",
+                photo: "Workshop photo · Aisha at loom",
+                swatch: ["#5A1226", "#C89B3C", "#E8D9B5"],
+                story:
+                  "Aisha took the workshop on from her mother in 2012. Eighteen artisans, all salaried, and she signs off every piece before it leaves the room.",
+              },
+              {
+                id: "kanchi",
+                name: "Handloom Kanchi",
+                city: "Chennai",
+                est: "1998",
+                artisans: 26,
+                rating: 4.8,
+                orders: 89,
+                ships: "GI-certified",
+                specialty: "Korvai Kanjivaram",
+                lead: "6 wks",
+                leadWeeks: 6,
+                crafts: ["Handloom", "Korvai", "Temple border"],
+                tags: ["Handloom"],
+                first: "Kanchi",
+                photo: "Workshop photo · the korvai join",
+                swatch: ["#0E5B4A", "#C89B3C", "#E4D2A8"],
+                story:
+                  "Three generations on the same street in Kanchipuram. Body and border are joined by hand at the loom — the korvai that gives the saree its weight.",
+              },
+              {
+                id: "noor",
+                name: "Noor Atelier",
+                city: "Lucknow",
+                est: "2016",
+                artisans: 9,
+                rating: 4.9,
+                orders: 143,
+                ships: "Ships worldwide",
+                specialty: "Chikankari",
+                lead: "2 wks",
+                leadWeeks: 2,
+                crafts: ["Chikankari", "Shadow work", "Under 2 wks"],
+                tags: ["Under 2 wks"],
+                first: "Noor",
+                photo: "Workshop photo · shadow work in progress",
+                swatch: ["#F5F2EA", "#CFE0DA", "#9AAFA6"],
+                story:
+                  "Nine women, all trained in shadow work, and the fastest turnaround in the network. Noor keeps the team small so the hand stays consistent.",
+              },
+              {
+                id: "veer",
+                name: "Veer & Sons",
+                city: "Jodhpur",
+                est: "1974",
+                artisans: 12,
+                rating: 4.7,
+                orders: 61,
+                ships: "Ships worldwide",
+                specialty: "Bandhgala",
+                lead: "4 wks",
+                leadWeeks: 4,
+                crafts: ["Menswear", "Bandhgala", "Sherwani"],
+                tags: ["Menswear"],
+                first: "Veer",
+                photo: "Workshop photo · the cutting table",
+                swatch: ["#1E3A4C", "#E2D7C3", "#8C5A3C"],
+                story:
+                  "Fifty years of menswear, cut on the same table. Veer's father opened it; his daughter runs the fittings now.",
+              },
+              {
+                id: "mira",
+                name: "Little Mira",
+                city: "Jaipur",
+                est: "2019",
+                artisans: 7,
+                rating: 4.8,
+                orders: 52,
+                ships: "Ships worldwide",
+                specialty: "Children's festive",
+                lead: "2 wks",
+                leadWeeks: 2,
+                crafts: ["Kids", "Block print", "Under 2 wks"],
+                tags: ["Kids", "Under 2 wks"],
+                first: "Mira",
+                photo: "Workshop photo · block printing by hand",
+                swatch: ["#E9C9CE", "#C89B3C", "#F4EEE8"],
+                story:
+                  "Festive clothes for children that survive a full day of being a child. Natural dyes, soft linings, and seams that let out as they grow.",
+              },
+            ];
+
+            /* What "verified" means here, spelled out. A badge nobody can
+               interrogate is not trust — it is decoration. */
+            const VETTING = [
+              ["Business & tax verified", "GSTIN, PAN, MSME check"],
+              ["Workshop visit", "Aura team or partner has physically visited"],
+              ["Sample audit", "3 test orders reviewed for craft"],
+              ["NRI shipping certified", "Meets customs & duty documentation standards"],
+              ["Quarterly review", "Ratings, returns, disputes tracked"],
+            ];
+
+            /* The workshop photograph. A gradient stands in until a real one is
+               shot — the same treatment the catalogue uses. */
+            function WorkshopPhoto({ designer, className, label }) {
+              return (
+                <span
+                  className={className + " flex items-center justify-center overflow-hidden"}
+                  role="img"
+                  aria-label={designer.name + " — photograph not yet available"}
+                  style={{
+                    background:
+                      "linear-gradient(150deg, " +
+                      designer.swatch[0] +
+                      " 0%, " +
+                      designer.swatch[2] +
+                      " 55%, " +
+                      designer.swatch[1] +
+                      " 100%)",
+                  }}
+                >
+                  {label && (
+                    <span className="text-[12px] text-white/90 px-4 text-center leading-snug drop-shadow">
+                      {designer.photo}
+                    </span>
+                  )}
+                </span>
+              );
+            }
+
+            /* One designer in the feed. Ranked by fit for you, never by spend. */
+            function DesignerCard({ designer, onOpen }) {
+              return (
+                <button
+                  type="button"
+                  onClick={() => onOpen(designer)}
+                  aria-label={
+                    designer.name +
+                    " — " +
+                    designer.city +
+                    ", " +
+                    designer.rating +
+                    " stars, " +
+                    designer.orders +
+                    " orders from abroad"
+                  }
+                  className="w-full text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.99] transition-all"
+                >
+                  <WorkshopPhoto
+                    designer={designer}
+                    className="block w-full h-[150px]"
+                  />
+                  <span className="block p-3">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="text-[14px] font-medium text-ink truncate">
+                        {designer.name}
+                      </span>
+                      <span className="font-mono text-[10.5px] text-muted shrink-0">
+                        {designer.city}
+                      </span>
+                    </span>
+                    <span className="flex items-baseline justify-between gap-3 mt-1.5">
+                      <span className="font-mono text-[11px] text-ink">
+                        ★ {designer.rating} · {designer.orders} NRI orders
+                      </span>
+                      <span className="font-mono text-[10.5px] text-goldtext shrink-0">
+                        {designer.ships}
+                      </span>
+                    </span>
+                    <span className="flex items-baseline justify-between gap-3 mt-1">
+                      <span className="text-[11.5px] text-muted truncate">
+                        Specialty: {designer.specialty}
+                      </span>
+                      <span className="font-mono text-[10.5px] text-muted shrink-0">
+                        Lead time {designer.lead}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            }
+
+
+            /* ===================================================================
+             AURA DRAWER — the right-hand navigation panel, identical on every
+             screen. Built to Figma "Right Drawer / v2" (173:2827) with its
+             "Drawer / Nav Item" and "Drawer / Ship-to" components; icons are the
+             component's own exports in images/drawer/. Each screen passes which
+             tab is current and its own ship-to state.
+             =================================================================== */
+            const DRAWER_SERIF = {
+              fontFamily: '"Instrument Serif", "Iowan Old Style", Georgia, serif',
+            };
+            const DRAWER_ICON = "images/drawer/";
+
+            const DRAWER_TABS = [
+              {
+                id: "home",
+                label: "Home",
+                link: "index.html",
+                desc: "Occasion-first landing",
+              },
+              {
+                id: "discover",
+                label: "Discover",
+                link: "discover.html",
+                desc: "Craft & regional provenance",
+              },
+              {
+                id: "design",
+                label: "Design",
+                link: "designers.html",
+                desc: "The makers behind the cloth",
+              },
+              {
+                id: "wardrobe",
+                label: "Wardrobe",
+                link: "wardrobe.html",
+                desc: "Memory & measurements",
+              },
+              {
+                id: "orders",
+                label: "Orders",
+                link: "orders.html",
+                desc: "Live artisan production tracker",
+              },
+            ];
+
+            // The ship-to codes are markets (UK); the top line shows the ISO country (GB).
+            const DRAWER_ISO = { US: "US", UK: "GB", CA: "CA", IN: "IN" };
+
+            function AuraDrawer({ active, countries, current, onPickCountry, onClose }) {
+              return (
+                <div
+                  className="relative bg-canvas w-[88%] max-w-[346px] h-full flex flex-col px-5 py-6 border-l border-hairline drawer-slide-in overflow-y-auto overflow-x-hidden"
+                  style={{ boxShadow: "-12px 0 40px rgb(30 27 46 / 0.18)" }}
+                >
+                  {/* Profile */}
+                  <div className="shrink-0 flex items-center gap-2.5 pb-5 border-b border-hairline">
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 p-[2px] rounded-full border border-gold/55"
+                    >
+                      <span
+                        className="w-[52px] h-[52px] rounded-full bg-gold text-ink flex items-center justify-center text-[21px] leading-[26px]"
+                        style={DRAWER_SERIF}
+                      >
+                        PS
+                      </span>
+                    </span>
+                    <span className="flex-1 min-w-0 flex flex-col gap-2">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          id="drawer-title"
+                          className="text-[20px] leading-[24px] text-ink truncate"
+                          style={DRAWER_SERIF}
+                        >
+                          Priya Sharma
+                        </span>
+                        <a
+                          href="profile.html"
+                          aria-label="Edit your profile"
+                          className="shrink-0 w-8 h-8 -m-[7px] rounded-full flex items-center justify-center hover:bg-inset transition-colors"
+                        >
+                          <img
+                            src={DRAWER_ICON + "edit.svg"}
+                            width="18"
+                            height="18"
+                            alt=""
+                          />
+                        </a>
+                        <img
+                          src={DRAWER_ICON + "online.svg"}
+                          width="8"
+                          height="8"
+                          alt="Your stylist is online"
+                          className="shrink-0"
+                        />
+                      </span>
+                      <span className="font-mono text-[11px] leading-[14px] tracking-[1.98px] uppercase text-muted whitespace-nowrap">
+                        Toronto, ON
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Close navigation menu"
+                      className="shrink-0 w-11 h-11 rounded-full bg-hairline/70 flex items-center justify-center hover:bg-hairline transition-colors"
+                    >
+                      <img src={DRAWER_ICON + "close.svg"} width="18" height="18" alt="" />
+                    </button>
+                  </div>
+
+                  {/* 5 primary tabs */}
+                  <nav
+                    aria-label="Primary"
+                    className="shrink-0 py-3 border-b border-hairline"
+                  >
+                    <ul className="list-none m-0 p-0 flex flex-col gap-1">
+                      {DRAWER_TABS.map((t) => {
+                        const on = t.id === active;
+                        return (
+                          <li key={t.id}>
+                            <a
+                              href={t.link}
+                              aria-current={on ? "page" : undefined}
+                              className={`relative flex flex-col gap-0.5 pl-[52px] pr-3 py-3 rounded-r-2xl border-l-[3px] transition-colors ${
+                                on
+                                  ? "bg-primary/[0.07] border-primary"
+                                  : "border-transparent hover:bg-inset/70"
+                              }`}
+                            >
+                              <img
+                                src={DRAWER_ICON + t.id + ".svg"}
+                                width="24"
+                                height="24"
+                                alt=""
+                                className="absolute left-[9px] top-[15px]"
+                              />
+                              <span
+                                className={`block font-sans text-[16px] leading-[28px] text-ink ${
+                                  on ? "font-semibold" : "font-normal"
+                                }`}
+                              >
+                                {t.label}
+                              </span>
+                              <span className="block font-sans text-[12px] leading-[20px] text-muted">
+                                {t.desc}
+                              </span>
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </nav>
+
+                  {/* Dual-geography */}
+                  <div className="shrink-0 pt-5 flex flex-col gap-6">
+                    <div className="flex flex-col gap-3">
+                      <span
+                        id="ship-to-label"
+                        className="font-mono text-[11px] leading-[14px] tracking-[2.2px] uppercase text-muted"
+                      >
+                        Ship to
+                      </span>
+                      <div
+                        className="flex gap-2"
+                        role="group"
+                        aria-labelledby="ship-to-label"
+                      >
+                        {countries.map((c) => {
+                          const on = current.code === c.code;
+                          return (
+                            <button
+                              key={c.code}
+                              type="button"
+                              aria-pressed={on}
+                              aria-label={`Ship to ${c.code}`}
+                              onClick={() => onPickCountry(c)}
+                              className={`flex-1 min-w-0 h-14 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${
+                                on
+                                  ? "bg-primary border-primary"
+                                  : "bg-inset border-hairline hover:border-ctrl/60"
+                              }`}
+                            >
+                              <span
+                                className={`text-[19px] leading-[23px] ${on ? "text-onprimary" : "text-ink"}`}
+                                style={DRAWER_SERIF}
+                              >
+                                {DRAWER_ISO[c.code] || c.code}
+                              </span>
+                              <span
+                                className={`font-sans text-[10.5px] leading-[13px] ${
+                                  on ? "text-onprimary/80" : "text-muted"
+                                }`}
+                              >
+                                {c.code}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <p className="flex items-start gap-3 pt-1 m-0" aria-live="polite">
+                      <img
+                        src={DRAWER_ICON + "globe.svg"}
+                        width="20"
+                        height="20"
+                        alt=""
+                        className="shrink-0"
+                      />
+                      <span className="flex-1 min-w-0 font-sans text-[12px] leading-[18px] text-muted">
+                        Prices are landed to {current.code} — {current.duty},{" "}
+                        {current.courier}. Nothing is added at checkout.
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="flex-1 min-h-6" aria-hidden="true" />
+
+                  {/* Sign-off */}
+                  <div className="shrink-0 relative h-[170px] border-t border-hairline">
+                    <span className="absolute left-0 top-[135px] font-mono text-[11px] leading-[13px] text-muted">
+                      Aura v1.0
+                    </span>
+                    <span className="absolute right-0 top-[127px] font-mono text-[10px] leading-[14px] tracking-[2px] uppercase text-ink pb-[5px] border-b border-ink/60 whitespace-nowrap">
+                      Perfect Fit Guarantee
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            function App() {
+              const back = backTarget("index.html", "home");
+              const [view, setView] = useState("feed"); // feed · profile · verify
+              const [openId, setOpenId] = useState(null);
+              const [filter, setFilter] = useState("All");
+              const [drawerOpen, setDrawerOpen] = useState(false);
+              const [activeCountry, setActiveCountry] = useState(SHIP_TO[0]);
+              const [toastMsg, setToastMsg] = useState("");
+              const toastTimer = useRef(null);
+              const scrollRef = useRef(null);
+
+              const showToast = useCallback((msg) => {
+                setToastMsg(msg);
+                if (toastTimer.current) clearTimeout(toastTimer.current);
+                toastTimer.current = setTimeout(() => setToastMsg(""), 3200);
+              }, []);
+              useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+              const designer = DESIGNERS.find((d) => d.id === openId) || DESIGNERS[0];
+
+              const shown =
+                filter === "All"
+                  ? DESIGNERS
+                  : DESIGNERS.filter(
+                      (d) =>
+                        d.tags.indexOf(filter) !== -1 ||
+                        d.crafts.indexOf(filter) !== -1
+                    );
+
+              // Each view starts at the top rather than inheriting the last scroll.
+              useEffect(() => {
+                if (scrollRef.current) scrollRef.current.scrollTop = 0;
+              }, [view]);
+
+              const openDesigner = (d) => {
+                setOpenId(d.id);
+                setView("profile");
+              };
+
+              // Back steps through the views before it leaves the screen.
+              const goBack = (e) => {
+                if (view === "verify") {
+                  e.preventDefault();
+                  setView("profile");
+                  return;
+                }
+                if (view === "profile") {
+                  e.preventDefault();
+                  setView("feed");
+                  return;
+                }
+                if (!back.useHistory) return;
+                e.preventDefault();
+                window.history.back();
+              };
+
+              const title =
+                view === "feed"
+                  ? "Discover designers"
+                  : view === "profile"
+                    ? designer.name
+                    : "Verification";
+
+              const backLabel =
+                view === "feed" ? back.text : view === "profile" ? "Back" : "Back";
+
+              return (
+                <div className="app-shell">
+                  <div className="sr-only" role="status" aria-live="polite">
+                    {toastMsg}
+                  </div>
+                  {toastMsg && (
+                    <div
+                      aria-hidden="true"
+                      className="fixed top-5 left-1/2 z-[60] bg-primary text-onprimary text-[12.5px] font-medium px-4 py-2.5 rounded-full shadow-lg border border-gold/40 flex items-center gap-2 aura-toast-in max-w-[92vw]"
+                    >
+                      <span className="text-gold" aria-hidden="true">✦</span>
+                      <span className="truncate">{toastMsg}</span>
+                    </div>
+                  )}
+
+                  <div className="app-viewport">
+                    {/* ---------- Top bar ---------- */}
+                    <header className="shrink-0 flex items-center gap-1 px-2 pt-3 pb-2 border-b border-hairline bg-canvas">
+                      {/* Back retraces your steps; home is the way out of them. */}
+                      <a
+                        href="index.html"
+                        aria-label="Go to home"
+                        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
+                      >
+                        <svg
+                          width="19"
+                          height="19"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.9"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M3 10.5 12 3.5l9 7" />
+                          <path d="M5.5 9.5V20h13V9.5" />
+                          <path d="M9.75 20v-6h4.5v6" />
+                        </svg>
+                      </a>
+
+                      <a
+                        href={back.href}
+                        aria-label={backLabel}
+                        onClick={goBack}
+                        className="flex items-center gap-1 min-h-[44px] pl-1.5 pr-3 rounded-full text-ink hover:bg-inset active:scale-95 transition-all shrink-0"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="m15 18-6-6 6-6" />
+                        </svg>
+                        <span className="text-[13.5px] font-medium">{backLabel}</span>
+                      </a>
+
+                      <div className="min-w-0 flex-1 text-right pr-1">
+                        <h1 className="font-display text-[20px] text-primary leading-tight truncate">
+                          {title}
+                        </h1>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setDrawerOpen(true)}
+                        aria-label="Open navigation menu"
+                        aria-haspopup="dialog"
+                        aria-expanded={drawerOpen}
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all shrink-0"
+                      >
+                        <svg
+                          width="20"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.1"
+                          strokeLinecap="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <line x1="3" y1="7" x2="21" y2="7" />
+                          <line x1="3" y1="12" x2="21" y2="12" />
+                          <line x1="3" y1="17" x2="21" y2="17" />
+                        </svg>
+                      </button>
+                    </header>
+
+                    {/* ---------- 1 · Discovery feed ---------- */}
+                    {view === "feed" && (
+                      <React.Fragment>
+                        <div className="shrink-0 px-4 pt-3 pb-1">
+                          <div
+                            className="flex flex-wrap gap-2"
+                            role="group"
+                            aria-label="Filter designers"
+                          >
+                            {DESIGNER_FILTERS.map((f) => {
+                              const on = filter === f;
+                              return (
+                                <button
+                                  key={f}
+                                  type="button"
+                                  aria-pressed={on}
+                                  onClick={() => setFilter(f)}
+                                  className={
+                                    "min-h-[38px] px-3.5 rounded-full border text-[12.5px] font-medium transition-all active:scale-95 " +
+                                    (on
+                                      ? "bg-primary text-onprimary border-primary"
+                                      : "bg-card text-ink border-hairline hover:border-primary/45")
+                                  }
+                                >
+                                  {f}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div ref={scrollRef} className="thread-scroll px-4 pt-3 pb-24">
+                          <p className="font-mono text-[10.5px] text-muted mb-3">
+                            {shown.length}{" "}
+                            {shown.length === 1 ? "designer" : "designers"} · ranked by
+                            fit for you, not by ad spend
+                          </p>
+
+                          {shown.length === 0 ? (
+                            <p className="text-[13px] text-muted leading-relaxed text-center py-10 rounded-2xl border border-dashed border-ctrl/50">
+                              Nobody in the network matches that yet. Try another craft.
+                            </p>
+                          ) : (
+                            <div className="flex flex-col gap-3.5">
+                              {shown.map((d) => (
+                                <DesignerCard
+                                  key={d.id}
+                                  designer={d}
+                                  onOpen={openDesigner}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </React.Fragment>
+                    )}
+
+                    {/* ---------- 2 · Designer profile ---------- */}
+                    {view === "profile" && (
+                      <div ref={scrollRef} className="thread-scroll px-4 pt-3 pb-24">
+                        <WorkshopPhoto
+                          designer={designer}
+                          label
+                          className="block w-full h-[210px] rounded-2xl border border-hairline"
+                        />
+
+                        <div className="flex items-baseline justify-between gap-3 mt-3.5">
+                          <h2 className="text-[15px] font-medium text-ink">
+                            Verified boutique
+                          </h2>
+                          <span className="font-mono text-[13px] text-ink shrink-0">
+                            ★ {designer.rating}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline justify-between gap-3 mt-1">
+                          <p className="text-[12.5px] text-muted">
+                            {designer.city} · Est. {designer.est}
+                          </p>
+                          <p className="font-mono text-[11px] text-muted shrink-0">
+                            {designer.artisans} artisans
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {designer.crafts.map((c) => (
+                            <span
+                              key={c}
+                              className="min-h-[34px] px-3.5 rounded-full border border-hairline bg-card text-ink text-[12px] font-medium flex items-center"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* A person, not a logo — so the primary actions are ways
+                            to reach one. */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            (window.location.href =
+                              "conversation.html?prompt=" +
+                              encodeURIComponent(
+                                "I'd like to talk to " +
+                                  designer.first +
+                                  " at " +
+                                  designer.name +
+                                  " about a commission."
+                              ) +
+                              "&ship=" +
+                              encodeURIComponent(activeCountry.code))
+                          }
+                          className="w-full min-h-[52px] mt-5 rounded-full bg-primary text-onprimary text-[14.5px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+                        >
+                          Chat with {designer.first}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showToast(
+                              "Video call with " +
+                                designer.first +
+                                " — pick a time in the next release"
+                            )
+                          }
+                          className="w-full min-h-[50px] mt-2.5 rounded-full bg-card border border-primary text-ink text-[14px] font-medium hover:bg-inset active:scale-95 transition-all"
+                        >
+                          Book 15-min video call
+                        </button>
+
+                        <p className="text-[13px] text-ink leading-relaxed mt-5">
+                          {designer.story}
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => setView("verify")}
+                          className="w-full flex items-center justify-between gap-3 mt-5 p-3.5 rounded-2xl bg-inset/60 border border-hairline hover:border-primary/45 active:scale-[0.99] transition-all text-left"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-medium text-ink">
+                              How we vet designers
+                            </span>
+                            <span className="block text-[11.5px] text-muted leading-snug mt-0.5">
+                              Five checks, all of them explainable
+                            </span>
+                          </span>
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                            className="shrink-0 text-muted"
+                          >
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ---------- 3 · Trust scaffolding ---------- */}
+                    {view === "verify" && (
+                      <div ref={scrollRef} className="thread-scroll px-4 pt-4 pb-24">
+                        <h2 className="font-display text-[22px] text-ink leading-tight">
+                          How we vet designers
+                        </h2>
+                        <p className="text-[12.5px] text-muted leading-relaxed mt-1.5 mb-4">
+                          Verification isn't a badge — it's a checklist you can read.
+                          Every designer in the network has cleared all five.
+                        </p>
+
+                        <ol className="flex flex-col gap-4">
+                          {VETTING.map(([label, detail]) => (
+                            <li key={label} className="flex items-start gap-3">
+                              <span
+                                aria-hidden="true"
+                                className="shrink-0 w-2 h-2 rounded-full bg-gold mt-[7px]"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-[14px] font-medium text-ink leading-snug">
+                                  {label}
+                                </span>
+                                <span className="block text-[12.5px] text-muted leading-snug mt-0.5">
+                                  {detail}
+                                </span>
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+
+                        <p className="text-[11.5px] text-muted leading-relaxed mt-6 pt-4 border-t border-hairline">
+                          A designer who stops clearing these leaves the network.
+                          Ratings, returns and disputes are reviewed every quarter.
+                        </p>
+                      </div>
+                    )}
+
+
+              {/* ---------- Navigation drawer ---------- */}
+              <Overlay
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                labelledBy="drawer-title"
+                align="end"
+              >
+                <AuraDrawer
+                  active="design"
+                  countries={SHIP_TO}
+                  current={activeCountry}
+                  onPickCountry={(c) => {
+                    setActiveCountry(c);
+                    showToast(`Ship-to ${c.code} — duties and lead times recalculated`);
+                  }}
+                  onClose={() => setDrawerOpen(false)}
+                />
+              </Overlay>
+
+                    <div className="home-pill-line" aria-hidden="true" />
+                  </div>
+                </div>
+              );
+            }
+
+            ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

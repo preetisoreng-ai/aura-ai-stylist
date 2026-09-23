@@ -1,0 +1,3638 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F3EFE7" />
+    <title>Aura — Orders</title>
+    <meta
+      name="description"
+      content="Your Aura orders — live production tracking, delivery, returns, alterations and group commissions."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      /* Same channel-based token strategy as index.html so Tailwind's
+       `/opacity` modifier resolves against CSS variables. */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas: "rgb(var(--canvas-rgb) / <alpha-value>)",
+              card: "rgb(var(--card-rgb) / <alpha-value>)",
+              inset: "rgb(var(--inset-rgb) / <alpha-value>)",
+              primary: "rgb(var(--primary-rgb) / <alpha-value>)",
+              onprimary: "rgb(var(--onprimary-rgb) / <alpha-value>)",
+              selfill: "rgb(var(--sel-fill-rgb) / <alpha-value>)",
+              ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+              muted: "rgb(var(--muted-rgb) / <alpha-value>)",
+              hairline: "rgb(var(--hairline-rgb) / <alpha-value>)",
+              ctrl: "rgb(var(--ctrl-border-rgb) / <alpha-value>)",
+              gold: "rgb(var(--gold-rgb) / <alpha-value>)",
+              goldtext: "rgb(var(--gold-text-rgb) / <alpha-value>)",
+            },
+            fontFamily: {
+              display: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
+              sans: ['"DM Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+              mono: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        --canvas-rgb: 243 239 231; /* #F3EFE7 Warm Ivory · surface-0 (Figma 1:2285) */
+        --card-rgb: 255 255 255;
+        --inset-rgb: 243 238 228;
+        --primary-rgb: 59 42 90;
+        --onprimary-rgb: 255 255 255;
+        --sel-fill-rgb: 245 244 247;
+        --ink-rgb: 30 27 46;
+        --muted-rgb: 90 84 104;
+        --hairline-rgb: 229 223 213;
+        --ctrl-border-rgb: 124 123 134;
+        --gold-rgb: 200 155 60;
+        --gold-text-rgb: 120 93 36;
+
+        --canvas: rgb(var(--canvas-rgb));
+        --card: rgb(var(--card-rgb));
+        --ink: rgb(var(--ink-rgb));
+
+        --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+        --e-float:
+          0 14px 34px -8px rgb(var(--primary-rgb) / 0.16),
+          0 3px 10px -2px rgb(var(--ink-rgb) / 0.05), 0 1px 2px rgb(var(--ink-rgb) / 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html {
+        background-color: var(--canvas);
+      }
+
+      body {
+        background-color: var(--canvas);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body.aura-locked {
+        overflow: hidden;
+      }
+
+      :focus-visible {
+        outline: 2px solid rgb(var(--primary-rgb));
+        outline-offset: 2px;
+        border-radius: 12px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .app-viewport {
+        width: 100%;
+        max-width: 430px;
+        /* --app-h follows window.visualViewport so the composer stays above
+           the on-screen keyboard; the thread scrolls in the space left. */
+        height: var(--app-h, 100vh);
+        height: var(--app-h, 100dvh);
+        margin: 0 auto;
+        background: var(--canvas);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Guaranteed regardless of the CDN build's utility coverage. */
+      .line-clamp-1,
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .line-clamp-1 {
+        -webkit-line-clamp: 1;
+      }
+      .line-clamp-2 {
+        -webkit-line-clamp: 2;
+      }
+
+      @keyframes auraPing {
+        0% { transform: scale(1); opacity: 0.6; }
+        75%, 100% { transform: scale(2.4); opacity: 0; }
+      }
+      .aura-ping {
+        animation: auraPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+
+      .thread-scroll {
+        flex: 1;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+      }
+
+      .thread-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .thread-scroll::-webkit-scrollbar-thumb {
+        background: rgb(var(--hairline-rgb));
+        border-radius: 9999px;
+      }
+
+      /* Reuse the home screen's chip geometry — 44px minimum target. */
+      .reply-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 9999px;
+        background: rgb(var(--card-rgb) / 0.9);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        color: rgb(var(--ink-rgb));
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition:
+          border-color 0.2s ease,
+          background-color 0.2s ease,
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        box-shadow: 0 1px 2px rgb(var(--ink-rgb) / 0.03);
+      }
+
+      .reply-chip:hover {
+        border-color: rgb(var(--primary-rgb) / 0.55);
+        background: rgb(var(--card-rgb));
+        color: rgb(var(--primary-rgb));
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -4px rgb(var(--primary-rgb) / 0.14);
+      }
+
+      .reply-chip:active {
+        transform: scale(0.975);
+      }
+
+      .composer-bar {
+        background: var(--card);
+        border: 1px solid rgb(var(--hairline-rgb) / 0.95);
+        box-shadow: var(--e-float);
+        transition:
+          box-shadow 0.22s ease,
+          border-color 0.22s ease;
+      }
+
+      .composer-bar:focus-within {
+        border-color: rgb(var(--primary-rgb) / 0.75);
+        box-shadow:
+          0 16px 40px -8px rgb(var(--primary-rgb) / 0.2),
+          0 0 0 3px rgb(var(--primary-rgb) / 0.1);
+      }
+
+      /* The reply field is measured in JS to grow it line by line, so its
+         metrics live here rather than in Tailwind's async JIT sheet -- those
+         classes land after the first measurement and size it short. */
+      .aura-reply-field {
+        font-size: 16px;
+        line-height: 22px;
+        padding: 6px 44px 6px 0;
+      }
+
+      .aura-reply-field.is-open {
+        padding: 2px 32px 2px 0;
+      }
+
+      .home-pill-line {
+        width: 134px;
+        height: 5px;
+        background: var(--ink);
+        opacity: 0.2;
+        border-radius: 9999px;
+        margin: 10px auto 4px auto;
+      }
+
+      /* ---------- Motion ---------- */
+      @keyframes auraMsgIn {
+        from {
+          transform: translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraToastIn {
+        from {
+          transform: translate(-50%, -14px);
+          opacity: 0;
+        }
+        to {
+          transform: translate(-50%, 0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraTypingDot {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.35;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraListenRing {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(var(--primary-rgb) / 0.35);
+        }
+        50% {
+          box-shadow: 0 0 0 7px rgb(var(--primary-rgb) / 0);
+        }
+      }
+
+      @keyframes auraSheetUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .aura-sheet-up {
+        animation: auraSheetUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Carousel track: swipeable, but without a visible scrollbar. */
+      .no-scrollbar {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .aura-msg-in {
+        animation: auraMsgIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-toast-in {
+        animation: auraToastIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .aura-listening {
+        animation: auraListenRing 1.5s ease-out infinite;
+      }
+
+      .typing-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 9999px;
+        background: rgb(var(--primary-rgb));
+        animation: auraTypingDot 1.3s ease-in-out infinite;
+      }
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.16s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.32s;
+      }
+
+      @keyframes auraSlideFromRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes auraFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .drawer-slide-in {
+        animation: auraSlideFromRight 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .aura-fade-in {
+        animation: auraFadeIn 0.18s ease-out forwards;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+        .reply-chip:hover {
+          transform: none;
+        }
+        .typing-dot {
+          opacity: 0.7;
+        }
+      }
+      /* ---- Overlay motion: the scrim fades on its own, panels only move.
+         Transform-only animation stays on the compositor, so the slide is
+         smooth; closing plays the same motion in reverse before unmount. */
+      html {
+        scrollbar-gutter: stable;
+      }
+      .drawer-slide-in {
+        animation: auraDrawerIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      .aura-scrim {
+        animation: auraScrimIn 0.3s ease-out both;
+      }
+      .aura-leaving {
+        pointer-events: none;
+      }
+      .aura-leaving .aura-scrim {
+        animation: auraScrimOut 0.26s ease-in both;
+      }
+      .aura-leaving .drawer-slide-in {
+        animation: auraDrawerOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      .aura-leaving .drawer-slide-in-left {
+        animation: auraDrawerOutLeft 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      .aura-leaving .aura-sheet-up {
+        animation: auraSheetOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraDrawerIn {
+        from {
+          transform: translate3d(100%, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      @keyframes auraDrawerOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(100%, 0, 0);
+        }
+      }
+      @keyframes auraDrawerOutLeft {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(-100%, 0, 0);
+        }
+      }
+      @keyframes auraSheetOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 100%, 0);
+        }
+      }
+      @keyframes auraScrimIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes auraScrimOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .drawer-slide-in,
+        .aura-scrim,
+        .aura-leaving .aura-scrim,
+        .aura-leaving .drawer-slide-in,
+        .aura-leaving .drawer-slide-in-left,
+        .aura-leaving .aura-sheet-up {
+          animation-duration: 1ms;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+            const { useState, useRef, useEffect, useCallback } = React;
+
+            /* Five ways a piece gets built. Order here is the order of the
+                     catalogue. */
+            const CATEGORIES = [
+              { id: "lehenga", label: "Lehenga", note: "Ceremonial, full-skirted" },
+              { id: "saree", label: "Saree", note: "Draped, six to nine yards" },
+              { id: "anarkali", label: "Anarkali", note: "Floor-length, flared" },
+              { id: "kurta", label: "Kurta set", note: "Everyday festive" },
+              { id: "sherwani", label: "Sherwani", note: "Structured, buttoned" },
+            ];
+
+            /* `image` is only set where a real photograph exists. Everything else
+                     falls back to a woven panel in its own palette rather than a stock
+                     picture that misrepresents the cloth. */
+            const PIECES = [
+              {
+                id: "heritage-lehenga",
+                cat: "lehenga",
+                name: "Heritage handloom",
+                craft: "Banarasi kadhwa weave · Varanasi",
+                fabric: "Pure mulberry silk, woven zari",
+                from: 780,
+                image: "images/heritage_banarasi.jpg",
+                swatch: ["#7B1E3B", "#C89B3C", "#E8D9B5"],
+                note: "Silhouette in pure mulberry silk with a restrained gold zari border. Weight and drape that photograph beautifully in warm light.",
+                includes: "Blouse, skirt, dupatta · fully lined",
+                weight: "Approx. 2.1 kg finished",
+                care: "Dry clean only · store folded in muslin",
+                weeks: "4 to 6 weeks",
+              },
+              {
+                id: "featherweight-lehenga",
+                cat: "lehenga",
+                name: "Featherweight festive",
+                craft: "Hand aari work · Mumbai atelier",
+                fabric: "Organza, under 900g finished",
+                from: 520,
+                image: "images/featherweight_organza.jpg",
+                swatch: ["#D8C7E4", "#C89B3C", "#F3EEE4"],
+                note: "Built for long events and warm rooms. Under 900g finished, packs flat, and holds its shape after a full day of wear.",
+                includes: "Blouse, skirt, sheer dupatta",
+                weight: "Under 900 g finished",
+                care: "Dry clean · hang on a padded hanger",
+                weeks: "2 to 3 weeks",
+              },
+              {
+                id: "regal-lehenga",
+                cat: "lehenga",
+                name: "Regal zardozi",
+                craft: "Zardozi handwork · Lucknow",
+                fabric: "Silk velvet, metal thread",
+                from: 920,
+                image: "images/regal_zardozi.jpg",
+                swatch: ["#3B1220", "#C89B3C", "#8A2740"],
+                note: "Silk velvet carrying dense metal-thread zardozi. The heaviest piece we make, and the one that reads best under low evening light.",
+                includes: "Blouse, skirt, dupatta · fully lined",
+                weight: "Approx. 2.1 kg finished",
+                care: "Dry clean only · store folded in muslin",
+                weeks: "4 to 6 weeks",
+              },
+              {
+                id: "modern-saree",
+                cat: "saree",
+                name: "Modern sculptural",
+                craft: "Structured drape · Bhopal",
+                fabric: "Chanderi silk-cotton",
+                from: 640,
+                image: "images/modern_chanderi.jpg",
+                swatch: ["#4A2B6B", "#B9A7D0", "#EFE9F3"],
+                note: "A cleaner, architectural take — fewer surface motifs, more shape. Easy to move in, and reads contemporary against traditional dress codes.",
+                includes: "Saree, blouse piece, fall and pico finished",
+                weight: "Approx. 900 g finished",
+                care: "Dry clean · store rolled, refold yearly",
+                weeks: "3 to 5 weeks",
+              },
+              {
+                id: "kanjivaram-saree",
+                cat: "saree",
+                name: "Temple border Kanjivaram",
+                craft: "Korvai join · Kanchipuram",
+                fabric: "Mulberry silk, three-ply zari",
+                from: 710,
+                swatch: ["#0E5B4A", "#C89B3C", "#E4D2A8"],
+                note: "Woven with a true korvai join, so the border is interlocked rather than stitched. Holds a sharp pleat and outlives the occasion.",
+                includes: "Saree, blouse piece, fall and pico finished",
+                weight: "Approx. 900 g finished",
+                care: "Dry clean · store rolled, refold yearly",
+                weeks: "3 to 5 weeks",
+              },
+              {
+                id: "jamdani-saree",
+                cat: "saree",
+                name: "Linen jamdani",
+                craft: "Discontinuous weft · Phulia",
+                fabric: "Handwoven linen, 80 count",
+                from: 340,
+                swatch: ["#DCD8CC", "#6E7F6A", "#F4F1E8"],
+                note: "Handwoven linen with discontinuous weft figuring. Breathable enough for daytime, with a crispness that sharpens as it is worn in.",
+                includes: "Saree, blouse piece, fall and pico finished",
+                weight: "Approx. 900 g finished",
+                care: "Dry clean · store rolled, refold yearly",
+                weeks: "3 to 5 weeks",
+              },
+              {
+                id: "mirror-anarkali",
+                cat: "anarkali",
+                name: "Mirror-work anarkali",
+                craft: "Shisha embroidery · Kutch",
+                fabric: "Georgette, cotton lining",
+                from: 460,
+                swatch: ["#123A5E", "#D7E1EA", "#C89B3C"],
+                note: "Shisha mirrors set by hand on georgette, fully lined in cotton. Catches light when you move without adding weight.",
+                includes: "Kurta, churidar, dupatta · fully lined",
+                weight: "Approx. 1.4 kg finished",
+                care: "Dry clean · steam rather than press",
+                weeks: "4 to 5 weeks",
+              },
+              {
+                id: "chikankari-anarkali",
+                cat: "anarkali",
+                name: "Chikankari anarkali",
+                craft: "Shadow work · Lucknow",
+                fabric: "Cotton mul, hand-finished",
+                from: 390,
+                swatch: ["#F5F2EA", "#CFE0DA", "#9AAFA6"],
+                note: "Shadow work on cotton mul — the pattern reads from the reverse of the cloth. The coolest thing to wear through a daytime ceremony.",
+                includes: "Kurta, churidar, dupatta · fully lined",
+                weight: "Approx. 1.4 kg finished",
+                care: "Dry clean · steam rather than press",
+                weeks: "4 to 5 weeks",
+              },
+              {
+                id: "bagru-kurta",
+                cat: "kurta",
+                name: "Bagru block print",
+                craft: "Hand block, natural dye · Jaipur",
+                fabric: "Cotton, dabu resist",
+                from: 180,
+                swatch: ["#1E3A4C", "#E2D7C3", "#8C5A3C"],
+                note: "Hand block printed with natural dye and dabu resist. Colours settle over the first few washes rather than fading.",
+                includes: "Kurta, palazzo, dupatta",
+                weight: "Approx. 800 g finished",
+                care: "Gentle machine wash cold · line dry in shade",
+                weeks: "2 to 3 weeks",
+              },
+              {
+                id: "chanderi-kurta",
+                cat: "kurta",
+                name: "Chanderi kurta set",
+                craft: "Handloom · Chanderi",
+                fabric: "Silk-cotton, sheer finish",
+                from: 260,
+                swatch: ["#EADFC8", "#C89B3C", "#B7C4B1"],
+                note: "Handloom silk-cotton with the sheer finish Chanderi is known for. Light, slightly translucent, lined where it needs to be.",
+                includes: "Kurta, palazzo, dupatta",
+                weight: "Approx. 800 g finished",
+                care: "Gentle machine wash cold · line dry in shade",
+                weeks: "2 to 3 weeks",
+              },
+              {
+                id: "raw-silk-sherwani",
+                cat: "sherwani",
+                name: "Ivory raw-silk sherwani",
+                craft: "Dori and pearl work · Delhi",
+                fabric: "Raw silk, canvassed front",
+                from: 690,
+                swatch: ["#F0E7D6", "#C89B3C", "#5B4A33"],
+                note: "Canvassed through the front so the line stays clean without stiffness. Dori and pearl work kept to the placket and cuffs.",
+                includes: "Sherwani, churidar, stole · fully lined",
+                weight: "Approx. 1.8 kg finished",
+                care: "Dry clean only · hang on a broad hanger",
+                weeks: "5 to 7 weeks",
+              },
+              {
+                id: "bandhgala",
+                cat: "sherwani",
+                name: "Bandhgala jacket set",
+                craft: "Structured tailoring · Delhi",
+                fabric: "Wool blend, half canvas",
+                from: 540,
+                swatch: ["#22303B", "#8A97A3", "#C89B3C"],
+                note: "Half-canvassed wool blend cut close to the body. Structured enough for a reception, restrained enough to wear again.",
+                includes: "Sherwani, churidar, stole · fully lined",
+                weight: "Approx. 1.8 kg finished",
+                care: "Dry clean only · hang on a broad hanger",
+                weeks: "5 to 7 weeks",
+              },
+            ];
+
+            /* Same fallback contract as the stylist thread: a photograph when we
+                     have one, otherwise a woven panel in the piece's own palette. */
+      /* ===================================================================
+             PIECE ROW — the catalogue result when a garment pill is selected.
+             A full-width row rather than a grid card, so a filtered lookup reads
+             as a list and never gets confused with the curated rails.
+             =================================================================== */
+/* ===================================================================
+       WISHLIST
+       Saved pieces, shared by every surface that shows a garment — the
+       suggestion cards, the list rows and the detail sheet. Kept in
+       localStorage so a heart tapped on Discover is still filled when the
+       same piece turns up in a conversation.
+
+       Storage is best-effort: a private window or blocked site data throws,
+       and the hearts simply behave as an unsaved session.
+       =================================================================== */
+const WISHLIST_KEY = "aura.wishlist";
+
+function readWishlist() {
+  try {
+    const raw = window.localStorage.getItem(WISHLIST_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((x) => typeof x === "string")
+      : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function writeWishlist(ids) {
+  try {
+    window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+  } catch (e) {
+    /* saving is a convenience, never a blocker */
+  }
+}
+
+// One source of truth per screen, so a heart tapped on a card updates
+// the sheet sitting on top of it and vice versa.
+function useWishlist() {
+  const [ids, setIds] = useState(readWishlist);
+
+  const toggle = useCallback((id) => {
+    if (!id) return;
+    setIds((cur) => {
+      const next =
+        cur.indexOf(id) === -1 ? cur.concat(id) : cur.filter((x) => x !== id);
+      writeWishlist(next);
+      return next;
+    });
+  }, []);
+
+  // Another tab, or a return trip through the back button.
+  useEffect(() => {
+    const sync = (e) => {
+      if (!e || e.key === WISHLIST_KEY) setIds(readWishlist());
+    };
+    window.addEventListener("storage", sync);
+    window.addEventListener("pageshow", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("pageshow", sync);
+    };
+  }, []);
+
+  return {
+    ids,
+    saved: (id) => ids.indexOf(id) !== -1,
+    toggle,
+  };
+}
+
+/* `tone="overlay"` sits on a photograph; `tone="plain"` on a light
+         surface. Saved flips to a filled plum heart on white either way. */
+function HeartButton({ saved, onToggle, name, tone, className }) {
+  const overlay = tone !== "plain";
+  const base =
+    "shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90";
+  const skin = saved
+    ? "bg-card text-primary shadow-sm border border-hairline"
+    : overlay
+      ? "bg-black/35 text-white border border-white/25 hover:bg-black/55"
+      : "bg-card text-muted border border-hairline hover:text-primary hover:border-primary/45";
+
+  return (
+    <button
+      type="button"
+      aria-pressed={saved}
+      aria-label={
+        saved
+          ? `Remove ${name} from your wishlist`
+          : `Save ${name} to your wishlist`
+      }
+      onClick={(e) => {
+        // Cards are buttons themselves; never open the sheet from here.
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      className={`${base} ${skin} ${className || ""}`}
+    >
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill={saved ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={saved ? 0 : 1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M12 20.5 3.9 12.6a5 5 0 0 1 7.1-7.1l1 1 1-1a5 5 0 0 1 7.1 7.1Z" />
+      </svg>
+    </button>
+  );
+}
+      function PieceThumb({ piece }) {
+        const [failed, setFailed] = useState(false);
+
+        if (failed || !piece.image) {
+          return (
+            <span
+              className="block w-full h-full"
+              role="img"
+              aria-label={`${piece.name} — photograph not yet available`}
+              style={{
+                background: `linear-gradient(150deg, ${piece.swatch[0]} 0%, ${piece.swatch[2]} 55%, ${piece.swatch[1]} 100%)`,
+              }}
+            >
+              <span
+                className="block w-full h-full opacity-30"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 7px)",
+                }}
+              />
+            </span>
+          );
+        }
+
+        return (
+          <img
+            src={piece.image}
+            alt={`${piece.name} — ${piece.fabric}`}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="w-full h-full object-cover select-none"
+            draggable="false"
+          />
+        );
+      }
+
+      function PieceRow({ piece, ship, onOpen, saved, onSave }) {
+        return (
+          <div className="relative">
+          <button
+            type="button"
+            onClick={() => onOpen(piece)}
+            aria-label={`${piece.name} — ${piece.craft}, ${ship.symbol}${piece.from}`}
+            aria-haspopup="dialog"
+            className="w-full text-left flex items-stretch gap-3 p-2.5 bg-card border border-hairline rounded-2xl hover:border-primary/45 hover:shadow-md active:scale-[0.99] transition-all"
+          >
+            <span className="shrink-0 w-[76px] rounded-xl overflow-hidden bg-inset aspect-[3/4]">
+              <PieceThumb piece={piece} />
+            </span>
+
+            <span className="min-w-0 flex-1 flex flex-col justify-center py-0.5">
+              <span className="block text-[14px] font-medium text-ink leading-snug">
+                {piece.name}
+              </span>
+              <span className="block font-mono text-[14px] leading-[21px] text-ink font-medium mt-0.5">
+                {ship.symbol}
+                {piece.from}
+              </span>
+              <span className="block text-[11.5px] leading-[17.25px] text-muted mt-0.5 line-clamp-2">
+                {piece.craft}
+              </span>
+              <span className="block font-mono text-[10.5px] text-muted mt-1">
+                {piece.weeks}
+              </span>
+            </span>
+
+            <span className="shrink-0 w-9" aria-hidden="true" />
+          </button>
+
+          </div>
+        );
+      }
+            /* ===================================================================
+             CURATED SECTIONS
+             Five editorial rails sit below the filters. Each carries twenty
+             entries so the deep-dive page is a real collection rather than a
+             longer version of the rail.
+
+             Every item names the garment categories it belongs to, so the pill
+             filter narrows all five rails at once and a rail left empty drops
+             out. `piece` links an item to a real catalogue garment — those open
+             the product sheet; the rest are editorial surfaces without a detail
+             view yet, and say so rather than dead-ending.
+
+             `sw` names a palette used for the placeholder when no photograph
+             exists, which is most of them: we have eight images and a hundred
+             entries.
+             =================================================================== */
+            const SWATCHES = {
+              plum: ["#3B2A5A", "#B7A7C6", "#FBF8F3"],
+              wine: ["#7B1E3B", "#C89B3C", "#E8D9B5"],
+              gold: ["#C89B3C", "#E8D9B5", "#F3EEE4"],
+              ivory: ["#E8E4D9", "#D9C7A7", "#FBF8F3"],
+              forest: ["#2F4F3E", "#D9C7A7", "#F3EEE4"],
+              rose: ["#D8C7E4", "#C89B3C", "#F3EEE4"],
+              ink: ["#1E1B2E", "#7C7B86", "#E5DFD5"],
+              saffron: ["#D97A2B", "#E8D9B5", "#FBF8F3"],
+              indigo: ["#2B3A67", "#8E9BC0", "#E8E4D9"],
+              moss: ["#7FA05A", "#E8D9B5", "#FBF8F3"],
+              clay: ["#A65A3A", "#E8D9B5", "#F3EEE4"],
+              slate: ["#4A4F5A", "#B9BDC6", "#E5DFD5"],
+            };
+
+            const CURATION_SECTIONS = [
+              {
+                id: "curated",
+    facetLabel: "Edit",
+    facetOrder: ["Occasion", "Craft", "Fit", "Travel", "Budget", "Lead time", "Care"],
+                label: "Curated collection",
+                note: "Edits our stylists are building now",
+                blurb:
+                  "Standing edits, rebuilt each season. Every price is landed and every lead time is one an artisan can actually hold.",
+                items: [
+                  {
+                    id: "winter-reception",
+                    title: "The winter reception edit",
+                    meta: "9 pieces · from $520",
+                    facet: "Occasion",
+                    sw: "wine",
+                    image: "images/regal_zardozi.jpg",
+                    piece: "regal-lehenga",
+                  },
+                  {
+                    id: "heirloom-weaves",
+                    title: "Heirloom weaves",
+                    meta: "7 pieces · from $640",
+                    facet: "Craft",
+                    sw: "wine",
+                    image: "images/heritage_banarasi.jpg",
+                    piece: "heritage-lehenga",
+                  },
+                  {
+                    id: "under-400",
+                    title: "Under $400, fully landed",
+                    meta: "12 pieces · from $180",
+                    facet: "Budget",
+                    sw: "forest",
+                    piece: "bagru-kurta",
+                  },
+                  {
+                    id: "packs-flat",
+                    title: "Packs flat, travels far",
+                    meta: "8 pieces · from $340",
+                    facet: "Travel",
+                    sw: "ivory",
+                    piece: "jamdani-saree",
+                  },
+                  {
+                    id: "mother-of-bride",
+                    title: "For the mother of the bride",
+                    meta: "6 pieces · from $580",
+                    facet: "Occasion",
+                    sw: "plum",
+                    piece: "kanjivaram-saree",
+                  },
+                  {
+                    id: "menswear",
+                    title: "Menswear, restrained",
+                    meta: "5 pieces · from $540",
+                    facet: "Fit",
+                    sw: "ink",
+                    piece: "bandhgala",
+                  },
+                  {
+                    id: "first-diwali",
+                    title: "First Diwali away from home",
+                    meta: "7 pieces · from $260",
+                    facet: "Occasion",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "two-weeks",
+                    title: "Two weeks or less",
+                    meta: "11 pieces · from $180",
+                    facet: "Lead time",
+                    sw: "moss",
+                  },
+                  {
+                    id: "summer-breathable",
+                    title: "Summer weddings, breathable",
+                    meta: "9 pieces · from $310",
+                    facet: "Occasion",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "handloom-only",
+                    title: "Handloom only",
+                    meta: "10 pieces · from $340",
+                    facet: "Craft",
+                    sw: "clay",
+                  },
+                  {
+                    id: "sangeet-edit",
+                    title: "The sangeet edit",
+                    meta: "8 pieces · from $460",
+                    facet: "Occasion",
+                    sw: "plum",
+                  },
+                  {
+                    id: "quiet-gold",
+                    title: "Quiet gold",
+                    meta: "6 pieces · from $520",
+                    facet: "Craft",
+                    sw: "gold",
+                  },
+                  {
+                    id: "court-whites",
+                    title: "Court-ready whites",
+                    meta: "5 pieces · from $390",
+                    facet: "Occasion",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "petite",
+                    title: "Petite proportions",
+                    meta: "7 pieces · from $350",
+                    facet: "Fit",
+                    sw: "rose",
+                  },
+                  {
+                    id: "plus-size",
+                    title: "Plus size, properly cut",
+                    meta: "9 pieces · from $370",
+                    facet: "Fit",
+                    sw: "forest",
+                  },
+                  {
+                    id: "second-day",
+                    title: "Second-day brunch",
+                    meta: "6 pieces · from $290",
+                    facet: "Occasion",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "temple-mornings",
+                    title: "Temple mornings",
+                    meta: "8 pieces · from $220",
+                    facet: "Occasion",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "destination-proof",
+                    title: "Destination-proof",
+                    meta: "7 pieces · from $420",
+                    facet: "Travel",
+                    sw: "indigo",
+                  },
+                  {
+                    id: "under-900g",
+                    title: "Under 900 grams",
+                    meta: "6 pieces · from $480",
+                    facet: "Travel",
+                    sw: "rose",
+                    image: "images/featherweight_organza.jpg",
+                    piece: "featherweight-lehenga",
+                  },
+                  {
+                    id: "repair-list",
+                    title: "The heirloom repair list",
+                    meta: "4 services · from $140",
+                    facet: "Care",
+                    sw: "slate",
+                  },
+                ],
+              },
+              {
+                id: "editorial",
+    facetLabel: "Topic",
+    facetOrder: ["Craft", "Fabric", "Process", "Fit", "Pricing", "Travel", "Care"],
+                label: "Editorial stories",
+                note: "How the craft actually works",
+                blurb:
+                  "Written by the people who make and price the clothes. No trend copy — just what happens between your brief and the parcel.",
+                items: [
+                  {
+                    id: "kadhwa-six-weeks",
+                    title: "Why a kadhwa weave takes six weeks",
+                    meta: "6 min read · Varanasi",
+                    facet: "Craft",
+                    sw: "wine",
+                    image: "images/heritage_banarasi.jpg",
+                  },
+                  {
+                    id: "landed-price",
+                    title: "What a landed price actually means",
+                    meta: "4 min read · Pricing",
+                    facet: "Pricing",
+                    sw: "plum",
+                  },
+                  {
+                    id: "reading-a-border",
+                    title: "Reading a saree by its border",
+                    meta: "5 min read · Kanchipuram",
+                    facet: "Craft",
+                    sw: "gold",
+                    image: "images/jewelry_heritage.jpg",
+                  },
+                  {
+                    id: "organza-myth",
+                    title: "Organza, and the myth of fragile",
+                    meta: "4 min read · Fabric",
+                    facet: "Fabric",
+                    sw: "rose",
+                    image: "images/featherweight_organza.jpg",
+                  },
+                  {
+                    id: "two-week-kurta",
+                    title: "The two-week kurta, honestly",
+                    meta: "3 min read · Lead times",
+                    facet: "Process",
+                    sw: "forest",
+                  },
+                  {
+                    id: "photograph-before-ship",
+                    title: "Why we photograph before we ship",
+                    meta: "5 min read · Process",
+                    facet: "Process",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "real-zari",
+                    title: "Zari, and what makes it real",
+                    meta: "7 min read · Materials",
+                    facet: "Fabric",
+                    sw: "gold",
+                  },
+                  {
+                    id: "measuring-at-home",
+                    title: "Measuring yourself at home",
+                    meta: "6 min read · Fit",
+                    facet: "Fit",
+                    sw: "slate",
+                  },
+                  {
+                    id: "korvai-join",
+                    title: "What a korvai join is for",
+                    meta: "4 min read · Kanchipuram",
+                    facet: "Craft",
+                    sw: "clay",
+                  },
+                  {
+                    id: "chikankari-stitches",
+                    title: "Chikankari's six stitches",
+                    meta: "8 min read · Lucknow",
+                    facet: "Craft",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "against-dry-clean",
+                    title: "The case against dry-clean-only",
+                    meta: "5 min read · Care",
+                    facet: "Care",
+                    sw: "moss",
+                  },
+                  {
+                    id: "bandhgala-sit",
+                    title: "How a bandhgala should sit",
+                    meta: "5 min read · Tailoring",
+                    facet: "Fit",
+                    sw: "ink",
+                  },
+                  {
+                    id: "natural-dye-moves",
+                    title: "Natural dye, and why it moves",
+                    meta: "6 min read · Bagru",
+                    facet: "Craft",
+                    sw: "clay",
+                  },
+                  {
+                    id: "duties-arithmetic",
+                    title: "Duties, prepaid: the arithmetic",
+                    meta: "4 min read · Pricing",
+                    facet: "Pricing",
+                    sw: "plum",
+                  },
+                  {
+                    id: "velvet-warm-room",
+                    title: "Silk velvet in a warm room",
+                    meta: "4 min read · Fabric",
+                    facet: "Fabric",
+                    sw: "wine",
+                  },
+                  {
+                    id: "who-cuts",
+                    title: "Who actually cuts your garment",
+                    meta: "7 min read · Ateliers",
+                    facet: "Process",
+                    sw: "slate",
+                  },
+                  {
+                    id: "jamdani-woven",
+                    title: "Jamdani, woven and not printed",
+                    meta: "6 min read · Phulia",
+                    facet: "Craft",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "packing-lehenga",
+                    title: "Packing a lehenga for a flight",
+                    meta: "3 min read · Travel",
+                    facet: "Travel",
+                    sw: "indigo",
+                  },
+                  {
+                    id: "blouse-linings",
+                    title: "Blouse linings that survive summer",
+                    meta: "4 min read · Fit",
+                    facet: "Fit",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "lead-times-slip",
+                    title: "Why lead times slip, and what we do",
+                    meta: "5 min read · Process",
+                    facet: "Process",
+                    sw: "slate",
+                  },
+                ],
+              },
+              {
+                id: "designers",
+    facetLabel: "Discipline",
+    facetOrder: ["Weaving", "Embroidery", "Tailoring", "Printing", "Dyeing"],
+                label: "Designer spotlights",
+                note: "The hands behind the cloth",
+                blurb:
+                  "The drapers, weavers and tailors who take your brief. Each works to measurement and signs off the finished garment.",
+                items: [
+                  {
+                    id: "meera-r",
+                    title: "Meera R.",
+                    meta: "Master draper · Varanasi",
+                    facet: "Weaving",
+                    sw: "wine",
+                    image: "images/jewelry_regal.jpg",
+                  },
+                  {
+                    id: "farida-s",
+                    title: "Farida S.",
+                    meta: "Chikankari atelier · Lucknow",
+                    facet: "Embroidery",
+                    sw: "ivory",
+                    piece: "chikankari-anarkali",
+                  },
+                  {
+                    id: "ilango-v",
+                    title: "Ilango V.",
+                    meta: "Korvai weaver · Kanchipuram",
+                    facet: "Weaving",
+                    sw: "clay",
+                    piece: "kanjivaram-saree",
+                  },
+                  {
+                    id: "devika-n",
+                    title: "Devika N.",
+                    meta: "Zardozi workshop · Delhi",
+                    facet: "Embroidery",
+                    sw: "plum",
+                    image: "images/modern_chanderi.jpg",
+                    piece: "regal-lehenga",
+                  },
+                  {
+                    id: "bhanu-p",
+                    title: "Bhanu P.",
+                    meta: "Block printer · Bagru",
+                    facet: "Printing",
+                    sw: "forest",
+                    piece: "bagru-kurta",
+                  },
+                  {
+                    id: "arjun-m",
+                    title: "Arjun M.",
+                    meta: "Bandhgala tailor · Delhi",
+                    facet: "Tailoring",
+                    sw: "ink",
+                    piece: "bandhgala",
+                  },
+                  {
+                    id: "rukmini-d",
+                    title: "Rukmini D.",
+                    meta: "Jamdani weaver · Phulia",
+                    facet: "Weaving",
+                    sw: "ivory",
+                    piece: "jamdani-saree",
+                  },
+                  {
+                    id: "salim-a",
+                    title: "Salim A.",
+                    meta: "Aari embroiderer · Mumbai",
+                    facet: "Embroidery",
+                    sw: "rose",
+                    piece: "featherweight-lehenga",
+                  },
+                  {
+                    id: "ganesh-k",
+                    title: "Ganesh K.",
+                    meta: "Chanderi handloom · Ashoknagar",
+                    facet: "Weaving",
+                    sw: "plum",
+                    piece: "chanderi-kurta",
+                  },
+                  {
+                    id: "nasreen-b",
+                    title: "Nasreen B.",
+                    meta: "Shisha mirror work · Kutch",
+                    facet: "Embroidery",
+                    sw: "saffron",
+                    piece: "mirror-anarkali",
+                  },
+                  {
+                    id: "thomas-v",
+                    title: "Thomas V.",
+                    meta: "Raw silk cutter · Bengaluru",
+                    facet: "Tailoring",
+                    sw: "ivory",
+                    piece: "raw-silk-sherwani",
+                  },
+                  {
+                    id: "lalita-j",
+                    title: "Lalita J.",
+                    meta: "Gota patti · Jaipur",
+                    facet: "Embroidery",
+                    sw: "gold",
+                  },
+                  {
+                    id: "imran-q",
+                    title: "Imran Q.",
+                    meta: "Kalamkari pen work · Srikalahasti",
+                    facet: "Printing",
+                    sw: "clay",
+                  },
+                  {
+                    id: "sunita-r",
+                    title: "Sunita R.",
+                    meta: "Phulkari darn · Patiala",
+                    facet: "Embroidery",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "anand-s",
+                    title: "Anand S.",
+                    meta: "Patola double ikat · Patan",
+                    facet: "Weaving",
+                    sw: "wine",
+                  },
+                  {
+                    id: "zoya-h",
+                    title: "Zoya H.",
+                    meta: "Tilla work · Srinagar",
+                    facet: "Embroidery",
+                    sw: "indigo",
+                  },
+                  {
+                    id: "karthik-n",
+                    title: "Karthik N.",
+                    meta: "Temple border weaver · Arani",
+                    facet: "Weaving",
+                    sw: "gold",
+                  },
+                  {
+                    id: "mitali-g",
+                    title: "Mitali G.",
+                    meta: "Kantha running stitch · Bolpur",
+                    facet: "Embroidery",
+                    sw: "moss",
+                  },
+                  {
+                    id: "faiz-r",
+                    title: "Faiz R.",
+                    meta: "Sherwani canvassing · Hyderabad",
+                    facet: "Tailoring",
+                    sw: "slate",
+                  },
+                  {
+                    id: "poonam-t",
+                    title: "Poonam T.",
+                    meta: "Bandhani tie-dye · Bhuj",
+                    facet: "Dyeing",
+                    sw: "rose",
+                  },
+                ],
+              },
+              {
+                id: "inspiration",
+    facetLabel: "Occasion",
+    facetOrder: ["Wedding", "Sangeet", "Mehendi", "Haldi", "Reception", "Cocktail", "Engagement", "Diwali", "Temple", "Family"],
+                label: "Inspiration feed",
+                note: "Colour and cloth, by occasion",
+                blurb:
+                  "Starting points rather than finished answers. Tell your stylist which one you like and they will build from it.",
+                items: [
+                  {
+                    id: "haldi-courtyard",
+                    title: "Morning haldi, courtyard light",
+                    meta: "Marigold · raw silk",
+                    facet: "Haldi",
+                    sw: "gold",
+                  },
+                  {
+                    id: "sangeet-lights-down",
+                    title: "Sangeet, after the lights drop",
+                    meta: "Plum · silk velvet",
+                    facet: "Sangeet",
+                    sw: "plum",
+                    image: "images/jewelry_modern.jpg",
+                    piece: "modern-saree",
+                  },
+                  {
+                    id: "temple-six-yards",
+                    title: "Temple visit, six yards",
+                    meta: "Unbleached cotton",
+                    facet: "Temple",
+                    sw: "ivory",
+                    piece: "jamdani-saree",
+                  },
+                  {
+                    id: "reception-clean-line",
+                    title: "Reception, one clean line",
+                    meta: "Ivory · structured drape",
+                    facet: "Reception",
+                    sw: "ivory",
+                    piece: "raw-silk-sherwani",
+                  },
+                  {
+                    id: "mehendi-garden",
+                    title: "Mehendi in the garden",
+                    meta: "Lime · mul cotton",
+                    facet: "Mehendi",
+                    sw: "moss",
+                    piece: "chikankari-anarkali",
+                  },
+                  {
+                    id: "cocktail-rooftop",
+                    title: "Cocktail, city rooftop",
+                    meta: "Charcoal · organza",
+                    facet: "Cocktail",
+                    sw: "ink",
+                    image: "images/featherweight_organza.jpg",
+                    piece: "featherweight-lehenga",
+                  },
+                  {
+                    id: "griha-midday",
+                    title: "Griha pravesh, midday",
+                    meta: "Turmeric · cotton silk",
+                    facet: "Family",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "engagement-winter",
+                    title: "Engagement, winter garden",
+                    meta: "Sage · tissue silk",
+                    facet: "Engagement",
+                    sw: "moss",
+                  },
+                  {
+                    id: "annaprashan-simple",
+                    title: "Annaprashan, soft and simple",
+                    meta: "Oat · mul",
+                    facet: "Family",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "diwali-lamplit",
+                    title: "Diwali, lamp-lit",
+                    meta: "Vermilion · kanjivaram",
+                    facet: "Diwali",
+                    sw: "wine",
+                  },
+                  {
+                    id: "court-marriage",
+                    title: "Court marriage, ten minutes",
+                    meta: "Bone · chanderi",
+                    facet: "Wedding",
+                    sw: "ivory",
+                    piece: "chanderi-kurta",
+                  },
+                  {
+                    id: "beach-sangeet",
+                    title: "Beach sangeet, Goa",
+                    meta: "Seafoam · organza",
+                    facet: "Sangeet",
+                    sw: "indigo",
+                  },
+                  {
+                    id: "baraat-sun",
+                    title: "Baraat, midday sun",
+                    meta: "Ivory · raw silk",
+                    facet: "Wedding",
+                    sw: "gold",
+                  },
+                  {
+                    id: "karwa-chauth",
+                    title: "Karwa chauth, evening",
+                    meta: "Deep red · banarasi",
+                    facet: "Family",
+                    sw: "wine",
+                    image: "images/heritage_banarasi.jpg",
+                  },
+                  {
+                    id: "office-diwali",
+                    title: "Office Diwali lunch",
+                    meta: "Ochre · bagru cotton",
+                    facet: "Diwali",
+                    sw: "clay",
+                  },
+                  {
+                    id: "roka-family",
+                    title: "Roka, family only",
+                    meta: "Blush · tissue",
+                    facet: "Engagement",
+                    sw: "rose",
+                  },
+                  {
+                    id: "second-reception",
+                    title: "Second reception, abroad",
+                    meta: "Midnight · velvet",
+                    facet: "Reception",
+                    sw: "indigo",
+                  },
+                  {
+                    id: "puja-at-home",
+                    title: "Puja at home",
+                    meta: "Undyed cotton",
+                    facet: "Temple",
+                    sw: "ivory",
+                  },
+                  {
+                    id: "cocktail-monochrome",
+                    title: "Cocktail sangeet, monochrome",
+                    meta: "Slate · georgette",
+                    facet: "Cocktail",
+                    sw: "slate",
+                  },
+                  {
+                    id: "mehendi-terrace",
+                    title: "Mehendi, terrace at dusk",
+                    meta: "Copper · organza",
+                    facet: "Mehendi",
+                    sw: "clay",
+                  },
+                ],
+              },
+              {
+                id: "community",
+    facetLabel: "Occasion",
+    facetOrder: ["Wedding", "Sangeet", "Mehendi", "Haldi", "Reception", "Cocktail", "Engagement", "Diwali", "Temple", "Family"],
+                label: "Community looks",
+                note: "Worn by Aura customers",
+                blurb:
+                  "Shared with permission by customers who wore the finished piece. Every one was cut to their measurements.",
+                items: [
+                  {
+                    id: "ananya-sangeet",
+                    title: "Ananya at her sangeet",
+                    meta: "@ananyak · Chanderi lehenga",
+                    facet: "Sangeet",
+                    sw: "plum",
+                    image: "images/modern_chanderi.jpg",
+                    piece: "modern-saree",
+                  },
+                  {
+                    id: "sofia-toronto",
+                    title: "Sofia's Toronto reception",
+                    meta: "@sofia.rd · Banarasi saree",
+                    facet: "Reception",
+                    sw: "wine",
+                    image: "images/heritage_banarasi.jpg",
+                    piece: "heritage-lehenga",
+                  },
+                  {
+                    id: "ritu-diwali",
+                    title: "Ritu, Diwali at home",
+                    meta: "@ritu.makes · Bagru kurta",
+                    facet: "Diwali",
+                    sw: "forest",
+                    image: "images/jewelry_featherweight.jpg",
+                    piece: "bagru-kurta",
+                  },
+                  {
+                    id: "kavya-temple",
+                    title: "Kavya, temple morning",
+                    meta: "@kavyaiyer · Kanjivaram",
+                    facet: "Temple",
+                    sw: "gold",
+                    piece: "kanjivaram-saree",
+                  },
+                  {
+                    id: "nikhil-roka",
+                    title: "Nikhil at his roka",
+                    meta: "@nikhil.b · Ivory sherwani",
+                    facet: "Engagement",
+                    sw: "ivory",
+                    piece: "raw-silk-sherwani",
+                  },
+                  {
+                    id: "meher-mehendi",
+                    title: "Meher, mehendi in Jaipur",
+                    meta: "@meher.k · Organza anarkali",
+                    facet: "Mehendi",
+                    sw: "moss",
+                    piece: "mirror-anarkali",
+                  },
+                  {
+                    id: "divya-haldi",
+                    title: "Divya's Chicago haldi",
+                    meta: "@divya.rs · Cotton mul kurta",
+                    facet: "Haldi",
+                    sw: "saffron",
+                  },
+                  {
+                    id: "tara-engagement",
+                    title: "Tara, engagement in London",
+                    meta: "@tarasen · Tissue lehenga",
+                    facet: "Engagement",
+                    sw: "rose",
+                  },
+                  {
+                    id: "rohan-dubai",
+                    title: "Rohan's bandhgala, Dubai",
+                    meta: "@rohan.mehta · Wool blend",
+                    facet: "Reception",
+                    sw: "ink",
+                    piece: "bandhgala",
+                  },
+                  {
+                    id: "shreya-onam",
+                    title: "Shreya, Onam at home",
+                    meta: "@shreya.n · Kasavu saree",
+                    facet: "Family",
+                    sw: "gold",
+                  },
+                  {
+                    id: "ayesha-sydney",
+                    title: "Ayesha's Sydney reception",
+                    meta: "@ayesha.q · Zardozi lehenga",
+                    facet: "Reception",
+                    sw: "wine",
+                    piece: "regal-lehenga",
+                  },
+                  {
+                    id: "priyanka-brunch",
+                    title: "Priyanka, second-day brunch",
+                    meta: "@pri.yanka · Linen jamdani",
+                    facet: "Wedding",
+                    sw: "ivory",
+                    piece: "jamdani-saree",
+                  },
+                  {
+                    id: "vikram-baraat",
+                    title: "Vikram at his brother's baraat",
+                    meta: "@vik.r · Raw silk sherwani",
+                    facet: "Wedding",
+                    sw: "gold",
+                  },
+                  {
+                    id: "neha-durga-puja",
+                    title: "Neha, Durga Puja in Kolkata",
+                    meta: "@neha.d · Red bordered cotton",
+                    facet: "Temple",
+                    sw: "wine",
+                  },
+                  {
+                    id: "simran-vancouver",
+                    title: "Simran's Vancouver sangeet",
+                    meta: "@simran.gill · Mirror-work anarkali",
+                    facet: "Sangeet",
+                    sw: "saffron",
+                    piece: "mirror-anarkali",
+                  },
+                  {
+                    id: "aditi-griha",
+                    title: "Aditi, griha pravesh",
+                    meta: "@aditi.v · Chanderi kurta set",
+                    facet: "Family",
+                    sw: "ivory",
+                    piece: "chanderi-kurta",
+                  },
+                  {
+                    id: "lakshmi-temple",
+                    title: "Lakshmi's temple wedding",
+                    meta: "@lakshmi.iyer · Korvai Kanjivaram",
+                    facet: "Wedding",
+                    sw: "clay",
+                  },
+                  {
+                    id: "farah-houston",
+                    title: "Farah, cocktail in Houston",
+                    meta: "@farah.a · Charcoal organza",
+                    facet: "Cocktail",
+                    sw: "slate",
+                  },
+                  {
+                    id: "gauri-karwa",
+                    title: "Gauri, karwa chauth",
+                    meta: "@gauri.s · Chikankari anarkali",
+                    facet: "Family",
+                    sw: "rose",
+                    piece: "chikankari-anarkali",
+                  },
+                  {
+                    id: "dev-annaprashan",
+                    title: "Dev at his annaprashan",
+                    meta: "@dev.kapoor · Soft cotton kurta",
+                    facet: "Family",
+                    sw: "moss",
+                  },
+                ],
+              },
+            ];
+
+            // Resolve each item's palette once, so render paths stay simple.
+            const CURATIONS = CURATION_SECTIONS.map((s) => ({
+              ...s,
+              items: s.items.map((it) => ({
+                ...it,
+                swatch: SWATCHES[it.sw] || SWATCHES.ivory,
+              })),
+            }));
+            /* ===================================================================
+             CURATION CARD — the gradient fallback is the same treatment the
+             catalogue cards use when a photograph is not yet available.
+             =================================================================== */
+            function CurationImage({ item }) {
+              const [failed, setFailed] = useState(false);
+
+              if (failed || !item.image) {
+                return (
+                  <span
+                    className="block w-full h-full"
+                    role="img"
+                    aria-label={`${item.title} — photograph not yet available`}
+                    style={{
+                      background: `linear-gradient(150deg, ${item.swatch[0]} 0%, ${item.swatch[2]} 55%, ${item.swatch[1]} 100%)`,
+                    }}
+                  >
+                    <span
+                      className="block w-full h-full opacity-30"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 7px)",
+                      }}
+                    />
+                  </span>
+                );
+              }
+
+              return (
+                <img
+                  src={item.image}
+                  alt={`${item.title} — ${item.meta}`}
+                  loading="lazy"
+                  onError={() => setFailed(true)}
+                  className="w-full h-full object-cover select-none"
+                  draggable="false"
+                />
+              );
+            }
+
+            function CurationCard({ item, onOpen, className, saved, onSave }) {
+              return (
+                <div className={`relative ${className || ""}`}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(item)}
+                  aria-label={`${item.title} — ${item.meta}`}
+                  className="group block w-full text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.985] transition-all"
+                >
+                  <span className="block relative w-full aspect-[3/4] bg-inset overflow-hidden">
+                    <CurationImage item={item} />
+                  </span>
+                  <span className="block p-2.5">
+                    <span className="block text-[13.5px] font-medium text-ink leading-snug line-clamp-2 min-h-[34px]">
+                      {item.title}
+                    </span>
+                    <span className="block text-[11.5px] leading-[17.25px] text-muted mt-1 line-clamp-1">
+                      {item.meta}
+                    </span>
+                  </span>
+                </button>
+
+                {onSave && (
+                  <HeartButton
+                    saved={saved}
+                    onToggle={onSave}
+                    name={item.title}
+                    className="absolute top-2 right-2"
+                  />
+                )}
+                </div>
+              );
+            }
+
+            /* The fourth slide in every rail. Sized to match a card so the rail
+               keeps one rhythm rather than ending on a stub. */
+            function ShowMoreCard({ section, remaining, onOpen }) {
+              return (
+                <button
+                  type="button"
+                  onClick={() => onOpen(section)}
+                  aria-label={`Show all ${section.items.length} in ${section.label}`}
+                  className="shrink-0 w-[152px] snap-start rounded-2xl border border-dashed border-ctrl/60 bg-inset/50 hover:bg-inset hover:border-primary/50 active:scale-[0.985] transition-all flex flex-col items-center justify-center gap-2 text-primary"
+                >
+                  <span className="w-9 h-9 rounded-full bg-card border border-hairline flex items-center justify-center">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  </span>
+                  <span className="text-[13px] font-medium">Show more</span>
+                  {remaining > 0 && (
+                    <span className="font-mono text-[10.5px] text-muted">+{remaining} more</span>
+                  )}
+                </button>
+              );
+            }
+            const SHIP_TO = [
+              {
+                code: "US",
+                symbol: "$",
+                label: "US $",
+                flag: "🇺🇸",
+                duty: "Duties prepaid",
+                courier: "DHL Express · 4 days",
+              },
+              {
+                code: "UK",
+                symbol: "£",
+                label: "UK £",
+                flag: "🇬🇧",
+                duty: "VAT prepaid",
+                courier: "DHL Express · 3 days",
+              },
+              {
+                code: "CA",
+                symbol: "C$",
+                label: "CA $",
+                flag: "🇨🇦",
+                duty: "Duties prepaid",
+                courier: "DHL Express · 5 days",
+              },
+              {
+                code: "IN",
+                symbol: "₹",
+                label: "INR ₹",
+                flag: "🇮🇳",
+                duty: "No import duty",
+                courier: "Blue Dart · 2 days",
+              },
+            ];
+
+            /* ===================================================================
+                     COMPONENT: OVERLAY — same contract as the home screen's drawer.
+                     Escape to close, background scroll lock, focus moved in on open
+                     and restored to the trigger on close, focus kept inside while open.
+                     =================================================================== */
+            function Overlay({ open, onClose, labelledBy, align, children }) {
+              const panelRef = useRef(null);
+              const restoreRef = useRef(null);
+              // Stays mounted briefly after closing so the panel can move back out.
+              const [shown, setShown] = useState(open);
+              useEffect(() => {
+                if (open) {
+                  setShown(true);
+                  return;
+                }
+                const t = setTimeout(() => setShown(false), 260);
+                return () => clearTimeout(t);
+              }, [open]);
+
+              useEffect(() => {
+                if (!open) return;
+
+                restoreRef.current = document.activeElement;
+                document.body.classList.add("aura-locked");
+
+                const panel = panelRef.current;
+                const focusables = () =>
+                  Array.from(
+                    panel.querySelectorAll(
+                      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+                    )
+                  ).filter((el) => el.offsetParent !== null);
+
+                const first = focusables()[0];
+                if (first) first.focus({ preventScroll: true });
+                else panel.focus({ preventScroll: true });
+
+                const onKeyDown = (e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    onClose();
+                    return;
+                  }
+                  if (e.key !== "Tab") return;
+                  const items = focusables();
+                  if (items.length === 0) return;
+                  const firstEl = items[0];
+                  const lastEl = items[items.length - 1];
+                  if (e.shiftKey && document.activeElement === firstEl) {
+                    e.preventDefault();
+                    lastEl.focus();
+                  } else if (!e.shiftKey && document.activeElement === lastEl) {
+                    e.preventDefault();
+                    firstEl.focus();
+                  }
+                };
+
+                document.addEventListener("keydown", onKeyDown, true);
+                return () => {
+                  document.removeEventListener("keydown", onKeyDown, true);
+                  document.body.classList.remove("aura-locked");
+                  const restore = restoreRef.current;
+                  if (restore && typeof restore.focus === "function") restore.focus({ preventScroll: true });
+                };
+              }, [open, onClose]);
+
+              if (!open && !shown) return null;
+
+              return (
+                <div
+                  className={`absolute inset-0 z-50 flex ${open ? "" : "aura-leaving "}${align === "end" ? "justify-end" : "items-end justify-center"}`}
+                  onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) onClose();
+                  }}
+                >
+                  <div
+                    className="aura-scrim absolute inset-0 -z-10"
+                    style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.45)" }}
+                    onMouseDown={onClose}
+                    aria-hidden="true"
+                  />
+                  <div
+                    ref={panelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={labelledBy}
+                    tabIndex={-1}
+                    className="focus:outline-none contents"
+                  >
+                    {children}
+                  </div>
+                </div>
+              );
+            }
+            /* ===================================================================
+                   PRODUCT DETAIL SHEET (Figma 22:720)
+                   The same sheet the stylist workbench uses for a direction, driven
+                   here by a catalogue piece: 4-slide carousel, specs table, landed
+                   price and the Request action.
+                   =================================================================== */
+            const reducedMotion = () =>
+              typeof window.matchMedia === "function" &&
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+            // Four framings of the one photograph, cropped rather than faked, so a
+            // piece with a single image still reads as a considered set of views.
+            function getViewsForPiece(p) {
+              return [
+                {
+                  id: "full",
+                  label: "Full length",
+                  scale: 1,
+                  origin: "50% 50%",
+                  fit: "contain",
+                },
+                { id: "bodice", label: "Bodice & Neckline", scale: 2.1, origin: "50% 20%" },
+                { id: "detail", label: "Craft detail", scale: 2.6, origin: "50% 45%" },
+                { id: "hem", label: "Hem & Border", scale: 2.1, origin: "50% 86%" },
+              ];
+            }
+
+            function SheetPhoto({ piece, view, alt }) {
+              const [failed, setFailed] = useState(false);
+
+              if (failed || !piece.image) {
+                return (
+                  <div
+                    className="w-full h-full"
+                    role="img"
+                    aria-label={`${piece.name} — photograph not yet available`}
+                    style={{
+                      background: `linear-gradient(150deg, ${piece.swatch[0]} 0%, ${piece.swatch[2]} 55%, ${piece.swatch[1]} 100%)`,
+                    }}
+                  >
+                    <div
+                      className="w-full h-full opacity-30"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 7px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 7px)",
+                      }}
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <img
+                  src={piece.image}
+                  alt={alt}
+                  loading="eager"
+                  onError={() => setFailed(true)}
+                  className="w-full h-full select-none"
+                  style={{
+                    objectFit: view.fit || "cover",
+                    transform: `scale(${view.scale})`,
+                    transformOrigin: view.origin,
+                  }}
+                  draggable="false"
+                />
+              );
+            }
+
+            function ProductDetailSheet({ piece, ship, onClose, onRequest, onAsk, saved, onSave }) {
+              const trackRef = useRef(null);
+              const panelRef = useRef(null);
+              const restoreRef = useRef(null);
+              const [slide, setSlide] = useState(0);
+              const [specOpen, setSpecOpen] = useState(false);
+              const views = getViewsForPiece(piece);
+
+              useEffect(() => {
+                restoreRef.current = document.activeElement;
+                document.body.classList.add("aura-locked");
+
+                const panel = panelRef.current;
+                const focusables = () =>
+                  Array.from(
+                    panel.querySelectorAll(
+                      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )
+                  ).filter((el) => el.offsetParent !== null);
+
+                const first = focusables()[0];
+                if (first) first.focus();
+                else panel.focus();
+
+                const onKeyDown = (e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    onClose();
+                    return;
+                  }
+                  if (e.key !== "Tab") return;
+                  const items = focusables();
+                  if (!items.length) return;
+                  const a = items[0];
+                  const z = items[items.length - 1];
+                  if (e.shiftKey && document.activeElement === a) {
+                    e.preventDefault();
+                    z.focus();
+                  } else if (!e.shiftKey && document.activeElement === z) {
+                    e.preventDefault();
+                    a.focus();
+                  }
+                };
+
+                document.addEventListener("keydown", onKeyDown, true);
+                return () => {
+                  document.removeEventListener("keydown", onKeyDown, true);
+                  document.body.classList.remove("aura-locked");
+                  const r = restoreRef.current;
+                  if (r && typeof r.focus === "function") r.focus();
+                };
+              }, [onClose]);
+
+              // Derive the active slide from scroll position so a swipe and the dots
+              // always agree about which framing is showing.
+              const onScroll = () => {
+                const el = trackRef.current;
+                if (!el) return;
+                const i = Math.round(el.scrollLeft / el.clientWidth);
+                if (i !== slide) setSlide(Math.max(0, Math.min(views.length - 1, i)));
+              };
+
+              const goTo = (i) => {
+                const el = trackRef.current;
+                const child = el && el.children[i];
+                if (!el || !child) return;
+                setSlide(i);
+                el.scrollTo({
+                  left: child.offsetLeft - el.offsetLeft,
+                  behavior: reducedMotion() ? "auto" : "smooth",
+                });
+              };
+
+              const rows = [
+                { k: "Fabric", v: piece.fabric },
+                { k: "Includes", v: piece.includes },
+                { k: "Weight", v: piece.weight },
+                { k: "Care", v: piece.care },
+                { k: "On the loom", v: piece.weeks },
+              ];
+
+              /* "DHL Express · 4 days" — the courier sits with the duty line, the
+                       transit time drops to its own line under it. */
+              const [courierName, courierDays] = ship.courier.split(" · ");
+
+              return (
+                <div
+                  className="absolute inset-0 z-50 aura-fade-in"
+                  style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+                  onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) onClose();
+                  }}
+                >
+                  <div
+                    ref={panelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="piece-sheet-title"
+                    tabIndex={-1}
+                    className="absolute inset-x-0 bottom-0 h-[90%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+                  >
+                    {/* Grabber + close */}
+                    <div className="relative shrink-0 pt-2.5 pb-2.5">
+                      <span
+                        className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+                        aria-hidden="true"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label={`Close ${piece.name}`}
+                        className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+                      >
+                        <svg
+                          width="17"
+                          height="17"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          aria-hidden="true"
+                          focusable="false"
+                        >
+                          <path d="M18 6 6 18" />
+                          <path d="m6 6 12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto thread-scroll">
+                      {/* Swipeable carousel */}
+                      <div
+                        ref={trackRef}
+                        onScroll={onScroll}
+                        className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                        role="group"
+                        aria-label={`${piece.name} photographs`}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "ArrowRight") {
+                            e.preventDefault();
+                            goTo(Math.min(views.length - 1, slide + 1));
+                          } else if (e.key === "ArrowLeft") {
+                            e.preventDefault();
+                            goTo(Math.max(0, slide - 1));
+                          }
+                        }}
+                      >
+                        {views.map((v) => (
+                          <div key={v.id} className="snap-center shrink-0 w-full px-5">
+                            <div className="relative w-full h-[36vh] rounded-2xl overflow-hidden bg-inset border border-hairline">
+                              <SheetPhoto piece={piece} view={v} alt={`${piece.name} — ${v.label}`} />
+                              <span className="absolute bottom-3 left-3 text-[12px] font-bold text-white bg-black/45 px-3 py-1 rounded-full">
+                                {v.label}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Dots */}
+                      <div className="flex items-center justify-center gap-1.5 mt-3">
+                        {views.map((v, i) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => goTo(i)}
+                            aria-label={`Show ${v.label}`}
+                            aria-current={i === slide}
+                            className="w-11 h-8 flex items-center justify-center"
+                          >
+                            <span
+                              className={`block rounded-full transition-all ${
+                                i === slide ? "w-4 h-[5px] bg-primary" : "w-[5px] h-[5px] bg-hairline"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Details */}
+                      <div className="px-5 pb-5">
+                        {/* Save sits with the name it applies to. */}
+                        <div className="flex items-start justify-between gap-3 mt-1">
+                          <h2 id="piece-sheet-title" className="font-display text-[32px] leading-[36px] text-ink">
+                            {piece.name}
+                          </h2>
+                          {onSave && (
+                            <HeartButton
+                              saved={saved}
+                              onToggle={onSave}
+                              name={piece.name}
+                              tone="plain"
+                              className="mt-1"
+                            />
+                          )}
+                        </div>
+                        <p className="font-mono text-[11px] uppercase tracking-wider text-goldtext mt-1.5">
+                          {piece.craft}
+                        </p>
+                        {/* The spec is for people who want it. It stays folded away until
+                            asked for, so the description is not buried under a table on
+                            first look. */}
+                        <p className="text-[14px] text-muted leading-[22px] mt-3">
+                          {piece.note}{" "}
+                          {/* Reads as part of the sentence, so the eye finds it where the
+                              text runs out rather than off at the margin. */}
+                          <button
+                            type="button"
+                            onClick={() => setSpecOpen((v) => !v)}
+                            aria-expanded={specOpen}
+                            aria-controls="piece-spec"
+                            className="font-semibold text-ink hover:text-primary transition-colors whitespace-nowrap"
+                          >
+                            {specOpen ? "Show less" : "Show more…"}
+                          </button>
+                        </p>
+
+                        {specOpen && (
+                          <dl
+                            id="piece-spec"
+                            className="mt-4 border-t border-hairline aura-fade-in"
+                          >
+                            {rows.map((r) => (
+                              <div
+                                key={r.k}
+                                className="flex items-baseline justify-between gap-4 py-3 border-b border-hairline"
+                              >
+                                <dt className="font-mono text-[11px] uppercase tracking-wider text-muted shrink-0">
+                                  {r.k}
+                                </dt>
+                                <dd className="text-[13px] text-ink text-right">{r.v}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        )}
+
+                        <p className="text-[11px] text-muted leading-[17px] mt-4">
+                          Nothing is added at checkout. You approve photographs of the finished garment
+                          before it is dispatched, and alterations are covered under the Perfect Fit
+                          Guarantee.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Price stays put while everything above it scrolls. */}
+                    <div className="shrink-0 border-t border-hairline bg-card px-5 pt-3.5 pb-5 flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[28px] text-ink font-bold leading-none">
+                          {ship.symbol}
+                          {piece.from}
+                        </span>
+                        <span className="block text-[11px] text-muted leading-snug mt-1.5">
+                          {ship.duty} · {courierName}
+                        </span>
+                        <span className="block text-[11px] text-muted leading-snug">{courierDays}</span>
+                      </div>
+
+
+                      <button
+                        type="button"
+                        onClick={() => onRequest(piece)}
+                        className="shrink-0 min-h-[48px] px-7 rounded-full bg-primary text-onprimary text-[14px] font-semibold hover:bg-primary/90 active:scale-95 transition-all"
+                      >
+                        See Fit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            /* ===================================================================
+       ORDERS
+       Five things a commission passes through once it is placed: what is
+       being made now, what is on its way, what came back, what is being
+       altered, and anything ordered together for one occasion.
+       =================================================================== */
+      const STAGES = [
+        "Brief confirmed",
+        "Fabric sourced",
+        "Cut to measure",
+        "Handwork",
+        "Stitching",
+        "Finishing",
+        "Your approval",
+        "Dispatched",
+      ];
+
+      /* A concern moves Pending → In review → Done as the atelier works it. */
+      const CONCERN_STATUS = {
+        pending: { label: "Pending", tone: "text-muted border-hairline" },
+        review: { label: "In review", tone: "text-goldtext border-goldtext/45" },
+        done: { label: "Done", tone: "border-transparent" },
+      };
+
+      const PRODUCTION = [
+        {
+          id: "AUR-2618",
+          name: "Heritage handloom",
+          craft: "Banarasi kadhwa weave · Varanasi",
+          image: "images/heritage_banarasi.jpg",
+          swatch: ["#7B1E3B", "#C89B3C", "#E8D9B5"],
+          artisan: "Meera R. · Varanasi",
+          placed: "2 Sep 2026",
+          eta: "by 14 Oct",
+          stage: 3,
+          note: "Zari border woven. The bodice goes on the frame this week.",
+          // One photograph per stage reached, oldest first.
+          log: [
+            { at: "2 Sep", note: "Brief signed off — reception in Toronto, landed to US $." },
+            { at: "6 Sep", note: "Mulberry silk reserved at the mill. Undyed, three-ply zari on order.", image: "images/jewelry_heritage.jpg" },
+            {
+              at: "13 Sep",
+              note: "Cut to your fourteen points. Blouse pattern checked against the saree blouse set.",
+              concern: {
+                note: "The blouse looks shorter in the back than the one I sent you.",
+                at: "14 Sep",
+                status: "done",
+                reply: "Re-cut 2 cm longer at the back and re-checked against your set.",
+              },
+            },
+            { at: "21 Sep", note: "Kadhwa border on the loom. This is the slow part — six weeks of it.", image: "images/heritage_banarasi.jpg" },
+          ],
+        },
+        {
+          id: "AUR-2605",
+          name: "Chanderi kurta set",
+          craft: "Handloom · Chanderi",
+          swatch: ["#6A5D82", "#E8D9B5", "#FBF8F3"],
+          artisan: "Ganesh K. · Ashoknagar",
+          placed: "19 Aug 2026",
+          eta: "by 26 Sep",
+          stage: 6,
+          note: "Photographs ready for you to approve before it is dispatched.",
+          needsYou: true,
+          log: [
+            { at: "19 Aug", note: "Brief signed off — everyday festive, two-week lead." },
+            { at: "21 Aug", note: "Silk-cotton pulled from the Chanderi handloom run." },
+            { at: "26 Aug", note: "Cut to measure. Sheer finish means the lining is cut separately." },
+            {
+              at: "1 Sep",
+              note: "No surface handwork on this one — the weave carries it.",
+              image: "images/modern_chanderi.jpg",
+              concern: {
+                note: "Is the weave too sheer without any handwork over the bodice?",
+                at: "2 Sep",
+                status: "review",
+              },
+            },
+            { at: "9 Sep", note: "Stitched and lined. Side seams French-finished." },
+            { at: "16 Sep", note: "Pressed, tacked and checked against your measurements." },
+            { at: "22 Sep", note: "Finished garment, photographed front and back. Yours to approve.", image: "images/featherweight_organza.jpg" },
+          ],
+        },
+      ];
+
+      const DELIVERY = [
+        {
+          id: "AUR-2571",
+          name: "Featherweight festive",
+          swatch: ["#D8C7E4", "#C89B3C", "#F3EEE4"],
+          image: "images/featherweight_organza.jpg",
+          courier: "DHL Express",
+          tracking: "JD014600011234567890",
+          status: "In transit · cleared customs at Toronto",
+          eta: "Tomorrow before 6pm",
+          duties: "Duties prepaid — nothing to pay on arrival",
+        },
+        {
+          id: "AUR-2544",
+          name: "Bagru block print",
+          swatch: ["#2F4F3E", "#D9C7A7", "#F3EEE4"],
+          courier: "Blue Dart",
+          tracking: "BD88291047",
+          status: "Delivered · signed for by P. Sharma",
+          eta: "14 Aug 2026",
+          done: true,
+        },
+      ];
+
+      const RETURNS = [
+        {
+          id: "AUR-2498",
+          name: "Mirror-work anarkali",
+          swatch: ["#7FA05A", "#D8C7E4", "#FBF8F3"],
+          reason: "Neckline sat higher than the photographs suggested",
+          status: "Refund issued · $460 back to your Visa",
+          settled: true,
+        },
+        {
+          id: "AUR-2612",
+          name: "Linen jamdani",
+          swatch: ["#E8E4D9", "#D9C7A7", "#FBF8F3"],
+          reason: "Return window open",
+          status: "You have until 28 Sep to start a return",
+        },
+      ];
+
+      const ALTERATIONS = [
+        {
+          id: "AUR-2533",
+          name: "Temple border Kanjivaram",
+          swatch: ["#5A2140", "#C89B3C", "#D9C7A7"],
+          what: "Blouse taken in 1.5 cm at the back seam",
+          status: "With the atelier · back by 3 Oct",
+          credit: "1 alteration credit used",
+        },
+      ];
+
+      const GROUP = {
+        title: "Sharma–Iyer wedding",
+        when: "14–16 November 2026",
+        organiser: "You are organising",
+        deadline: "Everyone's measurements are needed by 20 Sep",
+        members: [
+          { name: "You", piece: "Heritage handloom", state: "In production", ok: true },
+          { name: "Meera R. (Mother)", piece: "Quiet gold saree", state: "In production", ok: true },
+          { name: "Ravi (Partner)", piece: "Ivory raw-silk sherwani", state: "Brief confirmed", ok: true },
+          { name: "Aarav (Son)", piece: "Not chosen yet", state: "Measurements needed", ok: false },
+        ],
+      };
+
+      /* ===================================================================
+       SHARED
+       =================================================================== */
+      function Thumb({ item, className }) {
+        const [failed, setFailed] = useState(false);
+        if (failed || !item.image) {
+          return (
+            <span
+              className={className}
+              role="img"
+              aria-label={`${item.name} — photograph not yet available`}
+              style={{
+                background: `linear-gradient(150deg, ${item.swatch[0]} 0%, ${item.swatch[2]} 55%, ${item.swatch[1]} 100%)`,
+              }}
+            />
+          );
+        }
+        return (
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className={`${className} object-cover`}
+            draggable="false"
+          />
+        );
+      }
+
+      function SectionTitle({ id, children, count }) {
+        return (
+          <div className="flex items-baseline justify-between gap-3 mb-2.5">
+            <h2 id={id} className="font-display text-[20px] leading-tight text-ink">
+              {children}
+            </h2>
+            {count && <span className="font-mono text-[10.5px] text-muted shrink-0">{count}</span>}
+          </div>
+        );
+      }
+
+      /* Eight stages, shown as a bar rather than eight labels — only the one
+         you are on is named. */
+      function StageTrack({ stage }) {
+        return (
+          <div className="mt-2.5">
+            <div className="flex items-center gap-1" aria-hidden="true">
+              {STAGES.map((s, i) => (
+                <span
+                  key={s}
+                  className={`h-1.5 flex-1 rounded-full ${
+                    i < stage ? "bg-primary" : i === stage ? "bg-primary/60" : "bg-hairline"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="flex items-center gap-1.5 font-mono text-[10.5px] text-muted mt-1.5">
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-primary opacity-60 aura-ping" />
+                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-primary" />
+              </span>
+              Stage {stage + 1} of {STAGES.length} · {STAGES[stage]}
+            </p>
+          </div>
+        );
+      }
+
+      function OrderCard({ item, children, tone, onClick, label }) {
+        const skin = `relative flex items-start gap-3 p-2.5 bg-card border rounded-2xl ${
+          tone === "attention" ? "border-goldtext/45" : "border-hairline"
+        }`;
+
+        const body = (
+          <React.Fragment>
+            <Thumb
+              item={item}
+              className="shrink-0 w-[54px] h-[72px] rounded-xl overflow-hidden bg-inset"
+            />
+            <div className="min-w-0 flex-1">{children}</div>
+          </React.Fragment>
+        );
+
+        // Sections with their own inline actions stay plain divs — a button
+        // cannot hold another button.
+        if (!onClick) return <div className={skin}>{body}</div>;
+
+        return (
+          <button
+            type="button"
+            onClick={onClick}
+            aria-haspopup="dialog"
+            aria-label={label}
+            className={`${skin} w-full text-left pb-8 hover:border-primary/45 hover:shadow-md active:scale-[0.995] transition-all`}
+          >
+            {body}
+            <span className="absolute bottom-2.5 right-3 text-primary" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </span>
+          </button>
+        );
+      }
+
+/* ===================================================================
+       STAGE REVIEW
+       Every stage is photographed as it is reached. You can approve what
+       you see, or say what is wrong — a concern stops the piece moving on
+       until the atelier answers it.
+
+       Verdicts are kept per order and stage so they survive a reload.
+       =================================================================== */
+const REVIEW_KEY = "aura.stageReviews";
+
+function readReviews() {
+  try {
+    const raw = window.localStorage.getItem(REVIEW_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function useStageReviews() {
+  const [map, setMap] = useState(readReviews);
+
+  const set = useCallback((orderId, stage, verdict, note) => {
+    setMap((cur) => {
+      const next = {
+        ...cur,
+        [orderId + ":" + stage]: {
+          verdict,
+          note: note || "",
+          at: new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+          status: verdict === "concern" ? "pending" : undefined,
+        },
+      };
+      try {
+        window.localStorage.setItem(REVIEW_KEY, JSON.stringify(next));
+      } catch (e) {
+        /* a verdict that cannot be stored still shows for this session */
+      }
+      return next;
+    });
+  }, []);
+
+  return {
+    map,
+    get: (orderId, stage) => map[orderId + ":" + stage] || null,
+    set,
+  };
+}
+
+function StageShot({ order, entry, label, className }) {
+  const [failed, setFailed] = useState(false);
+  const src = entry.image;
+
+  if (failed || !src) {
+    return (
+      <span
+        className={className}
+        role="img"
+        aria-label={`${label} — no photograph for this stage`}
+        style={{
+          background: `linear-gradient(150deg, ${order.swatch[0]} 0%, ${order.swatch[2]} 55%, ${order.swatch[1]} 100%)`,
+        }}
+      />
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={`${order.name} — ${label}`}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={`${className} object-cover`}
+      draggable="false"
+    />
+  );
+}
+
+function StageReviewSheet({ order, reviews, onVerdict, onMessage, onClose }) {
+  const entries = order.log || [];
+  const trackRef = useRef(null);
+  const panelRef = useRef(null);
+  const restoreRef = useRef(null);
+  const [slide, setSlide] = useState(Math.max(0, entries.length - 1));
+  const [concern, setConcern] = useState(false);
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    restoreRef.current = document.activeElement;
+    document.body.classList.add("aura-locked");
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.body.classList.remove("aura-locked");
+      const r = restoreRef.current;
+      if (r && typeof r.focus === "function") r.focus();
+    };
+  }, [onClose]);
+
+  // Open on the newest stage rather than the oldest. Wait a frame — at mount
+  // the slides have no width yet, so offsetLeft is still 0.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      const child = el.children[slide];
+      if (child) el.scrollLeft = child.offsetLeft - el.offsetLeft;
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== slide) {
+      setSlide(Math.max(0, Math.min(entries.length - 1, i)));
+      setConcern(false);
+    }
+  };
+
+  const goTo = (i) => {
+    const el = trackRef.current;
+    const child = el && el.children[i];
+    if (!el || !child) return;
+    setSlide(i);
+    setConcern(false);
+    el.scrollTo({ left: child.offsetLeft - el.offsetLeft, behavior: "smooth" });
+  };
+
+  const entry = entries[slide] || {};
+  const label = STAGES[slide] || "Stage";
+  const verdict = reviews.get(order.id, slide);
+  const approved = verdict && verdict.verdict === "approved";
+  // Yours, raised on this device, or one already on the order.
+  const raised =
+    verdict && verdict.verdict === "concern"
+      ? verdict
+      : entry.concern || null;
+
+  const send = () => {
+    const note = text.trim();
+    if (!note) return;
+    onVerdict(order.id, slide, "concern", note);
+    setConcern(false);
+    setText("");
+  };
+
+  return (
+    <div
+      className="absolute inset-0 z-50 aura-fade-in"
+      style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stage-sheet-title"
+        tabIndex={-1}
+        className="absolute inset-x-0 bottom-0 h-[92%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+      >
+        <div className="relative shrink-0 pt-2.5 pb-2.5">
+          <span
+            className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close stage photographs"
+            className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto thread-scroll">
+          <div className="px-5 pb-3">
+            <h2
+              id="stage-sheet-title"
+              className="font-display text-[24px] text-ink leading-tight"
+            >
+              {order.name}
+            </h2>
+            <p className="font-mono text-[10.5px] text-muted mt-1">
+              {order.id} · {order.artisan}
+            </p>
+          </div>
+
+          {/* One photograph per stage reached. */}
+          <div
+            ref={trackRef}
+            onScroll={onScroll}
+            className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+            role="group"
+            aria-label={`${order.name} stage photographs`}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") {
+                e.preventDefault();
+                goTo(Math.min(entries.length - 1, slide + 1));
+              } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                goTo(Math.max(0, slide - 1));
+              }
+            }}
+          >
+            {entries.map((en, i) => {
+              const v = reviews.get(order.id, i);
+              return (
+                <div key={i} className="snap-center shrink-0 w-full px-5">
+                  <div className="relative w-full h-[38vh] rounded-2xl overflow-hidden bg-inset border border-hairline">
+                    <StageShot
+                      order={order}
+                      entry={en}
+                      label={STAGES[i]}
+                      className="block w-full h-full"
+                    />
+                    <span className="absolute bottom-3 left-3 text-[12px] font-medium text-white bg-black/55 px-3 py-1.5 rounded-full">
+                      {i + 1}. {STAGES[i]}
+                    </span>
+                    {v && v.verdict && (
+                      <span
+                        className={`absolute top-3 right-3 font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                          v.verdict === "approved"
+                            ? "bg-card text-primary"
+                            : "bg-goldtext text-canvas"
+                        }`}
+                      >
+                        {v.verdict === "approved"
+                          ? "Approved"
+                          : "Concern raised"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dots */}
+          <div className="flex items-center justify-center gap-1.5 mt-3 px-5 flex-wrap">
+            {entries.map((en, i) => {
+              const v = reviews.get(order.id, i);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  aria-label={`Show stage ${i + 1}, ${STAGES[i]}`}
+                  aria-current={i === slide}
+                  className="w-8 h-8 flex items-center justify-center"
+                >
+                  <span
+                    className={`block rounded-full transition-all ${
+                      i === slide ? "w-5 h-1.5" : "w-1.5 h-1.5"
+                    } ${
+                      (v && v.verdict === "concern") || en.concern
+                        ? "bg-goldtext"
+                        : i === slide
+                          ? "bg-primary"
+                          : "bg-hairline"
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="px-5 pb-5">
+            <p className="font-mono text-[10.5px] uppercase tracking-wider text-muted mt-1">
+              {STAGES[slide]} · {entry.at}
+            </p>
+            <p className="text-[13.5px] text-ink leading-relaxed mt-1.5">
+              {entry.note}
+            </p>
+
+            {raised && (
+              <div className="mt-3.5 rounded-2xl border border-hairline bg-inset/50 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                    Your concern · {raised.at}
+                  </span>
+                  <span
+                    className={`shrink-0 font-mono text-[9.5px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                      (CONCERN_STATUS[raised.status] || CONCERN_STATUS.pending).tone
+                    }`}
+                    style={
+                      raised.status === "done"
+                        ? { color: "#3F7A4B", borderColor: "rgba(63,122,75,0.45)" }
+                        : undefined
+                    }
+                  >
+                    {(CONCERN_STATUS[raised.status] || CONCERN_STATUS.pending).label}
+                  </span>
+                </div>
+
+                <p className="text-[13px] text-ink leading-relaxed mt-2">“{raised.note}”</p>
+
+                {raised.reply ? (
+                  <p className="text-[12px] text-muted leading-snug mt-2.5">
+                    Meera: {raised.reply}
+                  </p>
+                ) : (
+                  <p className="text-[11.5px] text-muted leading-snug mt-2.5">
+                    Nothing moves on until this is answered.
+                  </p>
+                )}
+
+                {/* Carries the order, the stage and the concern into the
+                    stylist thread so the conversation starts in context. */}
+                <button
+                  type="button"
+                  onClick={() => onMessage(order, slide, raised)}
+                  className="mt-3 min-h-[40px] px-3.5 rounded-full bg-card border border-ctrl text-ink text-[12px] font-medium flex items-center gap-1.5 hover:bg-inset hover:border-primary/45 active:scale-95 transition-all"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.8L3 20.5l1.4-4.1A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z" />
+                  </svg>
+                  Message Meera about this
+                </button>
+              </div>
+            )}
+
+            <p className="text-[11px] text-muted leading-relaxed mt-4">
+              Nothing moves to the next stage while a concern is open. Approving
+              the final stage releases the piece for dispatch.
+            </p>
+          </div>
+        </div>
+
+        {/* Fixed under the scroll area, so the controls stay put however long
+            the stage note above them runs. */}
+        <div className="shrink-0 border-t border-hairline bg-card px-5 pt-3.5 pb-5">
+          {approved ? (
+            <p
+              className="flex items-center justify-center gap-2 min-h-[48px] text-[14px] font-medium"
+              style={{ color: "#3F7A4B" }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              Approved
+            </p>
+          ) : concern ? (
+            <div>
+              <label
+                htmlFor="concern-note"
+                className="block font-mono text-[10.5px] uppercase tracking-wider text-muted mb-1.5"
+              >
+                What is wrong?
+              </label>
+              <textarea
+                id="concern-note"
+                rows={3}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="The border sits lower than the reference, and the gold reads warmer than I expected."
+                style={{ fontSize: 16 }}
+                className="w-full px-3.5 py-3 rounded-xl border border-hairline bg-card text-ink placeholder:text-muted resize-none focus:outline-none focus:border-primary transition-colors"
+              />
+              <div className="flex items-center gap-2.5 mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConcern(false);
+                    setText("");
+                  }}
+                  className="min-h-[44px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13px] font-medium hover:bg-inset active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!text.trim()}
+                  onClick={send}
+                  className="flex-1 min-h-[44px] px-4 rounded-full bg-goldtext text-canvas text-[13.5px] font-medium hover:opacity-90 active:scale-95 transition-all disabled:opacity-40"
+                >
+                  Send to Meera
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConcern(true)}
+                className="min-h-[48px] px-4 rounded-full bg-card border border-ctrl text-ink text-[13px] font-medium hover:bg-inset active:scale-95 transition-all"
+              >
+                Raise a concern
+              </button>
+              <button
+                type="button"
+                onClick={() => onVerdict(order.id, slide, "approved")}
+                className="flex-1 min-h-[48px] px-4 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+              >
+                Approve this stage
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+      /* ===================================================================
+       MAIN
+       =================================================================== */
+      /* ===================================================================
+       AURA DRAWER — the right-hand navigation panel, identical on every
+       screen. Built to Figma "Right Drawer / v2" (173:2827) with its
+       "Drawer / Nav Item" and "Drawer / Ship-to" components; icons are the
+       component's own exports in images/drawer/. Each screen passes which
+       tab is current and its own ship-to state.
+       =================================================================== */
+      const DRAWER_SERIF = {
+        fontFamily: '"Instrument Serif", "Iowan Old Style", Georgia, serif',
+      };
+      const DRAWER_ICON = "images/drawer/";
+
+      const DRAWER_TABS = [
+        {
+          id: "home",
+          label: "Home",
+          link: "index.html",
+          desc: "Occasion-first landing",
+        },
+        {
+          id: "discover",
+          label: "Discover",
+          link: "discover.html",
+          desc: "Craft & regional provenance",
+        },
+        {
+          id: "design",
+          label: "Design",
+          link: "designers.html",
+          desc: "The makers behind the cloth",
+        },
+        {
+          id: "wardrobe",
+          label: "Wardrobe",
+          link: "wardrobe.html",
+          desc: "Memory & measurements",
+        },
+        {
+          id: "orders",
+          label: "Orders",
+          link: "orders.html",
+          desc: "Live artisan production tracker",
+        },
+      ];
+
+      // The ship-to codes are markets (UK); the top line shows the ISO country (GB).
+      const DRAWER_ISO = { US: "US", UK: "GB", CA: "CA", IN: "IN" };
+
+      function AuraDrawer({ active, countries, current, onPickCountry, onClose }) {
+        return (
+          <div
+            className="relative bg-canvas w-[88%] max-w-[346px] h-full flex flex-col px-5 py-6 border-l border-hairline drawer-slide-in overflow-y-auto overflow-x-hidden"
+            style={{ boxShadow: "-12px 0 40px rgb(30 27 46 / 0.18)" }}
+          >
+            {/* Profile */}
+            <div className="shrink-0 flex items-center gap-2.5 pb-5 border-b border-hairline">
+              <span
+                aria-hidden="true"
+                className="shrink-0 p-[2px] rounded-full border border-gold/55"
+              >
+                <span
+                  className="w-[52px] h-[52px] rounded-full bg-gold text-ink flex items-center justify-center text-[21px] leading-[26px]"
+                  style={DRAWER_SERIF}
+                >
+                  PS
+                </span>
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col gap-2">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    id="drawer-title"
+                    className="text-[20px] leading-[24px] text-ink truncate"
+                    style={DRAWER_SERIF}
+                  >
+                    Priya Sharma
+                  </span>
+                  <a
+                    href="profile.html"
+                    aria-label="Edit your profile"
+                    className="shrink-0 w-8 h-8 -m-[7px] rounded-full flex items-center justify-center hover:bg-inset transition-colors"
+                  >
+                    <img
+                      src={DRAWER_ICON + "edit.svg"}
+                      width="18"
+                      height="18"
+                      alt=""
+                    />
+                  </a>
+                  <img
+                    src={DRAWER_ICON + "online.svg"}
+                    width="8"
+                    height="8"
+                    alt="Your stylist is online"
+                    className="shrink-0"
+                  />
+                </span>
+                <span className="font-mono text-[11px] leading-[14px] tracking-[1.98px] uppercase text-muted whitespace-nowrap">
+                  Toronto, ON
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close navigation menu"
+                className="shrink-0 w-11 h-11 rounded-full bg-hairline/70 flex items-center justify-center hover:bg-hairline transition-colors"
+              >
+                <img src={DRAWER_ICON + "close.svg"} width="18" height="18" alt="" />
+              </button>
+            </div>
+
+            {/* 5 primary tabs */}
+            <nav
+              aria-label="Primary"
+              className="shrink-0 py-3 border-b border-hairline"
+            >
+              <ul className="list-none m-0 p-0 flex flex-col gap-1">
+                {DRAWER_TABS.map((t) => {
+                  const on = t.id === active;
+                  return (
+                    <li key={t.id}>
+                      <a
+                        href={t.link}
+                        aria-current={on ? "page" : undefined}
+                        className={`relative flex flex-col gap-0.5 pl-[52px] pr-3 py-3 rounded-r-2xl border-l-[3px] transition-colors ${
+                          on
+                            ? "bg-primary/[0.07] border-primary"
+                            : "border-transparent hover:bg-inset/70"
+                        }`}
+                      >
+                        <img
+                          src={DRAWER_ICON + t.id + ".svg"}
+                          width="24"
+                          height="24"
+                          alt=""
+                          className="absolute left-[9px] top-[15px]"
+                        />
+                        <span
+                          className={`block font-sans text-[16px] leading-[28px] text-ink ${
+                            on ? "font-semibold" : "font-normal"
+                          }`}
+                        >
+                          {t.label}
+                        </span>
+                        <span className="block font-sans text-[12px] leading-[20px] text-muted">
+                          {t.desc}
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* Dual-geography */}
+            <div className="shrink-0 pt-5 flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <span
+                  id="ship-to-label"
+                  className="font-mono text-[11px] leading-[14px] tracking-[2.2px] uppercase text-muted"
+                >
+                  Ship to
+                </span>
+                <div
+                  className="flex gap-2"
+                  role="group"
+                  aria-labelledby="ship-to-label"
+                >
+                  {countries.map((c) => {
+                    const on = current.code === c.code;
+                    return (
+                      <button
+                        key={c.code}
+                        type="button"
+                        aria-pressed={on}
+                        aria-label={`Ship to ${c.code}`}
+                        onClick={() => onPickCountry(c)}
+                        className={`flex-1 min-w-0 h-14 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${
+                          on
+                            ? "bg-primary border-primary"
+                            : "bg-inset border-hairline hover:border-ctrl/60"
+                        }`}
+                      >
+                        <span
+                          className={`text-[19px] leading-[23px] ${on ? "text-onprimary" : "text-ink"}`}
+                          style={DRAWER_SERIF}
+                        >
+                          {DRAWER_ISO[c.code] || c.code}
+                        </span>
+                        <span
+                          className={`font-sans text-[10.5px] leading-[13px] ${
+                            on ? "text-onprimary/80" : "text-muted"
+                          }`}
+                        >
+                          {c.code}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="flex items-start gap-3 pt-1 m-0" aria-live="polite">
+                <img
+                  src={DRAWER_ICON + "globe.svg"}
+                  width="20"
+                  height="20"
+                  alt=""
+                  className="shrink-0"
+                />
+                <span className="flex-1 min-w-0 font-sans text-[12px] leading-[18px] text-muted">
+                  Prices are landed to {current.code} — {current.duty},{" "}
+                  {current.courier}. Nothing is added at checkout.
+                </span>
+              </p>
+            </div>
+
+            <div className="flex-1 min-h-6" aria-hidden="true" />
+
+            {/* Sign-off */}
+            <div className="shrink-0 relative h-[170px] border-t border-hairline">
+              <span className="absolute left-0 top-[135px] font-mono text-[11px] leading-[13px] text-muted">
+                Aura v1.0
+              </span>
+              <span className="absolute right-0 top-[127px] font-mono text-[10px] leading-[14px] tracking-[2px] uppercase text-ink pb-[5px] border-b border-ink/60 whitespace-nowrap">
+                Perfect Fit Guarantee
+              </span>
+            </div>
+          </div>
+        );
+      }
+
+      function App() {
+        const [drawerOpen, setDrawerOpen] = useState(false);
+        const reviews = useStageReviews();
+        const [reviewing, setReviewing] = useState(null);
+        const [activeCountry, setActiveCountry] = useState(SHIP_TO[0]);
+        const [toastMsg, setToastMsg] = useState("");
+        const toastTimer = useRef(null);
+
+        const showToast = useCallback((msg) => {
+          setToastMsg(msg);
+          if (toastTimer.current) clearTimeout(toastTimer.current);
+          toastTimer.current = setTimeout(() => setToastMsg(""), 3200);
+        }, []);
+
+        useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+        const awaitingYou = PRODUCTION.filter((p) => p.needsYou).length;
+
+        return (
+          <div className="min-h-screen w-full bg-canvas flex justify-center font-sans">
+            <div className="sr-only" role="status" aria-live="polite">
+              {toastMsg}
+            </div>
+
+            {toastMsg && (
+              <div
+                className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] max-w-[calc(100%-2rem)] px-4 py-2.5 rounded-full bg-ink text-canvas text-[12.5px] shadow-lg aura-toast-in"
+                aria-hidden="true"
+              >
+                <span className="truncate">{toastMsg}</span>
+              </div>
+            )}
+
+            <div className="app-viewport">
+              <header className="shrink-0 flex items-center gap-2 px-4 pt-4 pb-2">
+                <a
+                  href="index.html"
+                  aria-label="Back to home"
+                  className="shrink-0 -ml-1.5 min-h-[44px] pr-2 pl-1.5 flex items-center gap-4 rounded-lg text-ink hover:text-primary active:scale-95 transition-all"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M20.5603 10.189L13.0603 2.68899C12.779 2.4079 12.3977 2.25 12 2.25C11.6024 2.25 11.221 2.4079 10.9397 2.68899L3.4397 10.189C3.29973 10.3279 3.18878 10.4933 3.1133 10.6755C3.03782 10.8577 2.99931 11.053 3.00001 11.2502V20.2502C3.00001 20.4492 3.07903 20.6399 3.21968 20.7806C3.36033 20.9212 3.5511 21.0002 3.75001 21.0002H9.75001C9.94892 21.0002 10.1397 20.9212 10.2803 20.7806C10.421 20.6399 10.5 20.4492 10.5 20.2502V15.0002H13.5V20.2502C13.5 20.4492 13.579 20.6399 13.7197 20.7806C13.8603 20.9212 14.0511 21.0002 14.25 21.0002H20.25C20.4489 21.0002 20.6397 20.9212 20.7803 20.7806C20.921 20.6399 21 20.4492 21 20.2502V11.2502C21.0007 11.053 20.9622 10.8577 20.8867 10.6755C20.8112 10.4933 20.7003 10.3279 20.5603 10.189ZM19.5 19.5002H15V14.2502C15 14.0513 14.921 13.8606 14.7803 13.7199C14.6397 13.5793 14.4489 13.5002 14.25 13.5002H9.75001C9.5511 13.5002 9.36033 13.5793 9.21968 13.7199C9.07903 13.8606 9.00001 14.0513 9.00001 14.2502V19.5002H4.50001V11.2502L12 3.75024L19.5 11.2502V19.5002Z" />
+                  </svg>
+                  <span className="flex items-center gap-0.5">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                    <span className="text-[13.5px] font-medium">Back to chat</span>
+                  </span>
+                </a>
+
+                <div className="min-w-0 flex-1 text-right pr-1">
+                  <h1 className="font-display text-[20px] text-primary leading-tight truncate">
+                    Orders
+                  </h1>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(true)}
+                  aria-label="Open navigation menu"
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerOpen}
+                  className="w-11 h-11 -mr-2 rounded-lg flex items-center justify-center text-ink hover:text-primary active:scale-95 transition-all shrink-0"
+                >
+                  <svg
+                    width="22"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.1"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <line x1="3" y1="7" x2="21" y2="7" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="17" x2="21" y2="17" />
+                  </svg>
+                </button>
+              </header>
+
+              <div className="thread-scroll px-4 pt-1 pb-24">
+                <p className="text-[12px] text-muted leading-relaxed mb-5">
+                  Every commission from the day it is placed. Lead times are what the artisan can
+                  actually hold, and you approve photographs before anything is dispatched.
+                </p>
+
+                {awaitingYou > 0 && (
+                  <div className="mb-6 p-3.5 rounded-2xl border border-goldtext/45 bg-inset/60">
+                    <p className="font-mono text-[10.5px] uppercase tracking-wider text-goldtext">
+                      Waiting on you
+                    </p>
+                    <p className="text-[12.5px] text-ink leading-snug mt-1.5">
+                      {awaitingYou} piece
+                      {awaitingYou > 1 ? "s are" : " is"} finished and needs your approval before it
+                      ships.
+                    </p>
+                  </div>
+                )}
+
+                {/* ---------- Live production tracker ---------- */}
+                <section className="mb-7" aria-labelledby="prod-title">
+                  <SectionTitle id="prod-title" count={`${PRODUCTION.length} in progress`}>
+                    In production
+                  </SectionTitle>
+
+                  <div className="flex flex-col gap-2.5">
+                    {PRODUCTION.map((o) => (
+                      <OrderCard
+                        key={o.id}
+                        item={o}
+                        tone={o.needsYou ? "attention" : undefined}
+                        onClick={() => setReviewing(o)}
+                        label={`${o.name} — ${STAGES[o.stage]}, open stage photographs`}
+                      >
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="text-[14px] font-medium text-ink truncate">{o.name}</span>
+                          <span className="font-mono text-[10px] text-muted shrink-0">{o.id}</span>
+                        </span>
+                        <span className="block text-[11.5px] text-muted leading-snug mt-0.5 line-clamp-1">
+                          {o.craft}
+                        </span>
+
+                        <StageTrack stage={o.stage} />
+
+                        <p className="text-[11.5px] text-ink leading-snug mt-2">{o.note}</p>
+                        <p className="font-mono text-[10.5px] text-muted mt-1.5">
+                          {o.artisan} · {o.eta}
+                        </p>
+
+                      </OrderCard>
+                    ))}
+                  </div>
+                </section>
+
+                {/* ---------- Group order ---------- */}
+                <section className="mb-7" aria-labelledby="grp-title">
+                  <SectionTitle id="grp-title" count={`${GROUP.members.length} people`}>
+                    Group order
+                  </SectionTitle>
+
+                  <div className="rounded-2xl border border-hairline bg-card overflow-hidden">
+                    <div className="p-3.5 border-b border-hairline">
+                      <p className="text-[14px] font-medium text-ink">{GROUP.title}</p>
+                      <p className="font-mono text-[10.5px] text-muted mt-1">
+                        {GROUP.when} · {GROUP.organiser}
+                      </p>
+                      <p className="text-[11.5px] text-goldtext leading-snug mt-1.5">
+                        {GROUP.deadline}
+                      </p>
+                    </div>
+
+                    <ul className="divide-y divide-hairline">
+                      {GROUP.members.map((m) => (
+                        <li
+                          key={m.name}
+                          className="flex items-center justify-between gap-3 px-3.5 py-3"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-[13.5px] text-ink truncate">{m.name}</span>
+                            <span className="block text-[11.5px] text-muted truncate mt-0.5">
+                              {m.piece}
+                            </span>
+                          </span>
+                          <span
+                            className={`shrink-0 font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border ${
+                              m.ok
+                                ? "text-muted border-hairline"
+                                : "text-goldtext border-goldtext/45"
+                            }`}
+                          >
+                            {m.state}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="px-3.5 py-3 border-t border-hairline bg-inset/50 flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-muted leading-snug">
+                        Everyone is cut to their own measurements from one shared brief.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => showToast("Invite sent — they can add measurements from the link")}
+                        className="shrink-0 min-h-[44px] -my-2 px-1 text-[12px] font-medium text-primary hover:text-ink transition-colors"
+                      >
+                        Invite
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* ---------- Delivery ---------- */}
+                <section className="mb-7" aria-labelledby="del-title">
+                  <SectionTitle id="del-title" count={`${DELIVERY.length} shipments`}>
+                    Delivery
+                  </SectionTitle>
+
+                  <div className="flex flex-col gap-2.5">
+                    {DELIVERY.map((d) => (
+                      <OrderCard key={d.id} item={d}>
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="text-[14px] font-medium text-ink truncate">{d.name}</span>
+                          <span className="font-mono text-[10px] text-muted shrink-0">{d.id}</span>
+                        </span>
+                        <span
+                          className={`block text-[11.5px] leading-snug mt-1 ${
+                            d.done ? "text-muted" : "text-ink"
+                          }`}
+                        >
+                          {d.status}
+                        </span>
+                        <span className="block font-mono text-[10.5px] text-muted mt-1">
+                          {d.courier} · {d.eta}
+                        </span>
+                        {d.duties && (
+                          <span className="block text-[11px] text-muted leading-snug mt-1">
+                            {d.duties}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => showToast(`Tracking ${d.tracking} · ${d.courier}`)}
+                          className="mt-1.5 min-h-[40px] -my-1 text-[12px] font-medium text-primary underline underline-offset-4 decoration-ctrl hover:decoration-primary transition-colors"
+                        >
+                          Track this parcel
+                        </button>
+                      </OrderCard>
+                    ))}
+                  </div>
+                </section>
+
+                {/* ---------- Returns ---------- */}
+                <section className="mb-7" aria-labelledby="ret-title">
+                  <SectionTitle id="ret-title" count={`${RETURNS.length} open`}>
+                    Returns
+                  </SectionTitle>
+                  <p className="text-[11.5px] text-muted leading-snug -mt-1 mb-2.5">
+                    Bespoke pieces are cut to you, so returns are for genuine faults or a fit we
+                    could not put right. Fourteen days from delivery.
+                  </p>
+
+                  <div className="flex flex-col gap-2.5">
+                    {RETURNS.map((r) => (
+                      <OrderCard key={r.id} item={r}>
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="text-[14px] font-medium text-ink truncate">{r.name}</span>
+                          <span className="font-mono text-[10px] text-muted shrink-0">{r.id}</span>
+                        </span>
+                        <span className="block text-[11.5px] text-muted leading-snug mt-1">
+                          {r.reason}
+                        </span>
+                        <span
+                          className={`block text-[11.5px] leading-snug mt-1 ${
+                            r.settled ? "text-muted" : "text-ink"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                        {!r.settled && (
+                          <button
+                            type="button"
+                            onClick={() => showToast(`Meera will pick up the return for ${r.name}`)}
+                            className="mt-1.5 min-h-[40px] -my-1 text-[12px] font-medium text-primary underline underline-offset-4 decoration-ctrl hover:decoration-primary transition-colors"
+                          >
+                            Start a return
+                          </button>
+                        )}
+                      </OrderCard>
+                    ))}
+                  </div>
+                </section>
+
+                {/* ---------- Alterations ---------- */}
+                <section className="mb-7" aria-labelledby="alt-title">
+                  <SectionTitle id="alt-title" count={`${ALTERATIONS.length} in hand`}>
+                    Alterations
+                  </SectionTitle>
+
+                  <div className="flex flex-col gap-2.5">
+                    {ALTERATIONS.map((a) => (
+                      <OrderCard key={a.id} item={a}>
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="text-[14px] font-medium text-ink truncate">{a.name}</span>
+                          <span className="font-mono text-[10px] text-muted shrink-0">{a.id}</span>
+                        </span>
+                        <span className="block text-[11.5px] text-ink leading-snug mt-1">
+                          {a.what}
+                        </span>
+                        <span className="block font-mono text-[10.5px] text-muted mt-1">
+                          {a.status}
+                        </span>
+                        <span className="block text-[11px] text-goldtext leading-snug mt-1">
+                          {a.credit}
+                        </span>
+                      </OrderCard>
+                    ))}
+                  </div>
+
+                  <a
+                    href="wardrobe.html"
+                    className="block mt-2.5 min-h-[44px] rounded-2xl border border-dashed border-ctrl/60 text-[12.5px] font-medium text-primary flex items-center justify-center hover:bg-inset active:scale-[0.99] transition-all"
+                  >
+                    Use a credit on something you own
+                  </a>
+                </section>
+
+                <p className="font-mono text-[10.5px] text-muted text-center pt-1">
+                  Nothing is added at checkout
+                </p>
+              </div>
+
+              {/* ---------- Navigation drawer ---------- */}
+              <Overlay
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                labelledBy="drawer-title"
+                align="end"
+              >
+                <AuraDrawer
+                  active="orders"
+                  countries={SHIP_TO}
+                  current={activeCountry}
+                  onPickCountry={(c) => {
+                    setActiveCountry(c);
+                    showToast(`Ship-to ${c.code} — duties and lead times recalculated`);
+                  }}
+                  onClose={() => setDrawerOpen(false)}
+                />
+              </Overlay>
+
+              {reviewing && (
+                <StageReviewSheet
+                  order={reviewing}
+                  reviews={reviews}
+                  onClose={() => setReviewing(null)}
+                  onMessage={(order, stage, concern) => {
+                    const lines = [
+                      `${order.name} (${order.id}) — about the ${STAGES[stage]} stage.`,
+                      `My concern: “${concern.note}”`,
+                    ];
+                    if (concern.reply) lines.push(`Meera replied: “${concern.reply}”`);
+                    lines.push("Can we talk this through?");
+                    window.location.href =
+                      "conversation.html?prompt=" +
+                      encodeURIComponent(lines.join("\n")) +
+                      "&ship=" +
+                      encodeURIComponent(activeCountry.code);
+                  }}
+                  onVerdict={(orderId, stage, verdict, note) => {
+                    reviews.set(orderId, stage, verdict, note);
+                    showToast(
+                      verdict === "approved"
+                        ? `${STAGES[stage]} approved — the piece moves on`
+                        : `Concern sent to Meera — ${STAGES[stage]} is on hold`
+                    );
+                  }}
+                />
+              )}
+
+              <a
+                href="index.html"
+                aria-label="Back to home"
+                className="absolute bottom-7 right-4 w-14 h-14 rounded-full bg-primary text-onprimary flex items-center justify-center shadow-lg hover:bg-primary/90 active:scale-95 transition-all"
+              >
+                <svg
+                  width="23"
+                  height="23"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.8L3 20.5l1.4-4.1A8.4 8.4 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
