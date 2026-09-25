@@ -408,6 +408,23 @@
         .aura-fade-in:has(.aura-sheet-up) { animation-duration: 1ms; }
       }
     </style>
+    <script id="aura-home-handoff">
+      /* Going back to Home (Home icon, back button, history.back) leaves Home
+         the drawer-hop flag, so it opens on its skeleton instead of a blank
+         reload. See the aura-tab-transition block in index.html. */
+      window.addEventListener("pageswap", function (e) {
+        try {
+          var a = e.activation;
+          var u = new URL(a.entry.url, location.href);
+          if (
+            a.navigationType !== "reload" &&
+            u.origin === location.origin &&
+            /\/(index\.html)?$/.test(u.pathname)
+          )
+            sessionStorage.setItem("aura-drawer-nav", "1");
+        } catch (err) {}
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

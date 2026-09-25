@@ -1004,9 +1004,25 @@
           else if (false) e.viewTransition.skipTransition();
         });
 
-        // Outgoing page: pin its top bar so it stays put across the hop.
+        // Outgoing page: pin its top bar so it stays put across the hop. A trip
+        // to Home (Home icon, back button, history.back) also leaves Home the
+        // flag, so Home opens on its skeleton instead of a blank reload.
         window.addEventListener("pageswap", function (e) {
-          if (!e.viewTransition || !window.__auraTabLeaving) return;
+          var toHome = false;
+          try {
+            var a = e.activation;
+            var u = new URL(a.entry.url, location.href);
+            toHome =
+              a.navigationType !== "reload" &&
+              u.origin === location.origin &&
+              /\/(index\.html)?$/.test(u.pathname);
+          } catch (err) {}
+          if (toHome) {
+            try {
+              sessionStorage.setItem(KEY, "1");
+            } catch (err) {}
+          }
+          if (!e.viewTransition || !(window.__auraTabLeaving || toHome)) return;
           e.viewTransition.types.add("aura-tab");
           var bar =
             document.querySelector(".app-viewport > header") ||
