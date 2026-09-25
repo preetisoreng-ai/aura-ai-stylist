@@ -241,6 +241,35 @@
         margin: 10px auto 4px auto;
       }
 
+      /* Horizontal category rail without a scrollbar */
+      .rail {
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .rail::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Selected category ring — matching reference Figma 161:6334 */
+      .cat-selected {
+        box-shadow:
+          0 0 3px 2px rgb(var(--gold-rgb) / 0.45),
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Right-edge fade over the category rail */
+      .rail-fade {
+        background: linear-gradient(
+          to left,
+          rgb(var(--canvas-rgb)) 24%,
+          rgb(var(--canvas-rgb) / 0.8) 65%,
+          rgb(var(--canvas-rgb) / 0)
+        );
+      }
+
       /* ---------- Motion ---------- */
       @keyframes auraMsgIn {
         from {
@@ -464,8 +493,399 @@
         }
       }
     </style>
-  </head>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from { transform: translate3d(0, 100%, 0); }
+        to { transform: translate3d(0, 0, 0); }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.3s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from { background-color: transparent; }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to { background-color: transparent; }
+      }
+      @keyframes auraSheetGhostOut {
+        from { transform: translate3d(0, 0, 0); }
+        to { transform: translate3d(0, 100%, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) { animation-duration: 1ms; }
+      }
+    </style>
+<!-- aura-tab-transition:start -->
+<style id="aura-tab-transition-style">
+  /* ---- Drawer tab transition ----
+         Picking a tab in the right drawer slides the drawer out, then the
+         next page opens with its top bar held still while the content below
+         crossfades into a skeleton; the skeleton dissolves once the real
+         screen and its first images are ready. */
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-group(aura-topbar) {
+    animation: none !important;
+  }
+  ::view-transition-old(aura-topbar),
+  ::view-transition-new(aura-topbar) {
+    animation-duration: 220ms !important;
+    animation-timing-function: ease !important;
+    mix-blend-mode: normal;
+  }
+  /* The old screen holds still underneath while the new one fades up over
+     it, so the two never leave a see-through gap. */
+  html,
+  ::view-transition {
+    background-color: rgb(243 239 231);
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-old(root) {
+    animation: none !important;
+    opacity: 1;
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+    animation: auraTabIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+  @keyframes auraTabIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+  }
+
+  .aura-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    background: rgb(243 239 231);
+    transition: opacity 320ms ease;
+  }
+  .aura-boot.is-done {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .aura-boot-vp {
+    width: 100%;
+    max-width: 430px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aura-boot-top {
+    view-transition-name: aura-topbar;
+  }
+  .aura-boot-body {
+    flex: 1;
+    min-height: 0;
+    padding: 12px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .sk {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgb(30 27 46 / 0.07);
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.55),
+      transparent
+    );
+    animation: auraShimmer 1.3s ease-in-out infinite;
+  }
+  @keyframes auraShimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  .sk-t {
+    height: 12px;
+    border-radius: 6px;
+  }
+  .sk-h {
+    height: 24px;
+    border-radius: 8px;
+  }
+  .sk-o {
+    border-radius: 9999px;
+  }
+  .sk-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .sk-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .sk-card {
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(229 223 213);
+    padding: 12px;
+  }
+  .sk-f1 {
+    flex: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after {
+      animation: none;
+      display: none;
+    }
+    .aura-boot {
+      transition: none;
+    }
+    html:active-view-transition-type(aura-tab)::view-transition-old(root),
+    html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+      animation: none !important;
+    }
+  }
+</style>
+<!-- Hold the first paint until the skeleton below is in the document. -->
+<link rel="expect" href="#aura-boot-ready" blocking="render" />
+<script id="aura-tab-transition-head">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var arriving = false;
+    try {
+      arriving = !!sessionStorage.getItem(KEY);
+      sessionStorage.removeItem(KEY);
+    } catch (e) {}
+    window.__auraTabArriving = arriving;
+    window.__auraTabLeaving = false;
+
+    // Only a drawer hop uses the transition; every other link behaves as before.
+    window.addEventListener("pagereveal", function (e) {
+      // A prerendered page ran the lines above before the hop, so read the
+      // flag again now that it is being shown.
+      if (!arriving) {
+        try {
+          if (sessionStorage.getItem(KEY)) {
+            sessionStorage.removeItem(KEY);
+            arriving = window.__auraTabArriving = true;
+            if (window.__auraShowBoot) window.__auraShowBoot();
+          }
+        } catch (err) {}
+      }
+      if (!e.viewTransition) return;
+      if (arriving) e.viewTransition.types.add("aura-tab");
+      else if (true) e.viewTransition.skipTransition();
+    });
+
+    // Outgoing page: pin its top bar so it stays put across the hop.
+    window.addEventListener("pageswap", function (e) {
+      if (!e.viewTransition || !window.__auraTabLeaving) return;
+      e.viewTransition.types.add("aura-tab");
+      var bar =
+        document.querySelector(".app-viewport > header") ||
+        document.querySelector("#root header");
+      if (bar) bar.style.viewTransitionName = "aura-topbar";
+    });
+  })();
+</script>
+<!-- aura-tab-transition:end -->
+</head>
   <body>
+<!-- aura-tab-transition:start -->
+<template id="aura-boot-template"><div class="aura-boot"><div class="aura-boot-vp"><div style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:normal;gap:4px;padding-top:12px;padding-right:8px;padding-bottom:8px;padding-left:8px;border-bottom:0.8px solid rgb(229, 223, 213);background-color:rgb(243, 239, 231);color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box;width:100%;height:64.80px" class="aura-boot-top"><span style="display:flex;flex-direction:row;align-items:center;justify-content:center;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box;width:44.00px;height:44.00px;flex-shrink:0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;box-sizing:border-box;width:19.00px;height:19.00px;flex-shrink:0"><path d="M3 10.5 12 3.5l9 7"></path><path d="M5.5 9.5V20h13V9.5"></path><path d="M9.75 20v-6h4.5v6"></path></svg></span><span style="display:flex;flex-direction:row;align-items:center;justify-content:normal;gap:4px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;box-sizing:border-box;width:18.00px;height:18.00px;flex-shrink:0"><path d="m15 18-6-6 6-6"></path></svg><span style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:13.5px;font-weight:500;line-height:20.25px;letter-spacing:normal;box-sizing:border-box">Back</span></span><span style="display:block;flex-direction:row;flex-grow:1;flex-basis:0%;align-items:normal;justify-content:normal;min-width:0px;padding-right:4px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;text-align:right;box-sizing:border-box"><span style="display:block;flex-direction:row;align-items:normal;justify-content:normal;min-width:0px;color:rgb(59, 42, 90);font-family:&quot;Instrument Serif&quot;, &quot;Iowan Old Style&quot;, Georgia, serif;font-size:20px;font-weight:400;line-height:25px;letter-spacing:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;box-sizing:border-box">Discover designers</span></span><span style="display:flex;flex-direction:row;align-items:center;justify-content:center;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;text-align:center;box-sizing:border-box;width:44.00px;height:44.00px;flex-shrink:0"><svg width="20" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;text-align:center;box-sizing:border-box;width:20.00px;height:18.00px;flex-shrink:0"><line x1="3" y1="7" x2="21" y2="7"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="17" x2="21" y2="17"></line></svg></span></div><div class="aura-boot-body"><div class="sk-row" style="gap:14px"><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:48px;height:48px"></div><div class="sk sk-t" style="width:36px;height:10px"></div></div></div><div class="sk-card" style="padding:0;overflow:hidden"><div class="sk " style="width:100%;height:200px;border-radius:0px"></div><div style="padding:14px;display:flex;flex-direction:column;gap:8px"><div class="sk sk-h" style="width:56%;height:22px"></div><div class="sk sk-t" style="width:40%;height:12px"></div><div class="sk sk-t" style="width:72%;height:12px"></div></div></div><div class="sk-card" style="padding:0;overflow:hidden"><div class="sk " style="width:100%;height:200px;border-radius:0px"></div><div style="padding:14px;display:flex;flex-direction:column;gap:8px"><div class="sk sk-h" style="width:56%;height:22px"></div><div class="sk sk-t" style="width:40%;height:12px"></div><div class="sk sk-t" style="width:72%;height:12px"></div></div></div></div></div></div></template>
+<script id="aura-tab-transition">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var arriving = !!window.__auraTabArriving;
+
+    // Incoming page: show the top bar and a skeleton until React has painted.
+    var booted = false;
+    function showBoot() {
+      var tpl = document.getElementById("aura-boot-template");
+      // A prerendered page may already be on screen; it needs no skeleton.
+      if (booted || !tpl || !tpl.content.firstElementChild) return;
+      if (document.querySelector("#root header")) return;
+      booted = true;
+      var boot = tpl.content.firstElementChild.cloneNode(true);
+      boot.setAttribute("aria-hidden", "true");
+      document.body.insertBefore(boot, document.body.firstChild);
+      // #root is parsed after this script, so look it up when needed.
+      var started = Date.now();
+      var finish = function () {
+        if (boot.classList.contains("is-done")) return;
+        boot.classList.add("is-done");
+        setTimeout(
+          function () {
+            boot.remove();
+          },
+          reduce ? 0 : 360,
+        );
+      };
+      var whenPainted = function () {
+        // Hold for the images the reader sees first, but never long.
+        var imgs = Array.prototype.filter.call(
+          document.querySelectorAll("#root img"),
+          function (img) {
+            var r = img.getBoundingClientRect();
+            return !img.complete && r.top < window.innerHeight && r.width > 40;
+          },
+        );
+        var left = imgs.length;
+        var cap = Math.max(250, 1200 - (Date.now() - started));
+        var t = setTimeout(finish, cap);
+        var one = function () {
+          if (--left <= 0) {
+            clearTimeout(t);
+            setTimeout(finish, 60);
+          }
+        };
+        if (!left) {
+          clearTimeout(t);
+          setTimeout(finish, 120);
+          return;
+        }
+        imgs.forEach(function (img) {
+          img.addEventListener("load", one, { once: true });
+          img.addEventListener("error", one, { once: true });
+        });
+      };
+      var ready = function () {
+        return document.querySelector("#root header");
+      };
+      if (ready()) whenPainted();
+      else if (window.MutationObserver) {
+        var mo = new MutationObserver(function () {
+          if (!ready()) return;
+          mo.disconnect();
+          setTimeout(whenPainted, 30);
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      setTimeout(finish, 6000); // never strand the skeleton
+    }
+    window.__auraShowBoot = showBoot;
+    if (arriving) showBoot();
+
+    // Start building the next tab's page as soon as a finger or pointer
+    // lands on it, so it is often ready before the drawer has left.
+    var speculated = {};
+    var canPrerender =
+      window.HTMLScriptElement &&
+      HTMLScriptElement.supports &&
+      HTMLScriptElement.supports("speculationrules");
+    function warm(e) {
+      if (!canPrerender) return;
+      var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+      if (!link || !link.closest(".drawer-slide-in")) return;
+      if (link.getAttribute("aria-current") === "page" || speculated[link.href]) return;
+      speculated[link.href] = true;
+      var rules = document.createElement("script");
+      rules.type = "speculationrules";
+      rules.textContent = JSON.stringify({ prerender: [{ source: "list", urls: [link.href] }] });
+      document.head.appendChild(rules);
+    }
+    ["pointerover", "pointerdown", "touchstart", "focusin"].forEach(function (type) {
+      document.addEventListener(type, warm, { capture: true, passive: true });
+    });
+
+    // Drawer tabs: slide the drawer out, then open the tab's page.
+    var leaving = false;
+    document.addEventListener(
+      "click",
+      function (e) {
+        if (
+          e.defaultPrevented ||
+          e.button !== 0 ||
+          e.metaKey ||
+          e.ctrlKey ||
+          e.shiftKey ||
+          e.altKey
+        )
+          return;
+        var link =
+          e.target.closest &&
+          e.target.closest('nav[aria-label="Primary"] a[href]');
+        if (!link) return;
+        var drawer = link.closest(".drawer-slide-in");
+        if (!drawer) return;
+        e.preventDefault();
+        if (leaving) return;
+        var close = drawer.querySelector(
+          '[aria-label="Close navigation menu"]',
+        );
+        if (close) close.click();
+        if (link.getAttribute("aria-current") === "page") return;
+        leaving = true;
+        var href = link.href;
+        var gone = false;
+        var go = function () {
+          if (gone) return;
+          gone = true;
+          try {
+            sessionStorage.setItem(KEY, "1");
+          } catch (err) {}
+          window.__auraTabLeaving = true;
+          window.location.href = href;
+        };
+        if (reduce) return go();
+        // Leave once the drawer has slid out: its slide ends, or the
+        // overlay unmounts it, whichever comes first.
+        drawer.addEventListener("animationend", function (ev) {
+          if (ev.target === drawer && /Out/.test(ev.animationName)) go();
+        });
+        (function watch() {
+          if (gone) return;
+          if (!drawer.isConnected) return go();
+          requestAnimationFrame(watch);
+        })();
+        setTimeout(go, 420);
+      },
+      true,
+    );
+    window.addEventListener("pageshow", function () {
+      leaving = false;
+      window.__auraTabLeaving = false;
+    });
+  })();
+</script>
+<span id="aura-boot-ready" hidden></span>
+<!-- aura-tab-transition:end -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -677,19 +1097,39 @@
              Three views, one screen: the feed you browse, the profile you open,
              and the checklist that explains what "verified" actually means.
              =================================================================== */
-            const DESIGNER_FILTERS = [
-              "All",
-              "Bridal",
-              "Handloom",
-              "Zardosi",
-              "Menswear",
-              "Kids",
-              "Under 2 wks",
+            const DESIGNER_CATEGORIES = [
+              { id: "all", label: "All Pieces", img: "images/discover-full/cat-all.jpg" },
+              { id: "lehengas", label: "Lehengas", img: "images/discover-full/cat-lehengas.jpg" },
+              { id: "sarees", label: "Sarees", img: "images/discover-full/cat-sarees.jpg" },
+              { id: "anarkalis", label: "Anarkalis", img: "images/discover-full/cat-anarkalis.jpg" },
+              { id: "kurta-sets", label: "Kurta Sets", img: "images/discover-full/cat-kurta-sets.jpg" },
+              { id: "sherwanis", label: "Sherwanis", img: "images/discover-full/cat-sherwanis.jpg" },
+              { id: "bridal", label: "Bridal", img: "images/discover-full/cat-occasions.jpg" },
+              { id: "handloom", label: "Handloom", img: "images/discover-full/story-banarasi.jpg" },
             ];
+
+            const filterDesigner = (d, catId) => {
+              if (!catId || catId === "all" || catId === "All") return true;
+              const target = catId.toLowerCase().replace(/[-_]/g, " ");
+              const allTags = [...d.tags, ...d.crafts, d.specialty, d.name]
+                .join(" ")
+                .toLowerCase();
+
+              if (target === "lehengas") return allTags.includes("lehenga");
+              if (target === "sarees") return allTags.includes("saree");
+              if (target === "anarkalis") return allTags.includes("anarkali");
+              if (target === "kurta sets") return allTags.includes("kurta");
+              if (target === "sherwanis") return allTags.includes("sherwani") || allTags.includes("bandhgala") || allTags.includes("menswear");
+              if (target === "bridal") return allTags.includes("bridal");
+              if (target === "handloom") return allTags.includes("handloom");
+
+              return allTags.includes(target);
+            };
 
             const DESIGNERS = [
               {
                 id: "aisha",
+                image: "images/hero_anarkali.jpg",
                 name: "Aisha's Boutique",
                 city: "Mumbai",
                 est: "2012",
@@ -697,11 +1137,11 @@
                 rating: 4.9,
                 orders: 214,
                 ships: "Ships worldwide",
-                specialty: "Silk Anarkali",
+                specialty: "Silk Anarkali & Lehengas",
                 lead: "5 wks",
                 leadWeeks: 5,
-                crafts: ["Bridal", "Silk Anarkali", "Zardosi"],
-                tags: ["Bridal", "Zardosi"],
+                crafts: ["Bridal", "Silk Anarkali", "Anarkalis", "Lehengas", "Zardosi"],
+                tags: ["Bridal", "Zardosi", "Anarkalis", "Lehengas"],
                 first: "Aisha",
                 photo: "Workshop photo · Aisha at loom",
                 swatch: ["#5A1226", "#C89B3C", "#E8D9B5"],
@@ -710,6 +1150,7 @@
               },
               {
                 id: "kanchi",
+                image: "images/textile_jewel_tones.jpg",
                 name: "Handloom Kanchi",
                 city: "Chennai",
                 est: "1998",
@@ -717,11 +1158,11 @@
                 rating: 4.8,
                 orders: 89,
                 ships: "GI-certified",
-                specialty: "Korvai Kanjivaram",
+                specialty: "Korvai Kanjivaram Sarees",
                 lead: "6 wks",
                 leadWeeks: 6,
-                crafts: ["Handloom", "Korvai", "Temple border"],
-                tags: ["Handloom"],
+                crafts: ["Handloom", "Korvai", "Temple border", "Sarees", "Bridal"],
+                tags: ["Handloom", "Sarees", "Bridal"],
                 first: "Kanchi",
                 photo: "Workshop photo · the korvai join",
                 swatch: ["#0E5B4A", "#C89B3C", "#E4D2A8"],
@@ -730,6 +1171,7 @@
               },
               {
                 id: "noor",
+                image: "images/featherweight_organza.jpg",
                 name: "Noor Atelier",
                 city: "Lucknow",
                 est: "2016",
@@ -737,11 +1179,11 @@
                 rating: 4.9,
                 orders: 143,
                 ships: "Ships worldwide",
-                specialty: "Chikankari",
+                specialty: "Chikankari Sarees & Anarkalis",
                 lead: "2 wks",
                 leadWeeks: 2,
-                crafts: ["Chikankari", "Shadow work", "Under 2 wks"],
-                tags: ["Under 2 wks"],
+                crafts: ["Chikankari", "Shadow work", "Under 2 wks", "Anarkalis", "Sarees", "Lehengas"],
+                tags: ["Under 2 wks", "Anarkalis", "Sarees", "Lehengas"],
                 first: "Noor",
                 photo: "Workshop photo · shadow work in progress",
                 swatch: ["#F5F2EA", "#CFE0DA", "#9AAFA6"],
@@ -750,6 +1192,7 @@
               },
               {
                 id: "veer",
+                image: "images/sherwani_midnight_navy.jpg",
                 name: "Veer & Sons",
                 city: "Jodhpur",
                 est: "1974",
@@ -757,11 +1200,11 @@
                 rating: 4.7,
                 orders: 61,
                 ships: "Ships worldwide",
-                specialty: "Bandhgala",
+                specialty: "Bandhgala & Sherwanis",
                 lead: "4 wks",
                 leadWeeks: 4,
-                crafts: ["Menswear", "Bandhgala", "Sherwani"],
-                tags: ["Menswear"],
+                crafts: ["Menswear", "Bandhgala", "Sherwani", "Sherwanis", "Kurta Sets"],
+                tags: ["Menswear", "Sherwanis", "Kurta Sets"],
                 first: "Veer",
                 photo: "Workshop photo · the cutting table",
                 swatch: ["#1E3A4C", "#E2D7C3", "#8C5A3C"],
@@ -770,6 +1213,7 @@
               },
               {
                 id: "mira",
+                image: "images/girl_gold_pattu.jpg",
                 name: "Little Mira",
                 city: "Jaipur",
                 est: "2019",
@@ -777,11 +1221,11 @@
                 rating: 4.8,
                 orders: 52,
                 ships: "Ships worldwide",
-                specialty: "Children's festive",
+                specialty: "Children's Festive & Kurta Sets",
                 lead: "2 wks",
                 leadWeeks: 2,
-                crafts: ["Kids", "Block print", "Under 2 wks"],
-                tags: ["Kids", "Under 2 wks"],
+                crafts: ["Kids", "Block print", "Under 2 wks", "Kurta Sets", "Lehengas"],
+                tags: ["Kids", "Under 2 wks", "Kurta Sets", "Lehengas"],
                 first: "Mira",
                 photo: "Workshop photo · block printing by hand",
                 swatch: ["#E9C9CE", "#C89B3C", "#F4EEE8"],
@@ -800,9 +1244,18 @@
               ["Quarterly review", "Ratings, returns, disputes tracked"],
             ];
 
-            /* The workshop photograph. A gradient stands in until a real one is
-               shot — the same treatment the catalogue uses. */
+            /* The workshop photograph. Designers without one yet fall back to a
+               gradient in their own palette — the same treatment the catalogue uses. */
             function WorkshopPhoto({ designer, className, label }) {
+              if (designer.image) {
+                return (
+                  <img
+                    src={designer.image}
+                    alt={designer.name + " — " + designer.specialty}
+                    className={className + " object-cover object-[50%_28%]"}
+                  />
+                );
+              }
               return (
                 <span
                   className={className + " flex items-center justify-center overflow-hidden"}
@@ -828,7 +1281,9 @@
               );
             }
 
-            /* One designer in the feed. Ranked by fit for you, never by spend. */
+            /* One designer in the feed. Ranked by fit for you, never by spend.
+               Who they are on the left; where, how it ships and how long it takes
+               on the right, behind a hairline. */
             function DesignerCard({ designer, onOpen }) {
               return (
                 <button
@@ -844,35 +1299,53 @@
                     designer.orders +
                     " orders from abroad"
                   }
-                  className="w-full text-left bg-card border border-hairline rounded-2xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.99] transition-all"
+                  className="w-full text-left bg-card border border-hairline rounded-3xl overflow-hidden hover:border-primary/45 hover:shadow-md active:scale-[0.99] transition-all"
                 >
-                  <WorkshopPhoto
-                    designer={designer}
-                    className="block w-full h-[150px]"
-                  />
-                  <span className="block p-3">
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className="text-[14px] font-medium text-ink truncate">
+                  <WorkshopPhoto designer={designer} className="block w-full h-[176px]" />
+                  <span className="flex items-stretch gap-3 px-4 pt-3.5 pb-4">
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display text-[24px] leading-tight text-ink truncate">
                         {designer.name}
                       </span>
-                      <span className="font-mono text-[10.5px] text-muted shrink-0">
-                        {designer.city}
+                      <span className="block font-mono text-[11px] text-ink mt-1.5">
+                        <span className="text-gold" aria-hidden="true">
+                          ★
+                        </span>{" "}
+                        {designer.rating} · {designer.orders} NRI orders
                       </span>
-                    </span>
-                    <span className="flex items-baseline justify-between gap-3 mt-1.5">
-                      <span className="font-mono text-[11px] text-ink">
-                        ★ {designer.rating} · {designer.orders} NRI orders
-                      </span>
-                      <span className="font-mono text-[10.5px] text-goldtext shrink-0">
-                        {designer.ships}
-                      </span>
-                    </span>
-                    <span className="flex items-baseline justify-between gap-3 mt-1">
-                      <span className="text-[11.5px] text-muted truncate">
+                      <span className="block text-[12px] text-muted mt-1.5 truncate">
                         Specialty: {designer.specialty}
                       </span>
-                      <span className="font-mono text-[10.5px] text-muted shrink-0">
-                        Lead time {designer.lead}
+                    </span>
+                    <span className="shrink-0 border-l border-hairline pl-3 flex items-center gap-3">
+                      <span className="whitespace-nowrap">
+                        <span className="block font-mono text-[10.5px] text-muted">
+                          {designer.city}
+                        </span>
+                        <span className="block font-mono text-[10.5px] text-goldtext mt-1.5">
+                          {designer.ships}
+                        </span>
+                        <span className="block text-[11.5px] text-muted mt-1.5">
+                          Lead time {designer.lead}
+                        </span>
+                      </span>
+                      <span
+                        className="shrink-0 w-9 h-9 rounded-full bg-gold/15 text-ink flex items-center justify-center"
+                        aria-hidden="true"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          focusable="false"
+                        >
+                          <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
                       </span>
                     </span>
                   </span>
@@ -1115,7 +1588,7 @@
               const back = backTarget("index.html", "home");
               const [view, setView] = useState("feed"); // feed · profile · verify
               const [openId, setOpenId] = useState(null);
-              const [filter, setFilter] = useState("All");
+              const [filter, setFilter] = useState("all");
               const [drawerOpen, setDrawerOpen] = useState(false);
               const [activeCountry, setActiveCountry] = useState(SHIP_TO[0]);
               const [toastMsg, setToastMsg] = useState("");
@@ -1131,14 +1604,7 @@
 
               const designer = DESIGNERS.find((d) => d.id === openId) || DESIGNERS[0];
 
-              const shown =
-                filter === "All"
-                  ? DESIGNERS
-                  : DESIGNERS.filter(
-                      (d) =>
-                        d.tags.indexOf(filter) !== -1 ||
-                        d.crafts.indexOf(filter) !== -1
-                    );
+              const shown = DESIGNERS.filter((d) => filterDesigner(d, filter));
 
               // Each view starts at the top rather than inheriting the last scroll.
               useEffect(() => {
@@ -1277,41 +1743,64 @@
                     {/* ---------- 1 · Discovery feed ---------- */}
                     {view === "feed" && (
                       <React.Fragment>
-                        <div className="shrink-0 px-4 pt-3 pb-1">
-                          <div
-                            className="flex flex-wrap gap-2"
-                            role="group"
-                            aria-label="Filter designers"
-                          >
-                            {DESIGNER_FILTERS.map((f) => {
-                              const on = filter === f;
-                              return (
-                                <button
-                                  key={f}
-                                  type="button"
-                                  aria-pressed={on}
-                                  onClick={() => setFilter(f)}
-                                  className={
-                                    "min-h-[38px] px-3.5 rounded-full border text-[12.5px] font-medium transition-all active:scale-95 " +
-                                    (on
-                                      ? "bg-primary text-onprimary border-primary"
-                                      : "bg-card text-ink border-hairline hover:border-primary/45")
-                                  }
-                                >
-                                  {f}
-                                </button>
-                              );
-                            })}
-                          </div>
+                        {/* Top Category Filter Rail — Circle image with text below */}
+                        <div className="shrink-0 relative pt-2 pb-2">
+                          <nav aria-label="Categories" className="relative">
+                            <ul className="rail flex gap-[14px] px-4 pt-1 pb-1 list-none m-0">
+                              {DESIGNER_CATEGORIES.map((c) => {
+                                const active = filter === c.id;
+                                return (
+                                  <li key={c.id} className="shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFilter(c.id)}
+                                      aria-pressed={active}
+                                      className="w-16 flex flex-col items-center gap-1.5 rounded-2xl group cursor-pointer focus:outline-none"
+                                    >
+                                      <span
+                                        className={
+                                          "block w-[60px] h-[60px] rounded-full overflow-hidden bg-inset border-[1px] transition-all " +
+                                          (active
+                                            ? "border-primary cat-selected scale-[1.03]"
+                                            : "border-hairline group-hover:border-primary/40")
+                                        }
+                                      >
+                                        <img
+                                          src={c.img}
+                                          alt=""
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </span>
+                                      <span
+                                        className={
+                                          "text-[11px] leading-[14px] whitespace-nowrap transition-colors " +
+                                          (active
+                                            ? "font-semibold text-ink"
+                                            : "text-ink/75 group-hover:text-ink")
+                                        }
+                                      >
+                                        {c.label}
+                                      </span>
+                                      <span
+                                        aria-hidden="true"
+                                        className={
+                                          "w-1 h-1 rounded-full transition-all " +
+                                          (active ? "bg-goldtext opacity-100" : "opacity-0")
+                                        }
+                                      />
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                            <div
+                              aria-hidden="true"
+                              className="rail-fade pointer-events-none absolute top-0 right-0 w-8 h-full"
+                            />
+                          </nav>
                         </div>
 
                         <div ref={scrollRef} className="thread-scroll px-4 pt-3 pb-24">
-                          <p className="font-mono text-[10.5px] text-muted mb-3">
-                            {shown.length}{" "}
-                            {shown.length === 1 ? "designer" : "designers"} · ranked by
-                            fit for you, not by ad spend
-                          </p>
-
                           {shown.length === 0 ? (
                             <p className="text-[13px] text-muted leading-relaxed text-center py-10 rounded-2xl border border-dashed border-ctrl/50">
                               Nobody in the network matches that yet. Try another craft.
@@ -1503,6 +1992,44 @@
             }
 
             ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) { el.removeAttribute("id"); });
+              ghost.querySelectorAll("video").forEach(function (v) { v.remove(); });
+              r.target.appendChild(ghost);
+              setTimeout(function () { ghost.remove(); }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>

@@ -465,8 +465,401 @@
         }
       }
     </style>
-  </head>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      /* Soft Glide: a long, soft settle (the iOS sheet curve). The panel
+         glides up from the bottom edge and eases to rest, no overshoot. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from { transform: translate3d(0, 100%, 0); }
+        to { transform: translate3d(0, 0, 0); }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.4s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from { background-color: transparent; }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to { background-color: transparent; }
+      }
+      @keyframes auraSheetGhostOut {
+        from { transform: translate3d(0, 0, 0); }
+        to { transform: translate3d(0, 100%, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) { animation-duration: 1ms; }
+      }
+    </style>
+<!-- aura-tab-transition:start -->
+<style id="aura-tab-transition-style">
+  /* ---- Drawer tab transition ----
+         Picking a tab in the right drawer slides the drawer out, then the
+         next page opens with its top bar held still while the content below
+         crossfades into a skeleton; the skeleton dissolves once the real
+         screen and its first images are ready. */
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-group(aura-topbar) {
+    animation: none !important;
+  }
+  ::view-transition-old(aura-topbar),
+  ::view-transition-new(aura-topbar) {
+    animation-duration: 220ms !important;
+    animation-timing-function: ease !important;
+    mix-blend-mode: normal;
+  }
+  /* The old screen holds still underneath while the new one fades up over
+     it, so the two never leave a see-through gap. */
+  html,
+  ::view-transition {
+    background-color: rgb(243 239 231);
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-old(root) {
+    animation: none !important;
+    opacity: 1;
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+    animation: auraTabIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+  @keyframes auraTabIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+  }
+
+  .aura-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    background: rgb(243 239 231);
+    transition: opacity 320ms ease;
+  }
+  .aura-boot.is-done {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .aura-boot-vp {
+    width: 100%;
+    max-width: 430px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aura-boot-top {
+    view-transition-name: aura-topbar;
+  }
+  .aura-boot-body {
+    flex: 1;
+    min-height: 0;
+    padding: 12px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .sk {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgb(30 27 46 / 0.07);
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.55),
+      transparent
+    );
+    animation: auraShimmer 1.3s ease-in-out infinite;
+  }
+  @keyframes auraShimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  .sk-t {
+    height: 12px;
+    border-radius: 6px;
+  }
+  .sk-h {
+    height: 24px;
+    border-radius: 8px;
+  }
+  .sk-o {
+    border-radius: 9999px;
+  }
+  .sk-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .sk-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .sk-card {
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(229 223 213);
+    padding: 12px;
+  }
+  .sk-f1 {
+    flex: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after {
+      animation: none;
+      display: none;
+    }
+    .aura-boot {
+      transition: none;
+    }
+    html:active-view-transition-type(aura-tab)::view-transition-old(root),
+    html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+      animation: none !important;
+    }
+  }
+</style>
+<!-- Hold the first paint until the skeleton below is in the document. -->
+<link rel="expect" href="#aura-boot-ready" blocking="render" />
+<script id="aura-tab-transition-head">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var arriving = false;
+    try {
+      arriving = !!sessionStorage.getItem(KEY);
+      sessionStorage.removeItem(KEY);
+    } catch (e) {}
+    window.__auraTabArriving = arriving;
+    window.__auraTabLeaving = false;
+
+    // Only a drawer hop uses the transition; every other link behaves as before.
+    window.addEventListener("pagereveal", function (e) {
+      // A prerendered page ran the lines above before the hop, so read the
+      // flag again now that it is being shown.
+      if (!arriving) {
+        try {
+          if (sessionStorage.getItem(KEY)) {
+            sessionStorage.removeItem(KEY);
+            arriving = window.__auraTabArriving = true;
+            if (window.__auraShowBoot) window.__auraShowBoot();
+          }
+        } catch (err) {}
+      }
+      if (!e.viewTransition) return;
+      if (arriving) e.viewTransition.types.add("aura-tab");
+      else if (true) e.viewTransition.skipTransition();
+    });
+
+    // Outgoing page: pin its top bar so it stays put across the hop.
+    window.addEventListener("pageswap", function (e) {
+      if (!e.viewTransition || !window.__auraTabLeaving) return;
+      e.viewTransition.types.add("aura-tab");
+      var bar =
+        document.querySelector(".app-viewport > header") ||
+        document.querySelector("#root header");
+      if (bar) bar.style.viewTransitionName = "aura-topbar";
+    });
+  })();
+</script>
+<!-- aura-tab-transition:end -->
+</head>
   <body>
+<!-- aura-tab-transition:start -->
+<template id="aura-boot-template"><div class="aura-boot"><div class="aura-boot-vp"><div style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:normal;gap:8px;padding-top:16px;padding-right:16px;padding-bottom:8px;padding-left:16px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box;width:100%;height:68.00px" class="aura-boot-top"><span style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:normal;gap:16px;padding-right:8px;padding-left:6px;margin-left:-6px;border-radius:8px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;box-sizing:border-box;width:17.00px;height:17.00px;flex-shrink:0"><path d="M20.5603 10.189L13.0603 2.68899C12.779 2.4079 12.3977 2.25 12 2.25C11.6024 2.25 11.221 2.4079 10.9397 2.68899L3.4397 10.189C3.29973 10.3279 3.18878 10.4933 3.1133 10.6755C3.03782 10.8577 2.99931 11.053 3.00001 11.2502V20.2502C3.00001 20.4492 3.07903 20.6399 3.21968 20.7806C3.36033 20.9212 3.5511 21.0002 3.75001 21.0002H9.75001C9.94892 21.0002 10.1397 20.9212 10.2803 20.7806C10.421 20.6399 10.5 20.4492 10.5 20.2502V15.0002H13.5V20.2502C13.5 20.4492 13.579 20.6399 13.7197 20.7806C13.8603 20.9212 14.0511 21.0002 14.25 21.0002H20.25C20.4489 21.0002 20.6397 20.9212 20.7803 20.7806C20.921 20.6399 21 20.4492 21 20.2502V11.2502C21.0007 11.053 20.9622 10.8577 20.8867 10.6755C20.8112 10.4933 20.7003 10.3279 20.5603 10.189ZM19.5 19.5002H15V14.2502C15 14.0513 14.921 13.8606 14.7803 13.7199C14.6397 13.5793 14.4489 13.5002 14.25 13.5002H9.75001C9.5511 13.5002 9.36033 13.5793 9.21968 13.7199C9.07903 13.8606 9.00001 14.0513 9.00001 14.2502V19.5002H4.50001V11.2502L12 3.75024L19.5 11.2502V19.5002Z"></path></svg><span style="display:flex;flex-direction:row;align-items:center;justify-content:normal;gap:2px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;box-sizing:border-box;width:18.00px;height:18.00px;flex-shrink:0"><path d="m15 18-6-6 6-6"></path></svg><span style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:13.5px;font-weight:500;line-height:20.25px;letter-spacing:normal;box-sizing:border-box">Back to chat</span></span></span><span style="display:block;flex-direction:row;flex-grow:1;flex-basis:0%;align-items:normal;justify-content:normal;min-width:0px;padding-right:4px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;text-align:right;box-sizing:border-box"><span style="display:block;flex-direction:row;align-items:normal;justify-content:normal;min-width:0px;color:rgb(59, 42, 90);font-family:&quot;Instrument Serif&quot;, &quot;Iowan Old Style&quot;, Georgia, serif;font-size:20px;font-weight:400;line-height:25px;letter-spacing:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;box-sizing:border-box">Wardrobe</span></span><span style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:center;margin-right:-8px;border-radius:8px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;text-align:center;box-sizing:border-box;width:44.00px;height:44.00px;flex-shrink:0"><svg width="22" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true" focusable="false" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:hidden;text-align:center;box-sizing:border-box;width:22.00px;height:20.00px;flex-shrink:0"><line x1="3" y1="7" x2="21" y2="7"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="17" x2="21" y2="17"></line></svg></span></div><div class="aura-boot-body"><div class="sk-row" style="gap:10px;justify-content:space-between"><div class="sk sk-t" style="width:34%;height:18px"></div><div class="sk sk-t" style="width:56px;height:12px"></div></div><div class="sk " style="width:100%;height:72px;border-radius:14px"></div><div class="sk-row" style="gap:10px"><div class="sk-col sk-f1" style="gap:8px"><div class="sk sk-t" style="width:40%;height:16px"></div><div class="sk sk-t" style="width:80%;height:10px"></div></div><div class="sk sk-o" style="width:44px;height:24px"></div></div><div class="sk-row" style="gap:10px;justify-content:space-between"><div class="sk sk-t" style="width:36%;height:16px"></div><div class="sk sk-t" style="width:16px;height:16px"></div></div><div class="sk sk-h" style="width:62%;height:26px"></div><div class="sk-card"><div class="sk-col" style="gap:10px"><div class="sk sk-t" style="width:50%;height:18px"></div><div class="sk sk-t" style="width:70%;height:12px"></div><div class="sk sk-t" style="width:44%;height:10px"></div></div></div><div class="sk sk-h" style="width:54%;height:26px"></div><div class="sk-card"><div class="sk-row" style="gap:10px"><div class="sk sk-o" style="width:40px;height:40px"></div><div class="sk-col sk-f1" style="gap:8px"><div class="sk sk-t" style="width:50%;height:14px"></div><div class="sk sk-t" style="width:70%;height:10px"></div></div><div class="sk " style="width:40px;height:48px;border-radius:8px"></div></div></div><div class="sk-card"><div class="sk-row" style="gap:10px"><div class="sk sk-o" style="width:40px;height:40px"></div><div class="sk-col sk-f1" style="gap:8px"><div class="sk sk-t" style="width:50%;height:14px"></div><div class="sk sk-t" style="width:70%;height:10px"></div></div><div class="sk " style="width:40px;height:48px;border-radius:8px"></div></div></div></div></div></div></template>
+<script id="aura-tab-transition">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var arriving = !!window.__auraTabArriving;
+
+    // Incoming page: show the top bar and a skeleton until React has painted.
+    var booted = false;
+    function showBoot() {
+      var tpl = document.getElementById("aura-boot-template");
+      // A prerendered page may already be on screen; it needs no skeleton.
+      if (booted || !tpl || !tpl.content.firstElementChild) return;
+      if (document.querySelector("#root header")) return;
+      booted = true;
+      var boot = tpl.content.firstElementChild.cloneNode(true);
+      boot.setAttribute("aria-hidden", "true");
+      document.body.insertBefore(boot, document.body.firstChild);
+      // #root is parsed after this script, so look it up when needed.
+      var started = Date.now();
+      var finish = function () {
+        if (boot.classList.contains("is-done")) return;
+        boot.classList.add("is-done");
+        setTimeout(
+          function () {
+            boot.remove();
+          },
+          reduce ? 0 : 360,
+        );
+      };
+      var whenPainted = function () {
+        // Hold for the images the reader sees first, but never long.
+        var imgs = Array.prototype.filter.call(
+          document.querySelectorAll("#root img"),
+          function (img) {
+            var r = img.getBoundingClientRect();
+            return !img.complete && r.top < window.innerHeight && r.width > 40;
+          },
+        );
+        var left = imgs.length;
+        var cap = Math.max(250, 1200 - (Date.now() - started));
+        var t = setTimeout(finish, cap);
+        var one = function () {
+          if (--left <= 0) {
+            clearTimeout(t);
+            setTimeout(finish, 60);
+          }
+        };
+        if (!left) {
+          clearTimeout(t);
+          setTimeout(finish, 120);
+          return;
+        }
+        imgs.forEach(function (img) {
+          img.addEventListener("load", one, { once: true });
+          img.addEventListener("error", one, { once: true });
+        });
+      };
+      var ready = function () {
+        return document.querySelector("#root header");
+      };
+      if (ready()) whenPainted();
+      else if (window.MutationObserver) {
+        var mo = new MutationObserver(function () {
+          if (!ready()) return;
+          mo.disconnect();
+          setTimeout(whenPainted, 30);
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      setTimeout(finish, 6000); // never strand the skeleton
+    }
+    window.__auraShowBoot = showBoot;
+    if (arriving) showBoot();
+
+    // Start building the next tab's page as soon as a finger or pointer
+    // lands on it, so it is often ready before the drawer has left.
+    var speculated = {};
+    var canPrerender =
+      window.HTMLScriptElement &&
+      HTMLScriptElement.supports &&
+      HTMLScriptElement.supports("speculationrules");
+    function warm(e) {
+      if (!canPrerender) return;
+      var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+      if (!link || !link.closest(".drawer-slide-in")) return;
+      if (link.getAttribute("aria-current") === "page" || speculated[link.href]) return;
+      speculated[link.href] = true;
+      var rules = document.createElement("script");
+      rules.type = "speculationrules";
+      rules.textContent = JSON.stringify({ prerender: [{ source: "list", urls: [link.href] }] });
+      document.head.appendChild(rules);
+    }
+    ["pointerover", "pointerdown", "touchstart", "focusin"].forEach(function (type) {
+      document.addEventListener(type, warm, { capture: true, passive: true });
+    });
+
+    // Drawer tabs: slide the drawer out, then open the tab's page.
+    var leaving = false;
+    document.addEventListener(
+      "click",
+      function (e) {
+        if (
+          e.defaultPrevented ||
+          e.button !== 0 ||
+          e.metaKey ||
+          e.ctrlKey ||
+          e.shiftKey ||
+          e.altKey
+        )
+          return;
+        var link =
+          e.target.closest &&
+          e.target.closest('nav[aria-label="Primary"] a[href]');
+        if (!link) return;
+        var drawer = link.closest(".drawer-slide-in");
+        if (!drawer) return;
+        e.preventDefault();
+        if (leaving) return;
+        var close = drawer.querySelector(
+          '[aria-label="Close navigation menu"]',
+        );
+        if (close) close.click();
+        if (link.getAttribute("aria-current") === "page") return;
+        leaving = true;
+        var href = link.href;
+        var gone = false;
+        var go = function () {
+          if (gone) return;
+          gone = true;
+          try {
+            sessionStorage.setItem(KEY, "1");
+          } catch (err) {}
+          window.__auraTabLeaving = true;
+          window.location.href = href;
+        };
+        if (reduce) return go();
+        // Leave once the drawer has slid out: its slide ends, or the
+        // overlay unmounts it, whichever comes first.
+        drawer.addEventListener("animationend", function (ev) {
+          if (ev.target === drawer && /Out/.test(ev.animationName)) go();
+        });
+        (function watch() {
+          if (gone) return;
+          if (!drawer.isConnected) return go();
+          requestAnimationFrame(watch);
+        })();
+        setTimeout(go, 420);
+      },
+      true,
+    );
+    window.addEventListener("pageshow", function () {
+      leaving = false;
+      window.__auraTabLeaving = false;
+    });
+  })();
+</script>
+<span id="aura-boot-ready" hidden></span>
+<!-- aura-tab-transition:end -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -1928,7 +2321,8 @@
             document.removeEventListener("keydown", onKeyDown, true);
             document.body.classList.remove("aura-locked");
             const restore = restoreRef.current;
-            if (restore && typeof restore.focus === "function") restore.focus({ preventScroll: true });
+            if (restore && typeof restore.focus === "function")
+              restore.focus({ preventScroll: true });
           };
         }, [open, onClose]);
 
@@ -2038,26 +2432,31 @@
         {
           id: "front",
           label: "Front",
+          hint: "Full body, facing camera",
+          example: "images/lehenga_contemporary.jpg",
           cue: "Face the camera. Arms a hand's width from your sides, feet hip-width apart.",
         },
         {
           id: "back",
           label: "Back",
+          hint: "Full body, from behind",
+          example: "images/aura_hero_arch.jpg",
           cue: "Turn around, same stance. Keep your heels on the lower line.",
         },
         {
           id: "side",
           label: "Side profile",
+          hint: "Full body, from the side",
+          example: "images/blush_pastel_saree.jpg",
           cue: "Turn a quarter. Arms straight down, looking ahead, not at the camera.",
         },
       ];
 
       const STANDING_GUIDE = [
-        "Stand 2.5 metres (about 8 feet) back — far enough that your whole body sits inside the outline.",
-        "Prop the phone at hip height, portrait, against something steady.",
-        "Plain wall behind you. Light on your face, not behind you.",
-        "Wear fitted clothes. No coat, nothing bunched at the waist.",
-        "Crown of your head on the top line, heels on the bottom one.",
+        "Stand 2.5 m (8 ft) back.",
+        "Phone upright at hip height.",
+        "Plain wall, light on your face.",
+        "Wear fitted clothes.",
       ];
 
       /* The body guide drawn over the viewfinder. Deliberately a guide rather
@@ -2127,13 +2526,108 @@
         );
       }
 
-      function AiScanModal({ onClose, onDone }) {
+      /* Trailing affordance on a row that opens something. */
+      function Chevron() {
+        return (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+            className="relative shrink-0 text-ink"
+          >
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+        );
+      }
+
+      /* A gold botanical sprig that leans in on the hero arch. Decorative. */
+      function ScanSprig({ className }) {
+        return (
+          <svg
+            viewBox="0 0 48 96"
+            className={className}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M40 94C30 72 22 50 20 8" />
+            <path d="M21 22c-7-2-11-7-12-13 7 1 11 6 12 13Z" />
+            <path d="M22 36c6-4 12-4 17-1-5 5-11 5-17 1Z" />
+            <path d="M24 50c-8 0-13-4-16-10 8-1 13 3 16 10Z" />
+            <path d="M28 64c6-5 12-6 17-3-5 5-11 6-17 3Z" />
+            <path d="M32 76c-7 1-13-2-16-8 7-1 13 2 16 8Z" />
+            <circle cx="20" cy="6" r="2" />
+          </svg>
+        );
+      }
+
+      /* The frame from the guide, drawn as a line figure between the crown
+         and heel lines — the same two lines the viewfinder shows. */
+      function StanceFigure({ className }) {
+        return (
+          <div
+            className={
+              "flex flex-col items-center rounded-2xl bg-inset/60 px-1.5 py-2 " + (className || "")
+            }
+            aria-hidden="true"
+          >
+            <span className="font-mono text-[9px] text-muted leading-tight text-center">
+              Top of head
+            </span>
+            <svg
+              viewBox="0 0 80 200"
+              preserveAspectRatio="xMidYMid meet"
+              className="w-full h-[96px] my-1 text-muted"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              focusable="false"
+            >
+              <g strokeWidth="0.75" strokeDasharray="3 3" className="text-goldtext">
+                <line x1="2" y1="4" x2="78" y2="4" />
+                <line x1="2" y1="196" x2="78" y2="196" />
+              </g>
+              <g strokeWidth="1">
+                <ellipse cx="40" cy="17" rx="8" ry="10" />
+                <path d="M36 27v5M44 27v5" />
+                <path d="M36 32c-6 1-11 3-12 7l-3 30 3 1M44 32c6 1 11 3 12 7l3 30-3 1" />
+                <path d="M26 40l2 22h24l2-22" />
+                <path d="M28 62c-4 40-10 90-14 132h52c-4-42-10-92-14-132" />
+                <path
+                  d="M40 66v126M33 66c-3 40-7 86-9 126M47 66c3 40 7 86 9 126"
+                  strokeWidth="0.5"
+                />
+              </g>
+            </svg>
+            <span className="font-mono text-[9px] text-muted leading-tight text-center">
+              Heels on the line
+            </span>
+          </div>
+        );
+      }
+
+      /* `inline` renders the setup straight into the measurement sheet's AI scan
+         tab instead of as its own full-screen sheet; the live camera still
+         covers the sheet while a photo is being taken. */
+      function AiScanModal({ onClose, onDone, inline }) {
         const [shots, setShots] = useState({});
         const [capturing, setCapturing] = useState(null); // shot id while the camera is live
         const [countdown, setCountdown] = useState(0);
         const [camError, setCamError] = useState("");
         const [picking, setPicking] = useState(null); // the shot whose picker is open
         const [streamTick, setStreamTick] = useState(0);
+        const [guideOpen, setGuideOpen] = useState(false); // How to stand starts collapsed
 
         const videoRef = useRef(null);
         const streamRef = useRef(null);
@@ -2151,6 +2645,9 @@
         }, []);
 
         useEffect(() => {
+          // Inline, the measurement sheet already owns focus, scroll lock and
+          // Escape; only the camera needs releasing when the tab changes.
+          if (inline) return () => stopCamera();
           restoreRef.current = document.activeElement;
           document.body.classList.add("aura-locked");
           const onKey = (e) => {
@@ -2165,9 +2662,9 @@
             document.body.classList.remove("aura-locked");
             stopCamera();
             const r = restoreRef.current;
-            if (r && typeof r.focus === "function") r.focus();
+            if (r && typeof r.focus === "function") r.focus({ preventScroll: true });
           };
-        }, [onClose, stopCamera]);
+        }, [onClose, stopCamera, inline]);
 
         // Attach once both the element and the stream exist.
         useEffect(() => {
@@ -2259,21 +2756,33 @@
 
         return (
           <div
-            className="absolute inset-0 z-50 aura-fade-in"
-            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+            className={
+              inline
+                ? capturing
+                  ? "absolute inset-0 z-50 bg-canvas flex flex-col aura-fade-in"
+                  : "aura-fade-in"
+                : "absolute inset-0 z-50 aura-fade-in"
+            }
+            style={inline ? undefined : { backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
             onMouseDown={(e) => {
-              if (e.target === e.currentTarget) onClose();
+              if (!inline && e.target === e.currentTarget) onClose();
             }}
           >
             <div
               ref={panelRef}
-              role="dialog"
-              aria-modal="true"
+              role={inline && !capturing ? undefined : "dialog"}
+              aria-modal={inline && !capturing ? undefined : "true"}
               aria-labelledby="scan-title"
               tabIndex={-1}
-              className="absolute inset-x-0 bottom-0 h-[92%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+              className={
+                inline
+                  ? capturing
+                    ? "flex-1 flex flex-col min-h-0 pt-5 focus:outline-none"
+                    : "focus:outline-none"
+                  : "absolute inset-x-0 bottom-0 h-[92%] bg-canvas rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+              }
             >
-              <div className="relative shrink-0 pt-2.5 pb-2.5">
+              <div className="relative shrink-0 pt-2.5 pb-2.5" hidden={inline}>
                 <span
                   className="block w-10 h-1 rounded-full bg-hairline mx-auto"
                   aria-hidden="true"
@@ -2282,7 +2791,7 @@
                   type="button"
                   onClick={onClose}
                   aria-label="Close AI scan"
-                  className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+                  className="absolute top-2 right-3 w-11 h-11 rounded-full flex items-center justify-center bg-canvas/80 backdrop-blur-sm border border-ctrl/40 text-ink hover:bg-card active:scale-95 transition-all z-10"
                 >
                   <svg
                     width="17"
@@ -2364,88 +2873,146 @@
                 </div>
               ) : (
                 /* ---------- Setup and review ---------- */
-                <div className="flex-1 overflow-y-auto px-5 pb-5">
-                  <h2 id="scan-title" className="font-display text-[24px] text-ink leading-tight">
+                <div className={inline ? "" : "flex-1 overflow-y-auto px-4 pb-5"}>
+                  {/* Named for screen readers only; the guide opens straight on How to stand. */}
+                  <h2 id="scan-title" className="sr-only">
                     AI scan
                   </h2>
-                  <div className="mt-5 rounded-2xl border border-hairline bg-inset/50 p-4">
-                    <h3 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mb-2">
-                      How to stand
-                    </h3>
-                    <ul className="space-y-1.5">
-                      {STANDING_GUIDE.map((g, i) => (
-                        <li key={i} className="flex gap-2 text-[12px] text-ink leading-snug">
-                          <span className="font-mono text-[10.5px] text-goldtext shrink-0 mt-0.5">
-                            {String(i + 1).padStart(2, "0")}
+
+                  {/* How to stand — collapsed to its title until asked for, so the
+                      photo cards sit near the top; opens to the rules beside the
+                      frame they fill. */}
+                  <div className="relative rounded-3xl bg-card/70 border border-hairline">
+                    <h3 className="m-0">
+                      <button
+                        type="button"
+                        onClick={() => setGuideOpen((v) => !v)}
+                        aria-expanded={guideOpen}
+                        aria-controls="scan-guide"
+                        className="w-full min-h-[56px] px-4 py-3 flex items-center justify-between gap-3 text-left rounded-3xl"
+                      >
+                        <span className="min-w-0">
+                          <span className="block font-display italic text-[24px] leading-tight text-ink">
+                            How to stand
                           </span>
-                          <span>{g}</span>
-                        </li>
-                      ))}
-                    </ul>
+                          {!guideOpen && (
+                            <span className="block text-[12px] text-muted mt-0.5">
+                              {STANDING_GUIDE.length} quick steps
+                            </span>
+                          )}
+                        </span>
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          focusable="false"
+                          className={
+                            "shrink-0 text-ink transition-transform " +
+                            (guideOpen ? "rotate-180" : "")
+                          }
+                        >
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </button>
+                    </h3>
+                    <div
+                      id="scan-guide"
+                      className="flex gap-3 px-4 pb-4 aura-fade-in"
+                      hidden={!guideOpen}
+                      style={{ display: guideOpen ? undefined : "none" }}
+                    >
+                      <ol className="flex-1 min-w-0 space-y-2.5">
+                        {STANDING_GUIDE.map((g, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <span className="shrink-0 w-7 h-7 rounded-full border border-gold/50 flex items-center justify-center font-mono text-[10.5px] text-goldtext">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <span className="text-[12.5px] text-ink/85 leading-snug pt-1">{g}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      <StanceFigure className="shrink-0 w-[76px] self-start" />
+                    </div>
                   </div>
+
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.3em] text-muted mt-6 mb-3 pl-1">
+                    Capture 3 photos
+                  </p>
 
                   {/* Three shots, three cards, side by side — the stance cue moves
                 into the picker, where it is read at the moment it matters. */}
-                  <div className="mt-4 grid grid-cols-3 gap-2.5">
-                    {SHOTS.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setPicking(s)}
-                        aria-haspopup="dialog"
-                        aria-label={
-                          shots[s.id]
-                            ? `${s.label} — captured, choose how to retake it`
-                            : `${s.label} — choose how to take it`
-                        }
-                        className={`p-2 rounded-2xl border bg-card text-left transition-all active:scale-[0.98] ${
-                          shots[s.id]
-                            ? "border-primary/50"
-                            : "border-hairline hover:border-primary/45"
-                        }`}
-                      >
-                        <span className="block w-full aspect-[3/4] rounded-xl overflow-hidden bg-inset border border-hairline flex items-center justify-center">
-                          {shots[s.id] ? (
-                            <img
-                              src={shots[s.id]}
-                              alt={`${s.label} photograph`}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <svg
-                              viewBox="0 0 120 300"
-                              className="w-full h-full p-2 opacity-35"
-                              aria-hidden="true"
-                            >
-                              <g
-                                stroke="currentColor"
-                                strokeWidth="9"
-                                strokeLinecap="round"
-                                fill="none"
-                                className="text-muted"
-                              >
-                                <circle cx="60" cy="34" r="20" />
-                                <line x1="60" y1="54" x2="60" y2="170" />
-                                <line x1="30" y1="76" x2="90" y2="76" />
-                                <line x1="60" y1="170" x2="38" y2="270" />
-                                <line x1="60" y1="170" x2="82" y2="270" />
-                              </g>
-                            </svg>
-                          )}
-                        </span>
-
-                        <span className="block text-[12.5px] font-medium text-ink mt-1.5 truncate">
-                          {s.label}
-                        </span>
-                        <span
-                          className={`block font-mono text-[10px] mt-0.5 ${
-                            shots[s.id] ? "text-primary" : "text-muted"
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {SHOTS.map((s) => {
+                      const got = shots[s.id];
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setPicking(s)}
+                          aria-haspopup="dialog"
+                          aria-label={
+                            got
+                              ? `${s.label} — captured, choose how to retake it`
+                              : `${s.label} — choose how to take it`
+                          }
+                          className={`rounded-2xl overflow-hidden border bg-card/70 text-left transition-all active:scale-[0.98] ${
+                            got ? "border-primary/50" : "border-hairline hover:border-primary/45"
                           }`}
                         >
-                          {shots[s.id] ? "Captured" : "Not yet"}
-                        </span>
-                      </button>
-                    ))}
+                          <span className="relative block w-full aspect-[3/4] overflow-hidden rounded-2xl bg-inset">
+                            <img
+                              src={got || s.example}
+                              alt={got ? `${s.label} photograph` : ""}
+                              className="w-full h-full object-cover object-top"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span
+                                className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md ${
+                                  got ? "bg-primary text-onprimary" : "bg-card/90 text-ink"
+                                }`}
+                                aria-hidden="true"
+                              >
+                                <svg
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  focusable="false"
+                                >
+                                  {got ? (
+                                    <path d="m5 12.5 4.5 4.5L19 7.5" />
+                                  ) : (
+                                    <path d="M12 5v14M5 12h14" />
+                                  )}
+                                </svg>
+                              </span>
+                            </span>
+                          </span>
+                          <span className="block px-2.5 pt-2 pb-2.5">
+                            <span className="block font-display text-[17px] leading-tight text-ink truncate">
+                              {s.label}
+                            </span>
+                            <span
+                              className={`block text-[11px] leading-snug mt-0.5 ${
+                                got ? "text-primary font-medium" : "text-muted"
+                              }`}
+                            >
+                              {got ? "Captured · tap to retake" : s.hint}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {picking && (
@@ -2513,14 +3080,50 @@
                     type="button"
                     disabled={taken < SHOTS.length}
                     onClick={() => onDone(taken)}
-                    className="w-full mt-5 min-h-[48px] rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
+                    className="w-full mt-6 min-h-[60px] pl-6 pr-2 rounded-full bg-primary text-onprimary text-[15px] font-medium flex items-center gap-3 hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
                   >
-                    {taken < SHOTS.length
-                      ? `Extract measurements — ${taken} of ${SHOTS.length}`
-                      : "Extract measurements"}
+                    <span className="flex-1 text-center pl-11">
+                      {taken < SHOTS.length
+                        ? `Extract measurements — ${taken} of ${SHOTS.length}`
+                        : "Extract measurements"}
+                    </span>
+                    <span
+                      className="shrink-0 w-11 h-11 rounded-full border border-onprimary/60 flex items-center justify-center"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        focusable="false"
+                      >
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                      </svg>
+                    </span>
                   </button>
 
-                  <p className="text-[11px] text-muted leading-relaxed mt-3">
+                  <p className="text-[11px] text-muted leading-relaxed mt-3 text-center text-balance">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                      className="inline-block align-[-2px] mr-1.5"
+                    >
+                      <rect x="5" y="11" width="14" height="9.5" rx="2" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </svg>
                     Photographs stay on this device in this prototype — nothing is uploaded.
                   </p>
                 </div>
@@ -2703,39 +3306,13 @@
         return "Updated " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
       }
 
-      /* Four ways to arrive at the same fourteen points. The chips pick
+      /* Four ways to arrive at the same fourteen points. The tabs pick
                the route; everything below them belongs to that route. */
       const MEASURE_MODES = [
-        {
-          id: "tape",
-          label: "Manual",
-          icon: <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3ZM14.5 7.5l3 3" />,
-        },
-        {
-          id: "scan",
-          label: "AI scan",
-          icon: (
-            <>
-              <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.8l1.5-2.2h6.4L16.7 7h2.8A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" />
-              <circle cx="12" cy="12.8" r="3.3" />
-            </>
-          ),
-        },
-        {
-          id: "garment",
-          label: "Garment",
-          icon: <path d="M10 3v3l-1.5 3 1.5 2-4 10h12l-4-10 1.5-2L14 6V3M10 6h4" />,
-        },
-        {
-          id: "session",
-          label: "Session",
-          icon: (
-            <>
-              <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
-              <path d="M3.5 10h17M8 3v4M16 3v4" />
-            </>
-          ),
-        },
+        { id: "tape", label: "Manual" },
+        { id: "scan", label: "AI scan" },
+        { id: "garment", label: "Garment" },
+        { id: "session", label: "Session" },
       ];
 
       /* A native select draws its own arrow in a font that is not ours, so the
@@ -2757,7 +3334,7 @@
 
       const SESSION_SLOTS = ["Tomorrow morning", "Tomorrow evening", "This weekend", "Next week"];
 
-            function PersonMeasureSheet({ person, onClose, onSave, onToast }) {
+      function PersonMeasureSheet({ person, onClose, onSave, onToast }) {
         const panelRef = useRef(null);
         const restoreRef = useRef(null);
         const blank = {
@@ -2772,7 +3349,6 @@
           fitNote: "",
         };
         const [form, setForm] = useState(() => Object.assign({}, blank, person.m || {}));
-        const [scanOpen, setScanOpen] = useState(false);
         const [mode, setMode] = useState("tape");
         const [slot, setSlot] = useState("");
         /* Photographs of the tape on the cloth. They stay in memory for
@@ -2794,9 +3370,7 @@
         const suggestion = {
           flatChest: halfOf(form.bust, 1),
           flatWaist: halfOf(form.waist, 1),
-          flatLength: isFinite(parseFloat(form.length))
-            ? String(parseFloat(form.length))
-            : "",
+          flatLength: isFinite(parseFloat(form.length)) ? String(parseFloat(form.length)) : "",
         };
 
         const hasSuggestion = Boolean(
@@ -2838,7 +3412,7 @@
         useEffect(() => {
           restoreRef.current = document.activeElement;
           document.body.classList.add("aura-locked");
-          if (panelRef.current) panelRef.current.focus();
+          if (panelRef.current) panelRef.current.focus({ preventScroll: true });
 
           const onKey = (e) => {
             if (e.key === "Escape") {
@@ -2851,34 +3425,12 @@
             document.removeEventListener("keydown", onKey, true);
             document.body.classList.remove("aura-locked");
             const r = restoreRef.current;
-            if (r && typeof r.focus === "function") r.focus();
+            if (r && typeof r.focus === "function") r.focus({ preventScroll: true });
           };
         }, [onClose]);
 
         const filled =
           MEASURE_FIELDS.filter((m) => form[m.k].trim()).length + (form.height.trim() ? 1 : 0);
-
-        if (scanOpen) {
-          // The scan takes the whole screen, so it replaces the sheet
-          // rather than stacking on it; closing returns you here with
-          // whatever you had already typed still in the fields.
-          return (
-            <AiScanModal
-              onClose={() => setScanOpen(false)}
-              onDone={(n) => {
-                setScanOpen(false);
-                onToast(
-                  n +
-                    " photographs of " +
-                    (person.self ? "you" : person.name) +
-                    " saved \u2014 a draper will confirm " +
-                    (person.self ? "your" : "their") +
-                    " fourteen points within a day"
-                );
-              }}
-            />
-          );
-        }
 
         return (
           <div
@@ -2897,7 +3449,10 @@
               className="absolute inset-x-0 bottom-0 h-[94%] bg-canvas rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
             >
               <div className="relative shrink-0 pt-3 pb-1">
-                <span className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto" aria-hidden="true" />
+                <span
+                  className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto"
+                  aria-hidden="true"
+                />
                 <button
                   type="button"
                   onClick={onClose}
@@ -2935,14 +3490,11 @@
                     <span className="text-muted text-[20px]">{" \u00b7 " + person.relation}</span>
                   )}
                 </h2>
-                <p className="text-[14px] text-muted leading-snug mt-2 mb-5">
-                  {person.self
-                    ? "Add your details for a better fit and personalised suggestions."
-                    : "Add " + person.name + "\u2019s details for a better fit and personalised suggestions."}
-                </p>
-                {/* How the measurements get taken. */}
+                {/* How the measurements get taken. Form / Tabs (Figma 67:1831):
+                    the hairline rule runs the full width; the active tab sits on
+                    a 2px segment of it. */}
                 <div
-                  className="flex gap-1 p-1 rounded-full bg-card border border-hairline shadow-[0_1px_3px_rgb(30_27_46/0.06)] mb-6"
+                  className="flex items-end border-b border-hairline mt-5 mb-6"
                   role="tablist"
                   aria-label="How to take these measurements"
                 >
@@ -2956,56 +3508,34 @@
                         aria-selected={on}
                         onClick={() => setMode(mm.id)}
                         className={
-"flex-1 min-w-0 min-h-[44px] px-1 rounded-full flex items-center justify-center gap-1.5 font-read text-[15px] whitespace-nowrap transition-colors " + (on ? "bg-primary text-onprimary" : "text-ink hover:bg-inset")
+                          "flex-1 min-w-0 min-h-[44px] -mb-px px-1 py-3 flex items-center justify-center border-b-2 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:bg-inset " +
+                          (on
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted hover:text-ink")
                         }
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                          focusable="false"
-                          className="shrink-0"
-                        >
-                          {mm.icon}
-                        </svg>
                         {mm.label}
                       </button>
                     );
                   })}
                 </div>
 
+                {/* The scan guide sits right under the tabs; fit notes follow it. */}
                 {mode === "scan" && (
-                  <div className="aura-fade-in">
-                    <p className="text-[13px] text-ink leading-relaxed">
-                      Photograph {person.self ? "yourself" : person.name} against an on-screen guide
-                      — front, back and side.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setScanOpen(true)}
-                      aria-haspopup="dialog"
-                      className="mt-3 w-full min-h-[48px] px-4 rounded-full bg-primary text-onprimary text-[13.5px] font-medium flex items-center justify-center gap-1.5 hover:bg-primary/90 active:scale-95 transition-all"
-                    >
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
-                        focusable="false"
-                      >
-                        <path d="M12 2.5 13.9 8.1 19.5 10 13.9 11.9 12 17.5 10.1 11.9 4.5 10 10.1 8.1z" />
-                        <path d="M18.5 15.5 19.4 18.1 22 19 19.4 19.9 18.5 22.5 17.6 19.9 15 19 17.6 18.1z" />
-                      </svg>
-                      Open the camera guide
-                    </button>
-                  </div>
+                  <AiScanModal
+                    inline
+                    onClose={() => setMode("tape")}
+                    onDone={(n) => {
+                      onToast(
+                        n +
+                          " photographs of " +
+                          (person.self ? "you" : person.name) +
+                          " saved — a draper will confirm " +
+                          (person.self ? "your" : "their") +
+                          " fourteen points within a day"
+                      );
+                    }}
+                  />
                 )}
 
                 {mode === "garment" && (
@@ -3097,8 +3627,8 @@
                             Suggested reading
                           </span>
                           <p className="text-[11.5px] text-muted leading-relaxed mt-1 mb-2.5">
-                            Worked from the figures already on file. A draper checks
-                            them against your photographs before anything is cut.
+                            Worked from the figures already on file. A draper checks them against
+                            your photographs before anything is cut.
                           </p>
 
                           <dl className="bg-card border border-hairline rounded-xl divide-y divide-hairline overflow-hidden">
@@ -3115,9 +3645,7 @@
                                   {r.label}
                                 </dt>
                                 <dd className="font-mono text-[13px] text-ink">
-                                  {suggestion[r.k]
-                                    ? suggestion[r.k] + " " + form.unit
-                                    : "\u2014"}
+                                  {suggestion[r.k] ? suggestion[r.k] + " " + form.unit : "\u2014"}
                                 </dd>
                               </div>
                             ))}
@@ -3251,7 +3779,7 @@
                             aria-pressed={on}
                             onClick={() => setSlot(sl)}
                             className={
-                              "min-h-[44px] px-4 rounded-full border font-read text-[15px] transition-all active:scale-95 " +
+                              "min-h-[44px] px-4 rounded-full border text-[13.5px] font-medium transition-all active:scale-95 " +
                               (on
                                 ? "bg-primary text-onprimary border-primary"
                                 : "text-ink border-gold/45 hover:bg-card/60 hover:border-gold/80")
@@ -3305,7 +3833,10 @@
                             aria-pressed={on}
                             onClick={() => set("unit")(u.id)}
                             className={
-                              "min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " + (on ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]" : "text-muted hover:text-ink")
+                              "min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " +
+                              (on
+                                ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]"
+                                : "text-muted hover:text-ink")
                             }
                           >
                             {u.label}
@@ -3348,18 +3879,18 @@
                     Fit notes
                   </label>
                   <div className="flex items-stretch rounded-2xl border border-hairline bg-card focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgb(59_42_90/0.12)] transition-shadow">
-                  <span className="shrink-0 w-12 flex items-start justify-center pt-4 border-r border-hairline my-3">
-                    <FitIcon name="note" size={24} />
-                  </span>
-                  <textarea
-                    id="pm-fit"
-                    rows={3}
-                    value={form.fitNote}
-                    onChange={(e) => set("fitNote")(e.target.value)}
-                    placeholder="Add any specific notes (optional)"
-                    style={{ fontSize: 16 }}
-                    className="flex-1 min-w-0 px-3 py-3.5 bg-transparent text-ink placeholder:text-muted resize-none focus:outline-none"
-                  />
+                    <span className="shrink-0 w-12 flex items-start justify-center pt-4 border-r border-hairline my-3">
+                      <FitIcon name="note" size={24} />
+                    </span>
+                    <textarea
+                      id="pm-fit"
+                      rows={3}
+                      value={form.fitNote}
+                      onChange={(e) => set("fitNote")(e.target.value)}
+                      placeholder="Add any specific notes (optional)"
+                      style={{ fontSize: 16 }}
+                      className="flex-1 min-w-0 px-3 py-3.5 bg-transparent text-ink placeholder:text-muted resize-none focus:outline-none"
+                    />
                   </div>
                 </div>
               </div>
@@ -3371,14 +3902,14 @@
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-[52px] px-6 rounded-full border border-ink text-ink font-read text-[17px] hover:bg-inset active:scale-95 transition-all"
+                  className="min-h-[52px] px-6 rounded-full border border-ink text-ink text-[15px] font-medium hover:bg-inset active:scale-95 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => onSave(form, filled)}
-                  className="min-h-[52px] pl-6 pr-5 rounded-full bg-primary text-onprimary font-read text-[17px] flex items-center gap-2.5 hover:bg-primary/90 active:scale-95 transition-all"
+                  className="min-h-[52px] pl-6 pr-5 rounded-full bg-primary text-onprimary text-[15px] font-medium flex items-center gap-2.5 hover:bg-primary/90 active:scale-95 transition-all"
                 >
                   Save
                   <svg
@@ -3459,7 +3990,7 @@
             document.body.classList.remove("aura-locked");
             clearTimeout(readTimer.current);
             const r = restoreRef.current;
-            if (r && typeof r.focus === "function") r.focus();
+            if (r && typeof r.focus === "function") r.focus({ preventScroll: true });
           };
         }, [onClose]);
 
@@ -3555,7 +4086,10 @@
               </div>
 
               <form onSubmit={submit} className="px-5 pt-2 pb-6 overflow-y-auto no-scrollbar">
-                <h2 id="add-outfit-title" className="font-display text-[22px] leading-tight text-ink">
+                <h2
+                  id="add-outfit-title"
+                  className="font-display text-[22px] leading-tight text-ink"
+                >
                   {outfit ? "Edit outfit" : "Add an outfit"}
                 </h2>
                 <p className="text-[12px] text-muted leading-snug mt-1.5">
@@ -3701,7 +4235,7 @@
         useEffect(() => {
           restoreRef.current = document.activeElement;
           document.body.classList.add("aura-locked");
-          if (nameRef.current) nameRef.current.focus();
+          if (nameRef.current) nameRef.current.focus({ preventScroll: true });
 
           const onKey = (e) => {
             if (e.key === "Escape") {
@@ -3714,7 +4248,7 @@
             document.removeEventListener("keydown", onKey, true);
             document.body.classList.remove("aura-locked");
             const r = restoreRef.current;
-            if (r && typeof r.focus === "function") r.focus();
+            if (r && typeof r.focus === "function") r.focus({ preventScroll: true });
           };
         }, [onClose]);
 
@@ -3881,12 +4415,24 @@
         );
       }
 
-      function ProductDetailSheet({ piece, ship, owned, onClose, onRequest, onAsk, onReorder, onAlter, onCare, saved, onSave }) {
+      function ProductDetailSheet({
+        piece,
+        ship,
+        owned,
+        onClose,
+        onRequest,
+        onAsk,
+        onReorder,
+        onAlter,
+        onCare,
+        saved,
+        onSave,
+      }) {
         const trackRef = useRef(null);
         const panelRef = useRef(null);
         const restoreRef = useRef(null);
+        const enlargedRef = useRef(null);
         const [slide, setSlide] = useState(0);
-        const [specOpen, setSpecOpen] = useState(false);
         // Which action was tapped. It fills plum for a beat so the tap is
         // acknowledged before the sheet closes out from under it.
         const [firing, setFiring] = useState(null);
@@ -3907,13 +4453,14 @@
             ).filter((el) => el.offsetParent !== null);
 
           const first = focusables()[0];
-          if (first) first.focus();
-          else panel.focus();
+          if (first) first.focus({ preventScroll: true });
+          else panel.focus({ preventScroll: true });
 
           const onKeyDown = (e) => {
             if (e.key === "Escape") {
               e.stopPropagation();
-              onClose();
+              if (enlargedRef.current) enlargedRef.current();
+              else onClose();
               return;
             }
             if (e.key !== "Tab") return;
@@ -3935,7 +4482,7 @@
             document.removeEventListener("keydown", onKeyDown, true);
             document.body.classList.remove("aura-locked");
             const r = restoreRef.current;
-            if (r && typeof r.focus === "function") r.focus();
+            if (r && typeof r.focus === "function") r.focus({ preventScroll: true });
           };
         }, [onClose]);
 
@@ -3961,15 +4508,31 @@
 
         const rows = [
           { k: "Fabric", v: piece.fabric },
+          { k: "Colour", v: piece.colour },
           { k: "Includes", v: piece.includes },
           { k: "Weight", v: piece.weight },
           { k: "Care", v: piece.care },
           { k: "On the loom", v: piece.weeks },
-        ];
+        ].filter((r) => r.v);
 
         /* "DHL Express · 4 days" — the courier sits with the duty line, the
                        transit time drops to its own line under it. */
         const [courierName, courierDays] = ship.courier.split(" · ");
+
+        // Keep the chosen thumbnail in view when the column scrolls.
+        const thumbsRef = useRef(null);
+        useEffect(() => {
+          const col = thumbsRef.current;
+          const t = col && col.children[slide];
+          if (t)
+            t.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+        }, [slide]);
+
+        // Full-screen photo, opened from the label on each slide.
+        const [enlarged, setEnlarged] = useState(null);
+        // The sheet's Escape handler asks this first, so Escape closes the
+        // enlarged photo before it closes the sheet.
+        enlargedRef.current = enlarged ? () => setEnlarged(null) : null;
 
         return (
           <div
@@ -3985,28 +4548,27 @@
               aria-modal="true"
               aria-labelledby="piece-sheet-title"
               tabIndex={-1}
-              className="absolute inset-x-0 bottom-0 h-[90%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+              className="absolute inset-x-0 bottom-0 h-[92%] bg-canvas rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
             >
               {/* Grabber + close */}
-              <div className="relative shrink-0 pt-2.5 pb-2.5">
+              <div className="relative shrink-0 pt-3 pb-3">
                 <span
-                  className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+                  className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto"
                   aria-hidden="true"
                 />
-
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label={`Close ${piece.name}`}
-                  className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+                  className="absolute top-1.5 right-3 w-11 h-11 rounded-full flex items-center justify-center bg-hairline/70 text-ink hover:bg-hairline active:scale-95 transition-all z-10"
                 >
                   <svg
-                    width="17"
-                    height="17"
+                    width="18"
+                    height="18"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="1.6"
                     strokeLinecap="round"
                     aria-hidden="true"
                     focusable="false"
@@ -4018,63 +4580,105 @@
               </div>
 
               <div className="flex-1 overflow-y-auto thread-scroll">
-                {/* Swipeable carousel */}
-                <div
-                  ref={trackRef}
-                  onScroll={onScroll}
-                  className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                  role="group"
-                  aria-label={`${piece.name} photographs`}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowRight") {
-                      e.preventDefault();
-                      goTo(Math.min(views.length - 1, slide + 1));
-                    } else if (e.key === "ArrowLeft") {
-                      e.preventDefault();
-                      goTo(Math.max(0, slide - 1));
-                    }
-                  }}
-                >
-                  {views.map((v) => (
-                    <div key={v.id} className="snap-center shrink-0 w-full px-5">
-                      <div className="relative w-full h-[36vh] rounded-2xl overflow-hidden bg-inset border border-hairline">
-                        <SheetPhoto piece={piece} view={v} alt={`${piece.name} — ${v.label}`} />
-                        <span className="absolute bottom-3 left-3 text-[12px] font-bold text-white bg-black/45 px-3 py-1 rounded-full">
-                          {v.label}
-                        </span>
+                {/* Gallery: the swipeable photo, with every framing as a thumbnail beside it */}
+                <div className="flex gap-3 px-5 pt-5">
+                  <div
+                    ref={trackRef}
+                    onScroll={onScroll}
+                    className="flex-1 min-w-0 flex overflow-x-auto snap-x snap-mandatory no-scrollbar rounded-2xl"
+                    role="group"
+                    aria-label={`${piece.name} photographs`}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        goTo(Math.min(views.length - 1, slide + 1));
+                      } else if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        goTo(Math.max(0, slide - 1));
+                      }
+                    }}
+                  >
+                    {views.map((v) => (
+                      <div key={v.id} className="snap-center shrink-0 w-full">
+                        <div className="relative w-full h-[258px] rounded-2xl overflow-hidden bg-inset border border-hairline">
+                          <SheetPhoto piece={piece} view={v} alt={`${piece.name} — ${v.label}`} />
+                          <button
+                            type="button"
+                            onClick={() => setEnlarged(v)}
+                            aria-label={`Enlarge: ${v.label}`}
+                            className="absolute bottom-3 left-3 min-h-[36px] flex items-center gap-2 text-[13px] text-white px-3 rounded-xl border border-white/40 hover:bg-ink/70 transition-colors"
+                            style={{
+                              background: "rgb(var(--ink-rgb) / 0.55)",
+                              backdropFilter: "blur(6px)",
+                            }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                            </svg>
+                            {v.label}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  <div
+                    ref={thumbsRef}
+                    className="shrink-0 w-[60px] h-[258px] flex flex-col gap-2 overflow-y-auto no-scrollbar"
+                    role="group"
+                    aria-label="Choose a view"
+                  >
+                    {views.map((v, i) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => goTo(i)}
+                        aria-label={`Show ${v.label}`}
+                        aria-current={i === slide}
+                        className={`relative shrink-0 w-full h-[80px] rounded-xl overflow-hidden bg-inset border-2 transition-colors ${
+                          i === slide
+                            ? "border-primary"
+                            : "border-transparent hover:border-hairline"
+                        }`}
+                      >
+                        <SheetPhoto piece={piece} view={{ ...v, fit: "cover" }} alt="" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Dots */}
-                <div className="flex items-center justify-center gap-1.5 mt-3">
+                <div className="flex items-center justify-center mt-2" aria-hidden="true">
                   {views.map((v, i) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => goTo(i)}
-                      aria-label={`Show ${v.label}`}
-                      aria-current={i === slide}
-                      className="w-11 h-8 flex items-center justify-center"
-                    >
+                    <span key={v.id} className="w-7 h-8 flex items-center justify-center">
                       <span
                         className={`block rounded-full transition-all ${
-                          i === slide ? "w-4 h-[5px] bg-primary" : "w-[5px] h-[5px] bg-hairline"
+                          i === slide ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-ctrl/35"
                         }`}
                       />
-                    </button>
+                    </span>
                   ))}
                 </div>
 
                 {/* Details */}
-                <div className="px-5 pb-5">
+                <div className="px-5 pb-6">
                   {/* Save sits with the name it applies to. */}
-                  <div className="flex items-start justify-between gap-3 mt-1">
+                  <div className="flex items-start justify-between gap-3 mt-2">
                     <h2
                       id="piece-sheet-title"
-                      className="font-display text-[32px] leading-[36px] text-ink"
+                      className="font-display text-[34px] text-ink leading-[1.05]"
                     >
                       {piece.name}
                     </h2>
@@ -4084,52 +4688,31 @@
                         onToggle={onSave}
                         name={piece.name}
                         tone="plain"
-                        className="mt-1"
+                        className="!w-11 !h-11 mt-0.5"
                       />
                     )}
                   </div>
-                  <p className="font-mono text-[11px] uppercase tracking-wider text-goldtext mt-1.5">
+                  <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-goldtext mt-2.5">
                     {piece.craft}
                   </p>
-                  {/* The spec is for people who want it. It stays folded away until
-                      asked for, so the description is not buried under a table on
-                      first look. */}
-                  <p className="text-[14px] text-muted leading-[22px] mt-3">
-                    {piece.note}{" "}
-                    {/* Reads as part of the sentence, so the eye finds it where the
-                        text runs out rather than off at the margin. */}
-                    <button
-                      type="button"
-                      onClick={() => setSpecOpen((v) => !v)}
-                      aria-expanded={specOpen}
-                      aria-controls="piece-spec"
-                      className="font-semibold text-ink hover:text-primary transition-colors whitespace-nowrap"
-                    >
-                      {specOpen ? "Show less" : "Show more…"}
-                    </button>
-                  </p>
+                  <p className="text-[15px] text-ink leading-[1.6] mt-4">{piece.note}</p>
 
-                  {specOpen && (
-                    <dl
-                      id="piece-spec"
-                      className="mt-4 border-t border-hairline aura-fade-in"
-                    >
-                      {rows.map((r) => (
-                        <div
-                          key={r.k}
-                          className="flex items-baseline justify-between gap-4 py-3 border-b border-hairline"
-                        >
-                          <dt className="font-mono text-[11px] uppercase tracking-wider text-muted shrink-0">
-                            {r.k}
-                          </dt>
-                          <dd className="text-[13px] text-ink text-right">{r.v}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
+                  <dl className="mt-5 border-t border-hairline">
+                    {rows.map((r) => (
+                      <div
+                        key={r.k}
+                        className="flex items-baseline justify-between gap-4 py-3 border-b border-hairline"
+                      >
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted shrink-0">
+                          {r.k}
+                        </dt>
+                        <dd className="text-[14px] text-ink text-right m-0">{r.v}</dd>
+                      </div>
+                    ))}
+                  </dl>
 
                   {!owned && (
-                    <p className="text-[11px] text-muted leading-[17px] mt-4">
+                    <p className="text-[12px] text-muted leading-relaxed mt-4">
                       Nothing is added at checkout. You approve photographs of the finished garment
                       before it is dispatched, and alterations are covered under the Perfect Fit
                       Guarantee.
@@ -4148,7 +4731,7 @@
                   needs are the three things you can do with it. Anything you
                   do not own yet keeps its price and its fit check. */}
               {owned ? (
-                <div className="shrink-0 bg-card pb-4">
+                <div className="shrink-0 bg-canvas pb-4">
                   {/* One control split three ways rather than three pills —
                       they are siblings, so they read better joined than as
                       three competing buttons. */}
@@ -4197,7 +4780,7 @@
                             (i > 0 ? "border-l border-hairline " : "") +
                             (on
                               ? ""
-                              : "bg-card text-ink transition-colors hover:bg-inset active:bg-selfill")
+                              : "bg-canvas text-ink transition-colors hover:bg-inset active:bg-selfill")
                           }
                         >
                           {a.label}
@@ -4208,25 +4791,97 @@
                 </div>
               ) : (
                 /* Price stays put while everything above it scrolls. */
-                <div className="shrink-0 border-t border-hairline bg-card px-5 pt-3.5 pb-5 flex items-center gap-3">
+                <div className="shrink-0 border-t border-hairline bg-canvas px-5 pt-4 pb-6 flex items-center gap-3">
                   <div className="min-w-0 flex-1">
-                    <span className="block text-[28px] text-ink font-bold leading-none">
+                    <span className="block font-display text-[38px] text-ink leading-none">
                       {ship.symbol}
                       {piece.from}
                     </span>
-                    <span className="block text-[11px] text-muted leading-snug mt-1.5">
+                    <span className="block font-mono text-[11px] text-muted leading-snug mt-2 whitespace-nowrap">
                       {ship.duty} · {courierName}
                     </span>
-                    <span className="block text-[11px] text-muted leading-snug">{courierDays}</span>
+                    <span className="block font-mono text-[11px] text-muted leading-snug">
+                      {courierDays}
+                    </span>
                   </div>
 
                   <button
                     type="button"
+
                     onClick={() => onRequest(piece)}
-                    className="shrink-0 min-h-[48px] px-7 rounded-full bg-primary text-onprimary text-[14px] font-semibold hover:bg-primary/90 active:scale-95 transition-all"
+
+                    className="shrink-0 min-h-[52px] pl-6 pr-5 rounded-full bg-primary text-onprimary text-[15px] font-medium flex items-center gap-3 hover:bg-primary/90 active:scale-95 transition-all"
                   >
                     See Fit
+                    <svg
+                      width="18"
+
+                      height="18"
+
+                      viewBox="0 0 24 24"
+
+                      fill="none"
+
+                      stroke="currentColor"
+
+                      strokeWidth="1.8"
+
+                      strokeLinecap="round"
+
+                      strokeLinejoin="round"
+
+                      aria-hidden="true"
+
+                      focusable="false"
+                    >
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
                   </button>
+                </div>
+              )}
+              {/* Full-screen photo */}
+              {enlarged && (
+                <div
+                  className="absolute inset-0 z-20 flex flex-col aura-fade-in"
+                  style={{ background: "rgb(var(--ink-rgb) / 0.94)" }}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={`${piece.name} — ${enlarged.label}`}
+                >
+                  <div className="flex items-center justify-between px-4 pt-3 pb-2 text-onprimary">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.1em]">
+                      {enlarged.label}
+                    </span>
+                    <button
+                      type="button"
+                      autoFocus
+                      onClick={() => setEnlarged(null)}
+                      aria-label="Close the enlarged photo"
+                      className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="relative flex-1 m-4 rounded-2xl overflow-hidden">
+                    <SheetPhoto
+                      piece={piece}
+                      view={{ ...enlarged, fit: "contain" }}
+                      alt={`${piece.name} — ${enlarged.label}`}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -4514,6 +5169,7 @@
           values: 12,
           updated: "Updated 21 Jul 2026",
           initials: "MR",
+          photo: "images/blouse_pastel_aari.jpg",
         },
         {
           id: "fam-2",
@@ -4522,6 +5178,7 @@
           values: 10,
           updated: "Updated 28 Nov 2025",
           initials: "R",
+          photo: "images/groom_ivory_sherwani.jpg",
         },
         {
           id: "fam-3",
@@ -4530,6 +5187,7 @@
           values: 8,
           updated: "Re-measure suggested — children grow",
           initials: "A",
+          photo: "images/boy_gold_kurta.jpg",
           stale: true,
         },
       ];
@@ -4539,13 +5197,15 @@
           id: "alter",
           label: "Alterations",
           count: 2,
-          note: "Free re-fitting on any piece you own. Post it back, we adjust and return it.",
+          title: "Free re-fitting on any piece you own.",
+          note: "Post it back, we adjust and return it.",
         },
         {
           id: "care",
           label: "Care services",
           count: 1,
-          note: "Specialist clean and press, including zari and mirror work.",
+          title: "Specialist clean and press.",
+          note: "Including zari and mirror work.",
         },
       ];
 
@@ -4695,12 +5355,7 @@
                     aria-label="Edit your profile"
                     className="shrink-0 w-8 h-8 -m-[7px] rounded-full flex items-center justify-center hover:bg-inset transition-colors"
                   >
-                    <img
-                      src={DRAWER_ICON + "edit.svg"}
-                      width="18"
-                      height="18"
-                      alt=""
-                    />
+                    <img src={DRAWER_ICON + "edit.svg"} width="18" height="18" alt="" />
                   </a>
                   <img
                     src={DRAWER_ICON + "online.svg"}
@@ -4725,10 +5380,7 @@
             </div>
 
             {/* 5 primary tabs */}
-            <nav
-              aria-label="Primary"
-              className="shrink-0 py-3 border-b border-hairline"
-            >
+            <nav aria-label="Primary" className="shrink-0 py-3 border-b border-hairline">
               <ul className="list-none m-0 p-0 flex flex-col gap-1">
                 {DRAWER_TABS.map((t) => {
                   const on = t.id === active;
@@ -4776,11 +5428,7 @@
                 >
                   Ship to
                 </span>
-                <div
-                  className="flex gap-2"
-                  role="group"
-                  aria-labelledby="ship-to-label"
-                >
+                <div className="flex gap-2" role="group" aria-labelledby="ship-to-label">
                   {countries.map((c) => {
                     const on = current.code === c.code;
                     return (
@@ -4823,8 +5471,8 @@
                   className="shrink-0"
                 />
                 <span className="flex-1 min-w-0 font-sans text-[12px] leading-[18px] text-muted">
-                  Prices are landed to {current.code} — {current.duty},{" "}
-                  {current.courier}. Nothing is added at checkout.
+                  Prices are landed to {current.code} — {current.duty}, {current.courier}. Nothing
+                  is added at checkout.
                 </span>
               </p>
             </div>
@@ -4929,8 +5577,6 @@
           setOpenOwned(owned);
           setOpenPiece(p);
         };
-
-        const totalCredits = CREDITS.reduce((n, c) => n + c.count, 0);
 
         return (
           <div className="min-h-screen w-full bg-canvas flex justify-center font-sans">
@@ -5172,80 +5818,78 @@
                       </div>
 
                       <div className="flex flex-col gap-2.5">
-                        {(tabLists[ownedTab] || tabLists.aura).map(
-                          (o) => (
-                        <div
-                          key={o.id}
-                          className="bg-card border border-hairline rounded-2xl overflow-hidden"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              o.source === "uploaded" ? setEditOutfit(o) : viewPiece(o)
-                            }
-                            aria-label={
-                              o.source === "uploaded"
-                                ? `${o.name} — ${o.added}`
-                                : `${o.name} — delivered ${o.delivered}`
-                            }
-                            aria-haspopup="dialog"
-                            className="w-full text-left flex items-stretch gap-3 p-2.5 hover:bg-inset/40 active:scale-[0.995] transition-colors"
+                        {(tabLists[ownedTab] || tabLists.aura).map((o) => (
+                          <div
+                            key={o.id}
+                            className="bg-card border border-hairline rounded-2xl overflow-hidden"
                           >
-                            <Swatch
-                              item={o}
-                              className="shrink-0 w-[58px] h-[76px] rounded-xl overflow-hidden bg-inset"
-                            />
-                            <span className="min-w-0 flex-1 flex flex-col justify-center">
-                              <span className="block text-[14px] font-medium text-ink leading-snug">
-                                {o.name}
-                              </span>
-                              <span className="block text-[11.5px] text-muted leading-snug mt-0.5 line-clamp-1">
-                                {o.craft}
-                              </span>
-                              {o.source === "uploaded" ? (
-                                <React.Fragment>
-                                  <span className="block font-mono text-[10.5px] text-muted mt-1">
-                                    {o.added}
-                                  </span>
-                                  <span className="block text-[11px] text-muted mt-0.5">
-                                    {o.note}
-                                  </span>
-                                </React.Fragment>
-                              ) : (
-                                <React.Fragment>
-                                  <span className="block font-mono text-[10.5px] text-muted mt-1">
-                                    Delivered {o.delivered}
-                                  </span>
-                                  <span className="block text-[11px] text-muted mt-0.5">
-                                    Cut to {o.profile}
-                                  </span>
-                                </React.Fragment>
-                              )}
-                            </span>
-
-                            {/* What you can do with it lives in the sheet. */}
-                            <span
-                              aria-hidden="true"
-                              className="shrink-0 self-center text-muted pr-0.5"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                o.source === "uploaded" ? setEditOutfit(o) : viewPiece(o)
+                              }
+                              aria-label={
+                                o.source === "uploaded"
+                                  ? `${o.name} — ${o.added}`
+                                  : `${o.name} — delivered ${o.delivered}`
+                              }
+                              aria-haspopup="dialog"
+                              className="w-full text-left flex items-stretch gap-3 p-2.5 hover:bg-inset/40 active:scale-[0.995] transition-colors"
                             >
-                              <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                focusable="false"
+                              <Swatch
+                                item={o}
+                                className="shrink-0 w-[58px] h-[76px] rounded-xl overflow-hidden bg-inset"
+                              />
+                              <span className="min-w-0 flex-1 flex flex-col justify-center">
+                                <span className="block text-[14px] font-medium text-ink leading-snug">
+                                  {o.name}
+                                </span>
+                                <span className="block text-[11.5px] text-muted leading-snug mt-0.5 line-clamp-1">
+                                  {o.craft}
+                                </span>
+                                {o.source === "uploaded" ? (
+                                  <React.Fragment>
+                                    <span className="block font-mono text-[10.5px] text-muted mt-1">
+                                      {o.added}
+                                    </span>
+                                    <span className="block text-[11px] text-muted mt-0.5">
+                                      {o.note}
+                                    </span>
+                                  </React.Fragment>
+                                ) : (
+                                  <React.Fragment>
+                                    <span className="block font-mono text-[10.5px] text-muted mt-1">
+                                      Delivered {o.delivered}
+                                    </span>
+                                    <span className="block text-[11px] text-muted mt-0.5">
+                                      Cut to {o.profile}
+                                    </span>
+                                  </React.Fragment>
+                                )}
+                              </span>
+
+                              {/* What you can do with it lives in the sheet. */}
+                              <span
+                                aria-hidden="true"
+                                className="shrink-0 self-center text-muted pr-0.5"
                               >
-                                <path d="m9 18 6-6-6-6" />
-                              </svg>
-                            </span>
-                          </button>
-                            </div>
-                          )
-                        )}
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  focusable="false"
+                                >
+                                  <path d="m9 18 6-6-6-6" />
+                                </svg>
+                              </span>
+                            </button>
+                          </div>
+                        ))}
                       </div>
 
                       {ownedTab === "uploaded" && (
@@ -5277,10 +5921,10 @@
                 </section>
 
                 {/* ---------- Measurement profiles ---------- */}
-                <section className="mb-7" aria-labelledby="profiles-title">
+                <section className="mb-9" aria-labelledby="profiles-title">
                   <h2
                     id="profiles-title"
-                    className="font-display text-[20px] leading-tight text-ink mb-2.5"
+                    className="font-display italic text-[30px] leading-tight text-ink mb-3"
                   >
                     Measurement profiles
                   </h2>
@@ -5299,77 +5943,126 @@
                             m: profileMeasurements(selfProfile),
                           })
                         }
-                        className="w-full text-left p-3 bg-card border border-hairline rounded-2xl hover:border-primary/45 active:scale-[0.99] transition-all"
+                        className="relative overflow-hidden w-full text-left flex items-center gap-3 pl-4 pr-3 py-4 bg-card border border-hairline rounded-3xl hover:border-primary/45 active:scale-[0.99] transition-all"
                       >
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="text-[14px] font-medium text-ink truncate">
-                            {p.name}
-                          </span>
-                          {p.primary && (
-                            <span className="shrink-0 font-mono text-[9.5px] uppercase tracking-wider text-goldtext border border-goldtext/40 rounded-full px-2 py-0.5">
-                              Primary
+                        <ScanSprig className="absolute right-12 -bottom-8 w-12 h-auto text-gold/35 rotate-[20deg]" />
+                        <span className="relative min-w-0 flex-1">
+                          <span className="flex items-start justify-between gap-3">
+                            <span className="font-display text-[22px] leading-tight text-ink">
+                              {p.name}
                             </span>
-                          )}
+                            {p.primary && (
+                              <span className="shrink-0 mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-goldtext border border-gold/60 rounded-full px-2.5 py-1 bg-card">
+                                Primary
+                              </span>
+                            )}
+                          </span>
+                          <span className="block text-[13.5px] text-muted leading-snug mt-1.5">
+                            {p.note}
+                          </span>
+                          <span className="block font-mono text-[11.5px] text-muted mt-2">
+                            {selfProfile.measuredCount !== undefined
+                              ? selfProfile.measuredCount + " values · " + selfProfile.measuredAt
+                              : p.values + " values · " + p.updated}
+                          </span>
                         </span>
-                        <span className="block text-[11.5px] text-muted leading-snug mt-1">
-                          {p.note}
-                        </span>
-                        <span className="block font-mono text-[10.5px] text-muted mt-1.5">
-                          {selfProfile.measuredCount !== undefined
-                            ? selfProfile.measuredCount + " values · " + selfProfile.measuredAt
-                            : p.values + " values · " + p.updated}
-                        </span>
+                        <Chevron />
                       </button>
                     ))}
                   </div>
                 </section>
 
                 {/* ---------- Family members ---------- */}
-                <section className="mb-7" aria-labelledby="family-title">
-                  <h2
-                    id="family-title"
-                    className="font-display text-[20px] leading-tight text-ink mb-2.5"
-                  >
-                    Family members
-                  </h2>
+                <section className="mb-9" aria-labelledby="family-title">
+                  <div className="flex items-baseline justify-between gap-3 mb-3">
+                    <h2
+                      id="family-title"
+                      className="font-display italic text-[30px] leading-tight text-ink"
+                    >
+                      Family members
+                    </h2>
+                    <span className="shrink-0 text-[13px] text-muted">
+                      {family.length} {family.length === 1 ? "member" : "members"}
+                    </span>
+                  </div>
                   <div className="flex flex-col gap-2.5">
-                    {family.map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setMeasuring(f)}
-                        aria-haspopup="dialog"
-                        className="w-full text-left flex items-center gap-3 p-3 bg-card border border-hairline rounded-2xl hover:border-primary/45 active:scale-[0.99] transition-all"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="shrink-0 w-10 h-10 rounded-full bg-gold text-ink font-display text-[15px] flex items-center justify-center"
+                    {family.map((f) => {
+                      // Records saved before photos existed pick theirs up from the seed.
+                      const photo = f.photo || (FAMILY.find((x) => x.id === f.id) || {}).photo;
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setMeasuring(f)}
+                          aria-haspopup="dialog"
+                          className="w-full text-left flex items-center gap-3 p-3 bg-card border border-hairline rounded-3xl hover:border-primary/45 active:scale-[0.99] transition-all"
                         >
-                          {f.initials}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[14px] font-medium text-ink truncate">
-                            {f.name}
-                            <span className="text-muted font-normal"> · {f.relation}</span>
-                          </span>
                           <span
-                            className={`block font-mono text-[10.5px] mt-1 ${
-                              f.stale ? "text-goldtext" : "text-muted"
-                            }`}
+                            aria-hidden="true"
+                            className="shrink-0 w-12 h-12 rounded-full bg-gold text-ink font-display text-[18px] flex items-center justify-center"
                           >
-                            {f.values} values · {f.updated}
+                            {f.initials}
                           </span>
-                        </span>
-                      </button>
-                    ))}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">
+                              <span className="font-display text-[20px] leading-tight text-ink">
+                                {f.name}
+                              </span>
+                              <span className="text-[14px] text-muted"> · {f.relation}</span>
+                            </span>
+                            {f.stale ? (
+                              <span className="block text-[12px] text-goldtext leading-snug mt-1">
+                                {f.values} values · {f.updated}
+                              </span>
+                            ) : (
+                              <span className="block font-mono text-[10.5px] text-muted mt-1 whitespace-nowrap truncate">
+                                {f.values} values · {f.updated}
+                              </span>
+                            )}
+                          </span>
+                          {photo && (
+                            <img
+                              src={photo}
+                              alt=""
+                              className="shrink-0 w-[52px] h-[52px] rounded-xl object-cover object-[50%_30%]"
+                            />
+                          )}
+                          <Chevron />
+                        </button>
+                      );
+                    })}
 
                     <button
                       type="button"
                       onClick={() => setAddOpen(true)}
                       aria-haspopup="dialog"
-                      className="w-full min-h-[48px] rounded-2xl border border-dashed border-ctrl/60 text-[12.5px] font-medium text-primary hover:bg-inset active:scale-[0.99] transition-all"
+                      className="w-full text-left flex items-center gap-4 p-4 rounded-3xl border border-dashed border-gold/60 hover:bg-card/60 active:scale-[0.99] transition-all"
                     >
-                      Add someone
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 w-12 h-12 rounded-full bg-gold/15 text-ink flex items-center justify-center"
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          focusable="false"
+                        >
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display italic text-[22px] leading-tight text-ink">
+                          Add someone
+                        </span>
+                        <span className="block text-[12.5px] text-muted leading-snug mt-0.5">
+                          Partner, child, parent or someone special.
+                        </span>
+                      </span>
                     </button>
                   </div>
                 </section>
@@ -5378,44 +6071,67 @@
                 <section className="mb-7" aria-labelledby="credits-title">
                   <h2
                     id="credits-title"
-                    className="font-display text-[20px] leading-tight text-ink mb-2.5"
+                    className="font-display italic text-[30px] leading-tight text-ink mb-3"
                   >
                     Care &amp; alteration credits
                   </h2>
 
-                  <div className="bg-card border border-hairline rounded-2xl overflow-hidden">
-                    {CREDITS.map((c, i) => (
-                      <div
-                        key={c.id}
-                        className={`p-3.5 ${i > 0 ? "border-t border-hairline" : ""}`}
-                      >
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
-                            {c.label}
-                          </span>
-                          <span className="font-mono text-[18px] font-medium text-ink leading-none">
-                            {c.count}
-                          </span>
-                        </div>
-                        <p className="text-[11.5px] text-muted leading-snug mt-1.5">{c.note}</p>
-                      </div>
-                    ))}
-
-                    <div className="px-3.5 py-3 border-t border-hairline bg-inset/50 flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-muted leading-snug">
-                        Credits never expire while you own the piece.
-                      </span>
+                  <div className="flex flex-col gap-2.5">
+                    {CREDITS.map((c) => (
                       <button
+                        key={c.id}
                         type="button"
                         onClick={() =>
-                          showToast(`${totalCredits} credits available — pick a piece to use one`)
+                          showToast(
+                            `${c.count} ${c.label.toLowerCase()} ${c.count === 1 ? "credit" : "credits"} available — pick a piece to use one`
+                          )
                         }
-                        className="shrink-0 min-h-[44px] -my-2 px-1 text-[12px] font-medium text-primary hover:text-ink transition-colors"
+                        className="w-full text-left flex items-center gap-4 p-4 bg-card border border-hairline rounded-3xl hover:border-primary/45 active:scale-[0.99] transition-all"
                       >
-                        Use a credit
+                        <span
+                          aria-hidden="true"
+                          className="shrink-0 w-14 h-14 rounded-full bg-gold/15 text-muted flex items-center justify-center"
+                        >
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.25"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            focusable="false"
+                          >
+                            {c.id === "alter" ? (
+                              <>
+                                <circle cx="6.5" cy="17.5" r="2.5" />
+                                <circle cx="17.5" cy="17.5" r="2.5" />
+                                <path d="M8.3 15.7 19 4M15.7 15.7 5 4" />
+                              </>
+                            ) : (
+                              <path d="M12 3.5 13.8 9l5.7.2-4.5 3.5 1.6 5.5L12 15l-4.6 3.2L9 12.7 4.5 9.2 10.2 9Z" />
+                            )}
+                          </svg>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted">
+                            {c.label} · {c.count} left
+                          </span>
+                          <span className="block font-sans font-medium text-[16px] leading-snug text-ink mt-1">
+                            {c.title}
+                          </span>
+                          <span className="block text-[12.5px] text-muted leading-snug mt-0.5">
+                            {c.note}
+                          </span>
+                        </span>
+                        <Chevron />
                       </button>
-                    </div>
+                    ))}
                   </div>
+                  <p className="text-[11.5px] text-muted leading-snug mt-2.5 px-1">
+                    Credits never expire while you own the piece.
+                  </p>
                 </section>
               </div>
 
@@ -5594,6 +6310,44 @@
       }
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) { el.removeAttribute("id"); });
+              ghost.querySelectorAll("video").forEach(function (v) { v.remove(); });
+              r.target.appendChild(ghost);
+              setTimeout(function () { ghost.remove(); }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>

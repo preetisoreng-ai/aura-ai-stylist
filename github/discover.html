@@ -265,8 +265,399 @@
         }
       }
     </style>
-  </head>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from { transform: translate3d(0, 100%, 0); }
+        to { transform: translate3d(0, 0, 0); }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.3s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from { background-color: transparent; }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to { background-color: transparent; }
+      }
+      @keyframes auraSheetGhostOut {
+        from { transform: translate3d(0, 0, 0); }
+        to { transform: translate3d(0, 100%, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) { animation-duration: 1ms; }
+      }
+    </style>
+<!-- aura-tab-transition:start -->
+<style id="aura-tab-transition-style">
+  /* ---- Drawer tab transition ----
+         Picking a tab in the right drawer slides the drawer out, then the
+         next page opens with its top bar held still while the content below
+         crossfades into a skeleton; the skeleton dissolves once the real
+         screen and its first images are ready. */
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-group(aura-topbar) {
+    animation: none !important;
+  }
+  ::view-transition-old(aura-topbar),
+  ::view-transition-new(aura-topbar) {
+    animation-duration: 220ms !important;
+    animation-timing-function: ease !important;
+    mix-blend-mode: normal;
+  }
+  /* The old screen holds still underneath while the new one fades up over
+     it, so the two never leave a see-through gap. */
+  html,
+  ::view-transition {
+    background-color: rgb(243 239 231);
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-old(root) {
+    animation: none !important;
+    opacity: 1;
+  }
+  html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+    animation: auraTabIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+  @keyframes auraTabIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+  }
+
+  .aura-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    background: rgb(243 239 231);
+    transition: opacity 320ms ease;
+  }
+  .aura-boot.is-done {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .aura-boot-vp {
+    width: 100%;
+    max-width: 430px;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aura-boot-top {
+    view-transition-name: aura-topbar;
+  }
+  .aura-boot-body {
+    flex: 1;
+    min-height: 0;
+    padding: 12px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .sk {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgb(30 27 46 / 0.07);
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.55),
+      transparent
+    );
+    animation: auraShimmer 1.3s ease-in-out infinite;
+  }
+  @keyframes auraShimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  .sk-t {
+    height: 12px;
+    border-radius: 6px;
+  }
+  .sk-h {
+    height: 24px;
+    border-radius: 8px;
+  }
+  .sk-o {
+    border-radius: 9999px;
+  }
+  .sk-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .sk-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .sk-card {
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(229 223 213);
+    padding: 12px;
+  }
+  .sk-f1 {
+    flex: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after {
+      animation: none;
+      display: none;
+    }
+    .aura-boot {
+      transition: none;
+    }
+    html:active-view-transition-type(aura-tab)::view-transition-old(root),
+    html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+      animation: none !important;
+    }
+  }
+</style>
+<!-- Hold the first paint until the skeleton below is in the document. -->
+<link rel="expect" href="#aura-boot-ready" blocking="render" />
+<script id="aura-tab-transition-head">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var arriving = false;
+    try {
+      arriving = !!sessionStorage.getItem(KEY);
+      sessionStorage.removeItem(KEY);
+    } catch (e) {}
+    window.__auraTabArriving = arriving;
+    window.__auraTabLeaving = false;
+
+    // Only a drawer hop uses the transition; every other link behaves as before.
+    window.addEventListener("pagereveal", function (e) {
+      // A prerendered page ran the lines above before the hop, so read the
+      // flag again now that it is being shown.
+      if (!arriving) {
+        try {
+          if (sessionStorage.getItem(KEY)) {
+            sessionStorage.removeItem(KEY);
+            arriving = window.__auraTabArriving = true;
+            if (window.__auraShowBoot) window.__auraShowBoot();
+          }
+        } catch (err) {}
+      }
+      if (!e.viewTransition) return;
+      if (arriving) e.viewTransition.types.add("aura-tab");
+      else if (true) e.viewTransition.skipTransition();
+    });
+
+    // Outgoing page: pin its top bar so it stays put across the hop.
+    window.addEventListener("pageswap", function (e) {
+      if (!e.viewTransition || !window.__auraTabLeaving) return;
+      e.viewTransition.types.add("aura-tab");
+      var bar =
+        document.querySelector(".app-viewport > header") ||
+        document.querySelector("#root header");
+      if (bar) bar.style.viewTransitionName = "aura-topbar";
+    });
+  })();
+</script>
+<!-- aura-tab-transition:end -->
+</head>
   <body>
+<!-- aura-tab-transition:start -->
+<template id="aura-boot-template"><div class="aura-boot"><div class="aura-boot-vp"><div style="display:flex;position:sticky;top:0px;flex-direction:row;align-items:center;justify-content:normal;gap:8px;min-width:0px;padding-top:16px;padding-right:16px;padding-bottom:12px;padding-left:16px;background-color:rgba(243, 239, 231, 0.95);color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;z-index:20;box-sizing:border-box;width:100%;height:72.00px" class="aura-boot-top"><span style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:center;border-radius:9999px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box;width:44.00px;height:44.00px;flex-shrink:0"><img src="images/discover-full/icon-home.svg" alt="" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;max-width:100%;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:clip;box-sizing:border-box;width:19.00px;height:19.00px;flex-shrink:0"></span><span style="display:flex;flex-direction:row;flex-grow:1;flex-basis:0%;align-items:center;justify-content:space-between;min-width:0px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;box-sizing:border-box"><span style="display:flex;flex-direction:row;align-items:center;justify-content:normal;gap:4px;padding-right:8px;color:rgb(30, 27, 46);font-family:Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:400;line-height:21px;letter-spacing:normal;white-space:nowrap;box-sizing:border-box"><img src="images/discover-full/icon-chevron-left.svg" alt="" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;max-width:100%;color:rgb(30, 27, 46);font-family:Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:400;line-height:21px;letter-spacing:normal;white-space:nowrap;overflow:clip;box-sizing:border-box;width:20.00px;height:20.00px;flex-shrink:0">Back to chat</span><span style="display:block;flex-direction:row;align-items:normal;justify-content:normal;color:rgb(59, 42, 90);font-family:&quot;Instrument Serif&quot;, &quot;Iowan Old Style&quot;, Georgia, serif;font-size:22px;font-weight:400;line-height:22px;letter-spacing:normal;white-space:nowrap;box-sizing:border-box">Discover</span></span><span style="display:flex;flex-direction:row;flex-shrink:0;align-items:center;justify-content:center;margin-right:-10px;border-radius:9999px;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;text-align:center;box-sizing:border-box;width:44.00px;height:44.00px;flex-shrink:0"><img src="images/discover-full/icon-hamburger.svg" alt="" style="display:block;flex-direction:row;align-items:normal;justify-content:normal;max-width:100%;color:rgb(30, 27, 46);font-family:&quot;DM Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;line-height:24px;letter-spacing:normal;overflow:clip;text-align:center;box-sizing:border-box;width:24.00px;height:24.00px;flex-shrink:0"></span></div><div class="aura-boot-body"><div class="sk-row" style="gap:14px"><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div><div class="sk-col" style="gap:8px"><div class="sk sk-o" style="width:56px;height:56px"></div><div class="sk sk-t" style="width:44px;height:10px"></div></div></div><div class="sk-row" style="gap:10px;justify-content:space-between"><div class="sk sk-t" style="width:42%;height:18px"></div><div class="sk sk-t" style="width:56px;height:12px"></div></div><div class="sk-row" style="gap:8px"><div class="sk " style="width:38%;height:214px;border-radius:14px"></div><div class="sk-col sk-f1" style="gap:8px"><div class="sk " style="width:100%;height:104px;border-radius:14px"></div><div class="sk-row" style="gap:8px"><div class="sk " style="flex:1 1 0;min-width:0;height:102px;border-radius:14px"></div><div class="sk " style="flex:1 1 0;min-width:0;height:102px;border-radius:14px"></div></div></div></div><div class="sk-row" style="gap:10px;justify-content:space-between"><div class="sk sk-t" style="width:36%;height:18px"></div><div class="sk sk-t" style="width:56px;height:12px"></div></div><div class="sk-row" style="gap:8px"><div class="sk " style="flex:1 1 0;min-width:0;height:92px;border-radius:12px"></div><div class="sk " style="flex:1 1 0;min-width:0;height:92px;border-radius:12px"></div><div class="sk " style="flex:1 1 0;min-width:0;height:92px;border-radius:12px"></div></div></div></div></div></template>
+<script id="aura-tab-transition">
+  (function () {
+    var KEY = "aura-drawer-nav";
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var arriving = !!window.__auraTabArriving;
+
+    // Incoming page: show the top bar and a skeleton until React has painted.
+    var booted = false;
+    function showBoot() {
+      var tpl = document.getElementById("aura-boot-template");
+      // A prerendered page may already be on screen; it needs no skeleton.
+      if (booted || !tpl || !tpl.content.firstElementChild) return;
+      if (document.querySelector("#root header")) return;
+      booted = true;
+      var boot = tpl.content.firstElementChild.cloneNode(true);
+      boot.setAttribute("aria-hidden", "true");
+      document.body.insertBefore(boot, document.body.firstChild);
+      // #root is parsed after this script, so look it up when needed.
+      var started = Date.now();
+      var finish = function () {
+        if (boot.classList.contains("is-done")) return;
+        boot.classList.add("is-done");
+        setTimeout(
+          function () {
+            boot.remove();
+          },
+          reduce ? 0 : 360,
+        );
+      };
+      var whenPainted = function () {
+        // Hold for the images the reader sees first, but never long.
+        var imgs = Array.prototype.filter.call(
+          document.querySelectorAll("#root img"),
+          function (img) {
+            var r = img.getBoundingClientRect();
+            return !img.complete && r.top < window.innerHeight && r.width > 40;
+          },
+        );
+        var left = imgs.length;
+        var cap = Math.max(250, 1200 - (Date.now() - started));
+        var t = setTimeout(finish, cap);
+        var one = function () {
+          if (--left <= 0) {
+            clearTimeout(t);
+            setTimeout(finish, 60);
+          }
+        };
+        if (!left) {
+          clearTimeout(t);
+          setTimeout(finish, 120);
+          return;
+        }
+        imgs.forEach(function (img) {
+          img.addEventListener("load", one, { once: true });
+          img.addEventListener("error", one, { once: true });
+        });
+      };
+      var ready = function () {
+        return document.querySelector("#root header");
+      };
+      if (ready()) whenPainted();
+      else if (window.MutationObserver) {
+        var mo = new MutationObserver(function () {
+          if (!ready()) return;
+          mo.disconnect();
+          setTimeout(whenPainted, 30);
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      setTimeout(finish, 6000); // never strand the skeleton
+    }
+    window.__auraShowBoot = showBoot;
+    if (arriving) showBoot();
+
+    // Start building the next tab's page as soon as a finger or pointer
+    // lands on it, so it is often ready before the drawer has left.
+    var speculated = {};
+    var canPrerender =
+      window.HTMLScriptElement &&
+      HTMLScriptElement.supports &&
+      HTMLScriptElement.supports("speculationrules");
+    function warm(e) {
+      if (!canPrerender) return;
+      var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+      if (!link || !link.closest(".drawer-slide-in")) return;
+      if (link.getAttribute("aria-current") === "page" || speculated[link.href]) return;
+      speculated[link.href] = true;
+      var rules = document.createElement("script");
+      rules.type = "speculationrules";
+      rules.textContent = JSON.stringify({ prerender: [{ source: "list", urls: [link.href] }] });
+      document.head.appendChild(rules);
+    }
+    ["pointerover", "pointerdown", "touchstart", "focusin"].forEach(function (type) {
+      document.addEventListener(type, warm, { capture: true, passive: true });
+    });
+
+    // Drawer tabs: slide the drawer out, then open the tab's page.
+    var leaving = false;
+    document.addEventListener(
+      "click",
+      function (e) {
+        if (
+          e.defaultPrevented ||
+          e.button !== 0 ||
+          e.metaKey ||
+          e.ctrlKey ||
+          e.shiftKey ||
+          e.altKey
+        )
+          return;
+        var link =
+          e.target.closest &&
+          e.target.closest('nav[aria-label="Primary"] a[href]');
+        if (!link) return;
+        var drawer = link.closest(".drawer-slide-in");
+        if (!drawer) return;
+        e.preventDefault();
+        if (leaving) return;
+        var close = drawer.querySelector(
+          '[aria-label="Close navigation menu"]',
+        );
+        if (close) close.click();
+        if (link.getAttribute("aria-current") === "page") return;
+        leaving = true;
+        var href = link.href;
+        var gone = false;
+        var go = function () {
+          if (gone) return;
+          gone = true;
+          try {
+            sessionStorage.setItem(KEY, "1");
+          } catch (err) {}
+          window.__auraTabLeaving = true;
+          window.location.href = href;
+        };
+        if (reduce) return go();
+        // Leave once the drawer has slid out: its slide ends, or the
+        // overlay unmounts it, whichever comes first.
+        drawer.addEventListener("animationend", function (ev) {
+          if (ev.target === drawer && /Out/.test(ev.animationName)) go();
+        });
+        (function watch() {
+          if (gone) return;
+          if (!drawer.isConnected) return go();
+          requestAnimationFrame(watch);
+        })();
+        setTimeout(go, 420);
+      },
+      true,
+    );
+    window.addEventListener("pageshow", function () {
+      leaving = false;
+      window.__auraTabLeaving = false;
+    });
+  })();
+</script>
+<span id="aura-boot-ready" hidden></span>
+<!-- aura-tab-transition:end -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -304,10 +695,30 @@
 
       /* Each designer is shown through a piece in their own craft. */
       const DESIGNERS = [
-        { id: "meera", name: "Meera R.", role: "Master draper · Varanasi", img: "heritage_banarasi.jpg" },
-        { id: "farida", name: "Farida S.", role: "Chikankari atelier · Lucknow", img: "hero_anarkali.jpg" },
-        { id: "ilango", name: "Ilango V.", role: "Korvai weaver · Kanchipuram", img: "kanjivaram_gold.png" },
-        { id: "rehan", name: "Rehan K.", role: "Zardozi atelier · Delhi", img: "regal_zardozi.jpg" },
+        {
+          id: "meera",
+          name: "Meera R.",
+          role: "Master draper · Varanasi",
+          img: "heritage_banarasi.jpg",
+        },
+        {
+          id: "farida",
+          name: "Farida S.",
+          role: "Chikankari atelier · Lucknow",
+          img: "hero_anarkali.jpg",
+        },
+        {
+          id: "ilango",
+          name: "Ilango V.",
+          role: "Korvai weaver · Kanchipuram",
+          img: "kanjivaram_gold.png",
+        },
+        {
+          id: "rehan",
+          name: "Rehan K.",
+          role: "Zardozi atelier · Delhi",
+          img: "regal_zardozi.jpg",
+        },
       ];
 
       /* Inspiration looks, grouped by category. "All Pieces" shows a mix. */
@@ -653,7 +1064,10 @@
               </p>
             )}
             {/* Keyed on the items so a category change starts the rail at the beginning. */}
-            <div key={rail.items.map((i) => i.id).join()} className="rail flex gap-3 px-4 pb-1 mt-2.5">
+            <div
+              key={rail.items.map((i) => i.id).join()}
+              className="rail flex gap-3 px-4 pb-1 mt-2.5"
+            >
               {rail.items.map((p) => {
                 const key = rail.id + ":" + p.id;
                 return (
@@ -715,7 +1129,9 @@
         useEffect(() => {
           if (!open) return;
           document.body.classList.add("aura-locked");
-          const closeBtn = document.querySelector('#nav-drawer button[aria-label="Close navigation menu"]');
+          const closeBtn = document.querySelector(
+            '#nav-drawer button[aria-label="Close navigation menu"]'
+          );
           if (closeBtn) closeBtn.focus({ preventScroll: true });
           const onKey = (e) => e.key === "Escape" && onClose();
           window.addEventListener("keydown", onKey);
@@ -728,24 +1144,29 @@
         if (!open && !shown) return null;
         return (
           <div
-            className={"fixed inset-0 z-50 flex justify-end" + (open ? "" : " aura-leaving")}
+            className={
+              "fixed inset-0 z-50 flex justify-center pointer-events-none" +
+              (open ? "" : " aura-leaving")
+            }
             role="dialog"
             aria-modal="true"
             aria-labelledby="drawer-title"
             id="nav-drawer"
           >
             <div
-              className="aura-scrim absolute inset-0 bg-ink/40"
+              className="aura-scrim fixed inset-0 bg-ink/40 pointer-events-auto"
               onClick={onClose}
               aria-hidden="true"
             />
-            <AuraDrawer
-              active="discover"
-              countries={SHIP_TO}
-              current={country}
-              onPickCountry={setCountry}
-              onClose={onClose}
-            />
+            <div className="w-full max-w-[430px] h-full relative flex justify-end pointer-events-none overflow-hidden">
+              <AuraDrawer
+                active="discover"
+                countries={SHIP_TO}
+                current={country}
+                onPickCountry={setCountry}
+                onClose={onClose}
+              />
+            </div>
           </div>
         );
       }
@@ -801,7 +1222,7 @@
       function AuraDrawer({ active, countries, current, onPickCountry, onClose }) {
         return (
           <div
-            className="relative bg-canvas w-[88%] max-w-[346px] h-full flex flex-col px-5 py-6 border-l border-hairline drawer-slide-in overflow-y-auto overflow-x-hidden"
+            className="relative bg-canvas w-[88%] max-w-[346px] h-full flex flex-col px-5 py-6 border-l border-hairline drawer-slide-in overflow-y-auto overflow-x-hidden pointer-events-auto"
             style={{ boxShadow: "-12px 0 40px rgb(30 27 46 / 0.18)" }}
           >
             {/* Profile */}
@@ -831,12 +1252,7 @@
                     aria-label="Edit your profile"
                     className="shrink-0 w-8 h-8 -m-[7px] rounded-full flex items-center justify-center hover:bg-inset transition-colors"
                   >
-                    <img
-                      src={DRAWER_ICON + "edit.svg"}
-                      width="18"
-                      height="18"
-                      alt=""
-                    />
+                    <img src={DRAWER_ICON + "edit.svg"} width="18" height="18" alt="" />
                   </a>
                   <img
                     src={DRAWER_ICON + "online.svg"}
@@ -861,10 +1277,7 @@
             </div>
 
             {/* 5 primary tabs */}
-            <nav
-              aria-label="Primary"
-              className="shrink-0 py-3 border-b border-hairline"
-            >
+            <nav aria-label="Primary" className="shrink-0 py-3 border-b border-hairline">
               <ul className="list-none m-0 p-0 flex flex-col gap-1">
                 {DRAWER_TABS.map((t) => {
                   const on = t.id === active;
@@ -912,11 +1325,7 @@
                 >
                   Ship to
                 </span>
-                <div
-                  className="flex gap-2"
-                  role="group"
-                  aria-labelledby="ship-to-label"
-                >
+                <div className="flex gap-2" role="group" aria-labelledby="ship-to-label">
                   {countries.map((c) => {
                     const on = current.code === c.code;
                     return (
@@ -959,8 +1368,8 @@
                   className="shrink-0"
                 />
                 <span className="flex-1 min-w-0 font-sans text-[12px] leading-[18px] text-muted">
-                  Prices are landed to {current.code} — {current.duty},{" "}
-                  {current.courier}. Nothing is added at checkout.
+                  Prices are landed to {current.code} — {current.duty}, {current.courier}. Nothing
+                  is added at checkout.
                 </span>
               </p>
             </div>
@@ -983,7 +1392,13 @@
       function App() {
         // Deep links: discover.html?category=sarees (older singular ids still work).
         const [category, setCategory] = useState(() => {
-          const ALIASES = { lehenga: "lehengas", saree: "sarees", anarkali: "anarkalis", kurta: "kurta-sets", sherwani: "sherwanis" };
+          const ALIASES = {
+            lehenga: "lehengas",
+            saree: "sarees",
+            anarkali: "anarkalis",
+            kurta: "kurta-sets",
+            sherwani: "sherwanis",
+          };
           try {
             const params = new URLSearchParams(window.location.search);
             const raw = params.get("category") || params.get("cat") || "";
@@ -1028,6 +1443,44 @@
       }
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) { el.removeAttribute("id"); });
+              ghost.querySelectorAll("video").forEach(function (v) { v.remove(); });
+              r.target.appendChild(ghost);
+              setTimeout(function () { ghost.remove(); }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>

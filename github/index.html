@@ -481,9 +481,966 @@
           animation-duration: 1ms;
         }
       }
+
+      /* Focus-to-compose motion follows the supplied interaction recording. */
+      .home-motion {
+        --compose-ease: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .home-content {
+        transition:
+          opacity 240ms ease,
+          transform 420ms var(--compose-ease),
+          filter 300ms ease;
+      }
+      .home-motion.is-composing .home-content {
+        opacity: 0;
+        transform: translateY(-24px) scale(0.98);
+        filter: blur(4px);
+        pointer-events: none;
+      }
+      .compose-stage {
+        position: absolute;
+        inset: 76px 0 130px;
+        z-index: 15;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(24px);
+        transition:
+          opacity 340ms ease,
+          transform 480ms var(--compose-ease),
+          visibility 480ms;
+      }
+      .is-composing .compose-stage {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        transition-delay: 90ms;
+      }
+      .compose-stage p {
+        font-family: "Instrument Serif", Georgia, serif;
+        font-size: 32px;
+        color: rgb(var(--primary-rgb));
+        text-align: center;
+        margin: 0 24px;
+      }
+      .compose-dock {
+        transition: padding 380ms var(--compose-ease);
+      }
+      .compose-form {
+        position: relative;
+        transition:
+          border-radius 380ms var(--compose-ease),
+          padding 380ms var(--compose-ease),
+          box-shadow 380ms ease;
+      }
+      .compose-form textarea {
+        font-size: 16px;
+        resize: none;
+        height: 34px;
+        max-height: 120px;
+        overflow-y: auto;
+        transition: height 380ms var(--compose-ease);
+      }
+      .is-composing .compose-form {
+        border-radius: 24px;
+        padding-top: 70px;
+        padding-bottom: 8px;
+      }
+      .is-composing .compose-form textarea {
+        position: absolute;
+        top: 16px;
+        left: 18px;
+        width: calc(100% - 62px);
+        height: 46px;
+        padding: 0;
+      }
+      .is-composing .compose-form > button:last-child {
+        margin-left: auto;
+      }
+      .compose-close {
+        position: absolute;
+        right: 7px;
+        top: 6px;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        color: rgb(var(--muted-rgb));
+        border-radius: 50%;
+        font-size: 22px;
+      }
+      .compose-close:hover {
+        background: rgb(var(--inset-rgb));
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .home-content,
+        .compose-stage,
+        .compose-dock,
+        .compose-form,
+        .compose-form textarea {
+          transition: none !important;
+        }
+        .home-motion.is-composing .home-content,
+        .compose-stage {
+          transform: none;
+          filter: none;
+        }
+      }
+
+      .compose-stage {
+        overflow-y: auto;
+        padding: 16px 8px;
+      }
+      .compose-welcome {
+        width: 100%;
+        max-width: 410px;
+        margin: auto;
+        text-align: center;
+      }
+      .compose-welcome h1 {
+        margin: 0;
+        font-family: "Instrument Serif", Georgia, serif;
+        font-size: clamp(32px, 9vw, 44px);
+        font-weight: 400;
+        line-height: 1.05;
+        letter-spacing: -0.025em;
+        color: rgb(var(--ink-rgb));
+      }
+      .compose-stage .compose-subtitle {
+        margin: 14px 0 28px;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.5;
+        color: rgb(var(--muted-rgb));
+      }
+      .compose-occasions {
+        display: grid;
+        gap: 12px;
+      }
+      .compose-chip-row {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .compose-occasion {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 15px;
+        border: 1px solid rgb(var(--gold-rgb) / 0.55);
+        border-radius: 999px;
+        background: transparent;
+        color: rgb(var(--ink-rgb));
+        font-size: 14px;
+        font-weight: 500;
+        transition:
+          background 180ms,
+          border-color 180ms;
+      }
+      .compose-occasion > span {
+        color: rgb(var(--gold-text-rgb));
+      }
+      .compose-occasion:hover {
+        background: rgb(var(--inset-rgb));
+        border-color: rgb(var(--gold-rgb));
+      }
+      .compose-occasion[aria-pressed="true"] {
+        background: rgb(var(--primary-rgb));
+        color: rgb(var(--onprimary-rgb));
+        border-color: rgb(var(--primary-rgb));
+      }
+      .compose-occasion[aria-pressed="true"] > span {
+        color: inherit;
+      }
+      @media (max-width: 370px) {
+        .compose-occasion {
+          padding: 0 10px;
+          gap: 6px;
+          font-size: 12px;
+        }
+        .compose-chip-row {
+          gap: 6px;
+        }
+      }
+
+      @view-transition {
+        navigation: auto;
+      }
+      ::view-transition-group(*) {
+        animation-duration: 420ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      /* Do not dissolve the entire screen / root */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation: none !important;
+        mix-blend-mode: normal !important;
+      }
+      /* Top bar remains intact as is */
+      ::view-transition-group(aura-chat-header) {
+        animation: none !important;
+      }
+      ::view-transition-group(aura-chat-composer) {
+        animation-duration: 380ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      ::view-transition-group(aura-sent-prompt),
+      ::view-transition-group(aura-sent-attachment) {
+        animation-duration: 380ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        ::view-transition-group(*),
+        ::view-transition-old(*),
+        ::view-transition-new(*) {
+          animation-duration: 1ms !important;
+        }
+      }
+
+      .home-motion.is-sending .compose-stage {
+        opacity: 0;
+        transform: translateY(-16px);
+        transition:
+          opacity 200ms ease,
+          transform 260ms ease;
+        pointer-events: none;
+      }
+      .home-motion.is-sending .compose-form {
+        pointer-events: none;
+        view-transition-name: aura-chat-composer;
+      }
+      .home-motion.is-sending > header {
+        view-transition-name: aura-chat-header;
+      }
+
+      .event-chat-layer {
+        background: var(--canvas);
+        /* Fade only: the top bar above stays still, and the chat's ask bar
+           rises from the bottom inside the frame (conversation.html). */
+        animation: eventChatIn 240ms ease-out both;
+      }
+      @keyframes eventChatIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .event-chat-layer {
+          animation-duration: 1ms;
+        }
+      }
+      .home-motion.is-sending #aura-flying-bubble {
+        view-transition-name: aura-sent-prompt;
+      }
+      .home-motion.is-sending #aura-flying-attachment {
+        view-transition-name: aura-sent-attachment;
+      }
+      /* Sending from a garment tile: the rails step back, the header and
+         the ask bar stay where they are and carry over into the chat. */
+      .home-motion.is-sending:not(.is-composing) .home-content {
+        opacity: 0;
+        transform: translateY(-16px);
+        transition:
+          opacity 200ms ease,
+          transform 260ms ease;
+        pointer-events: none;
+      }
+      .flying-sent-attachment {
+        width: 136px;
+        margin-bottom: 6px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--hairline-rgb));
+        background: rgb(var(--card-rgb));
+        box-shadow: 0 1px 2px rgb(var(--ink-rgb) / 0.05);
+        animation: bubbleSendFly 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        transform-origin: bottom right;
+      }
+      .flying-sent-attachment img {
+        display: block;
+        width: 100%;
+        height: 112px;
+        object-fit: cover;
+      }
+      .flying-sent-attachment span {
+        display: block;
+        padding: 6px 10px 7px;
+        font-family: var(--font-sans);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: rgb(var(--ink-rgb));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Flight animation for sending bubble into chat view area */
+      .chat-send-flight-layer {
+        position: absolute;
+        inset: 58px 0 68px 0;
+        z-index: 35;
+        pointer-events: none;
+        padding: 16px 16px 0 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-end;
+        overflow: hidden;
+      }
+      .flying-sent-bubble {
+        background: rgb(var(--primary-rgb));
+        color: #ffffff;
+        font-family: var(--font-sans);
+        font-size: 17px;
+        line-height: 1.35;
+        padding: 12px 16px;
+        border-radius: 22px;
+        max-width: 80%;
+        white-space: pre-line;
+        box-shadow: 0 4px 16px -2px rgb(var(--primary-rgb) / 0.25);
+        animation: bubbleSendFly 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        transform-origin: bottom right;
+      }
+      @keyframes bubbleSendFly {
+        0% {
+          transform: translateY(calc(var(--app-h, 100vh) - 200px)) scale(0.92);
+          opacity: 0.85;
+        }
+        30% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .flying-sent-bubble {
+          animation: none !important;
+          transform: translateY(0) !important;
+        }
+      }
     </style>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      /* A long, soft settle (the iOS sheet curve): the panel glides up from
+         the bottom edge and eases to rest instead of snapping into place. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from {
+          transform: translate3d(0, 100%, 0);
+        }
+        to {
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.4s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from {
+          background-color: transparent;
+        }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to {
+          background-color: transparent;
+        }
+      }
+      @keyframes auraSheetGhostOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 100%, 0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) {
+          animation-duration: 1ms;
+        }
+      }
+    </style>
+    <!-- aura-tab-transition:start -->
+    <style id="aura-tab-transition-style">
+      /* ---- Drawer tab transition ----
+         Picking a tab in the right drawer slides the drawer out, then the
+         next page opens with its top bar held still while the content below
+         crossfades into a skeleton; the skeleton dissolves once the real
+         screen and its first images are ready. */
+      @view-transition {
+        navigation: auto;
+      }
+      ::view-transition-group(aura-topbar) {
+        animation: none !important;
+      }
+      ::view-transition-old(aura-topbar),
+      ::view-transition-new(aura-topbar) {
+        animation-duration: 220ms !important;
+        animation-timing-function: ease !important;
+        mix-blend-mode: normal;
+      }
+      /* The old screen holds still underneath while the new one fades up over
+     it, so the two never leave a see-through gap. */
+      html,
+      ::view-transition {
+        background-color: rgb(243 239 231);
+      }
+      html:active-view-transition-type(aura-tab)::view-transition-old(root) {
+        animation: none !important;
+        opacity: 1;
+      }
+      html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+        animation: auraTabIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+      }
+      @keyframes auraTabIn {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 10px, 0);
+        }
+      }
+
+      .aura-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        background: rgb(243 239 231);
+        transition: opacity 320ms ease;
+      }
+      .aura-boot.is-done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .aura-boot-vp {
+        width: 100%;
+        max-width: 430px;
+        height: 100vh;
+        height: 100dvh;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .aura-boot-top {
+        view-transition-name: aura-topbar;
+      }
+      .aura-boot-body {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 16px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .sk {
+        position: relative;
+        overflow: hidden;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: rgb(30 27 46 / 0.07);
+      }
+      .sk::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+        animation: auraShimmer 1.3s ease-in-out infinite;
+      }
+      @keyframes auraShimmer {
+        to {
+          transform: translateX(100%);
+        }
+      }
+      .sk-t {
+        height: 12px;
+        border-radius: 6px;
+      }
+      .sk-h {
+        height: 24px;
+        border-radius: 8px;
+      }
+      .sk-o {
+        border-radius: 9999px;
+      }
+      .sk-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .sk-col {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .sk-card {
+        flex-shrink: 0;
+        border-radius: 16px;
+        background: rgb(255 255 255 / 0.6);
+        border: 1px solid rgb(229 223 213);
+        padding: 12px;
+      }
+      .sk-f1 {
+        flex: 1;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sk::after {
+          animation: none;
+          display: none;
+        }
+        .aura-boot {
+          transition: none;
+        }
+        html:active-view-transition-type(aura-tab)::view-transition-old(root),
+        html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+          animation: none !important;
+        }
+      }
+    </style>
+    <!-- Hold the first paint until the skeleton below is in the document. -->
+    <link rel="expect" href="#aura-boot-ready" blocking="render" />
+    <script id="aura-tab-transition-head">
+      (function () {
+        var KEY = "aura-drawer-nav";
+        var arriving = false;
+        try {
+          arriving = !!sessionStorage.getItem(KEY);
+          sessionStorage.removeItem(KEY);
+        } catch (e) {}
+        window.__auraTabArriving = arriving;
+        window.__auraTabLeaving = false;
+
+        // Only a drawer hop uses the transition; every other link behaves as before.
+        window.addEventListener("pagereveal", function (e) {
+          // A prerendered page ran the lines above before the hop, so read the
+          // flag again now that it is being shown.
+          if (!arriving) {
+            try {
+              if (sessionStorage.getItem(KEY)) {
+                sessionStorage.removeItem(KEY);
+                arriving = window.__auraTabArriving = true;
+                if (window.__auraShowBoot) window.__auraShowBoot();
+              }
+            } catch (err) {}
+          }
+          if (!e.viewTransition) return;
+          if (arriving) e.viewTransition.types.add("aura-tab");
+          else if (false) e.viewTransition.skipTransition();
+        });
+
+        // Outgoing page: pin its top bar so it stays put across the hop.
+        window.addEventListener("pageswap", function (e) {
+          if (!e.viewTransition || !window.__auraTabLeaving) return;
+          e.viewTransition.types.add("aura-tab");
+          var bar =
+            document.querySelector(".app-viewport > header") ||
+            document.querySelector("#root header");
+          if (bar) bar.style.viewTransitionName = "aura-topbar";
+        });
+      })();
+    </script>
+    <!-- aura-tab-transition:end -->
   </head>
   <body>
+    <!-- aura-tab-transition:start -->
+    <template id="aura-boot-template"
+      ><div class="aura-boot">
+        <div class="aura-boot-vp">
+          <div
+            style="
+              display: flex;
+              position: relative;
+              top: 0px;
+              left: 0px;
+              right: 0px;
+              bottom: 0px;
+              flex-direction: row;
+              flex-shrink: 0;
+              align-items: center;
+              justify-content: space-between;
+              padding-top: 16px;
+              padding-right: 24px;
+              padding-bottom: 12px;
+              padding-left: 24px;
+              background-color: rgb(243, 239, 231);
+              color: rgb(30, 27, 46);
+              font-family:
+                &quot;DM Sans&quot;,
+                -apple-system,
+                BlinkMacSystemFont,
+                &quot;Segoe UI&quot;,
+                sans-serif;
+              font-size: 16px;
+              font-weight: 400;
+              line-height: 24px;
+              letter-spacing: normal;
+              z-index: 40;
+              box-sizing: border-box;
+              width: 100%;
+              height: 68px;
+            "
+            class="aura-boot-top"
+          >
+            <span
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: normal;
+                gap: 6px;
+                margin-left: -4px;
+                color: rgb(30, 27, 46);
+                font-family:
+                  &quot;DM Sans&quot;,
+                  -apple-system,
+                  BlinkMacSystemFont,
+                  &quot;Segoe UI&quot;,
+                  sans-serif;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 24px;
+                letter-spacing: normal;
+                box-sizing: border-box;
+              "
+              ><span
+                style="
+                  display: block;
+                  flex-direction: row;
+                  align-items: normal;
+                  justify-content: normal;
+                  color: rgb(30, 27, 46);
+                  font-family:
+                    &quot;DM Sans&quot;,
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    &quot;Segoe UI&quot;,
+                    sans-serif;
+                  font-size: 16px;
+                  font-weight: 400;
+                  line-height: 24px;
+                  letter-spacing: normal;
+                  text-align: left;
+                  box-sizing: border-box;
+                "
+                ><span
+                  style="
+                    display: block;
+                    flex-direction: row;
+                    align-items: normal;
+                    justify-content: normal;
+                    min-width: 0px;
+                    color: rgb(30, 27, 46);
+                    font-family:
+                      &quot;Instrument Serif&quot;, &quot;Iowan Old Style&quot;, Georgia, serif;
+                    font-size: 30px;
+                    font-weight: 400;
+                    line-height: 34px;
+                    letter-spacing: -0.6px;
+                    text-align: left;
+                    box-sizing: border-box;
+                  "
+                  >Aura</span
+                ></span
+              ></span
+            ><span
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                margin-right: -4px;
+                border-radius: 9999px;
+                color: rgb(30, 27, 46);
+                font-family:
+                  &quot;DM Sans&quot;,
+                  -apple-system,
+                  BlinkMacSystemFont,
+                  &quot;Segoe UI&quot;,
+                  sans-serif;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 24px;
+                letter-spacing: normal;
+                text-align: center;
+                box-sizing: border-box;
+                width: 40px;
+                height: 40px;
+                flex-shrink: 0;
+              "
+              ><svg
+                width="22"
+                height="15"
+                viewBox="0 0 22 15"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                style="
+                  display: block;
+                  flex-direction: row;
+                  align-items: normal;
+                  justify-content: normal;
+                  color: rgb(30, 27, 46);
+                  font-family:
+                    &quot;DM Sans&quot;,
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    &quot;Segoe UI&quot;,
+                    sans-serif;
+                  font-size: 16px;
+                  font-weight: 400;
+                  line-height: 24px;
+                  letter-spacing: normal;
+                  overflow: hidden;
+                  text-align: center;
+                  box-sizing: border-box;
+                  width: 22px;
+                  height: 15px;
+                  flex-shrink: 0;
+                "
+                aria-hidden="true"
+              >
+                <line x1="2" y1="2" x2="20" y2="2"></line>
+                <line x1="2" y1="7.5" x2="20" y2="7.5"></line>
+                <line x1="2" y1="13" x2="20" y2="13"></line></svg
+            ></span>
+          </div>
+          <div class="aura-boot-body">
+            <div class="sk-row" style="gap: 16px">
+              <div class="sk-col sk-f1" style="gap: 10px">
+                <div class="sk sk-h" style="width: 80%; height: 30px"></div>
+                <div class="sk sk-h" style="width: 62%; height: 30px"></div>
+                <div class="sk sk-t" style="width: 70%; height: 12px"></div>
+                <div class="sk sk-t" style="width: 50%; height: 12px"></div>
+                <div class="sk sk-t" style="width: 84px; height: 14px"></div>
+              </div>
+              <div class="sk" style="width: 150px; height: 196px; border-radius: 14px"></div>
+            </div>
+            <div class="sk-row" style="gap: 6px; justify-content: center">
+              <div class="sk sk-o" style="width: 22px; height: 4px"></div>
+              <div class="sk sk-o" style="width: 6px; height: 4px"></div>
+              <div class="sk sk-o" style="width: 6px; height: 4px"></div>
+              <div class="sk sk-o" style="width: 6px; height: 4px"></div>
+              <div class="sk sk-o" style="width: 6px; height: 4px"></div>
+            </div>
+            <div class="sk sk-t" style="width: 38%; height: 16px"></div>
+            <div class="sk-row" style="gap: 10px">
+              <div
+                class="sk"
+                style="flex: 1 1 0; min-width: 0; height: 64px; border-radius: 14px"
+              ></div>
+              <div
+                class="sk"
+                style="flex: 1 1 0; min-width: 0; height: 64px; border-radius: 14px"
+              ></div>
+            </div>
+            <div class="sk sk-t" style="width: 34%; height: 16px"></div>
+            <div class="sk-row" style="gap: 10px">
+              <div
+                class="sk"
+                style="flex: 1 1 0; min-width: 0; height: 132px; border-radius: 12px"
+              ></div>
+              <div
+                class="sk"
+                style="flex: 1 1 0; min-width: 0; height: 132px; border-radius: 12px"
+              ></div>
+              <div
+                class="sk"
+                style="flex: 1 1 0; min-width: 0; height: 132px; border-radius: 12px"
+              ></div>
+            </div>
+            <div style="flex: 1"></div>
+            <div class="sk sk-o" style="width: 100%; height: 52px"></div>
+            <div style="height: 18px"></div>
+          </div>
+        </div></div
+    ></template>
+    <script id="aura-tab-transition">
+      (function () {
+        var KEY = "aura-drawer-nav";
+        var reduce =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var arriving = !!window.__auraTabArriving;
+
+        // Incoming page: show the top bar and a skeleton until React has painted.
+        var booted = false;
+        function showBoot() {
+          var tpl = document.getElementById("aura-boot-template");
+          // A prerendered page may already be on screen; it needs no skeleton.
+          if (booted || !tpl || !tpl.content.firstElementChild) return;
+          if (document.querySelector("#root header")) return;
+          booted = true;
+          var boot = tpl.content.firstElementChild.cloneNode(true);
+          boot.setAttribute("aria-hidden", "true");
+          document.body.insertBefore(boot, document.body.firstChild);
+          // #root is parsed after this script, so look it up when needed.
+          var started = Date.now();
+          var finish = function () {
+            if (boot.classList.contains("is-done")) return;
+            boot.classList.add("is-done");
+            setTimeout(
+              function () {
+                boot.remove();
+              },
+              reduce ? 0 : 360
+            );
+          };
+          var whenPainted = function () {
+            // Hold for the images the reader sees first, but never long.
+            var imgs = Array.prototype.filter.call(
+              document.querySelectorAll("#root img"),
+              function (img) {
+                var r = img.getBoundingClientRect();
+                return !img.complete && r.top < window.innerHeight && r.width > 40;
+              }
+            );
+            var left = imgs.length;
+            var cap = Math.max(250, 1200 - (Date.now() - started));
+            var t = setTimeout(finish, cap);
+            var one = function () {
+              if (--left <= 0) {
+                clearTimeout(t);
+                setTimeout(finish, 60);
+              }
+            };
+            if (!left) {
+              clearTimeout(t);
+              setTimeout(finish, 120);
+              return;
+            }
+            imgs.forEach(function (img) {
+              img.addEventListener("load", one, { once: true });
+              img.addEventListener("error", one, { once: true });
+            });
+          };
+          var ready = function () {
+            return document.querySelector("#root header");
+          };
+          if (ready()) whenPainted();
+          else if (window.MutationObserver) {
+            var mo = new MutationObserver(function () {
+              if (!ready()) return;
+              mo.disconnect();
+              setTimeout(whenPainted, 30);
+            });
+            mo.observe(document.documentElement, { childList: true, subtree: true });
+          }
+          setTimeout(finish, 6000); // never strand the skeleton
+        }
+        window.__auraShowBoot = showBoot;
+        if (arriving) showBoot();
+
+        // Start building the next tab's page as soon as a finger or pointer
+        // lands on it, so it is often ready before the drawer has left.
+        var speculated = {};
+        var canPrerender =
+          window.HTMLScriptElement &&
+          HTMLScriptElement.supports &&
+          HTMLScriptElement.supports("speculationrules");
+        function warm(e) {
+          if (!canPrerender) return;
+          var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+          if (!link || !link.closest(".drawer-slide-in")) return;
+          if (link.getAttribute("aria-current") === "page" || speculated[link.href]) return;
+          speculated[link.href] = true;
+          var rules = document.createElement("script");
+          rules.type = "speculationrules";
+          rules.textContent = JSON.stringify({
+            prerender: [{ source: "list", urls: [link.href] }],
+          });
+          document.head.appendChild(rules);
+        }
+        ["pointerover", "pointerdown", "touchstart", "focusin"].forEach(function (type) {
+          document.addEventListener(type, warm, { capture: true, passive: true });
+        });
+
+        // Drawer tabs: slide the drawer out, then open the tab's page.
+        var leaving = false;
+        document.addEventListener(
+          "click",
+          function (e) {
+            if (
+              e.defaultPrevented ||
+              e.button !== 0 ||
+              e.metaKey ||
+              e.ctrlKey ||
+              e.shiftKey ||
+              e.altKey
+            )
+              return;
+            var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+            if (!link) return;
+            var drawer = link.closest(".drawer-slide-in");
+            if (!drawer) return;
+            e.preventDefault();
+            if (leaving) return;
+            var close = drawer.querySelector('[aria-label="Close navigation menu"]');
+            if (close) close.click();
+            if (link.getAttribute("aria-current") === "page") return;
+            leaving = true;
+            var href = link.href;
+            var gone = false;
+            var go = function () {
+              if (gone) return;
+              gone = true;
+              try {
+                sessionStorage.setItem(KEY, "1");
+              } catch (err) {}
+              window.__auraTabLeaving = true;
+              window.location.href = href;
+            };
+            if (reduce) return go();
+            // Leave once the drawer has slid out: its slide ends, or the
+            // overlay unmounts it, whichever comes first.
+            drawer.addEventListener("animationend", function (ev) {
+              if (ev.target === drawer && /Out/.test(ev.animationName)) go();
+            });
+            (function watch() {
+              if (gone) return;
+              if (!drawer.isConnected) return go();
+              requestAnimationFrame(watch);
+            })();
+            setTimeout(go, 420);
+          },
+          true
+        );
+        window.addEventListener("pageshow", function () {
+          leaving = false;
+          window.__auraTabLeaving = false;
+        });
+      })();
+    </script>
+    <span id="aura-boot-ready" hidden></span>
+    <!-- aura-tab-transition:end -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -1950,264 +2907,657 @@
         );
       }
 
-      /* A rail showcasing coordinated bespoke family commissions. Tapping a card
-         opens the dedicated slider modal showing garments for every member. */
-      /* Slider modal with carousel of garments for each family member, dynamically
-         updating details below, and prominent collection theme mention. */
-      function FamilyCollectionModal({ collection, activeCountry, onClose, onCommission }) {
-        const [memberIdx, setMemberIdx] = useState(0);
-        const dragRef = useRef(null);
-        const count = collection.members.length;
-        const member = collection.members[memberIdx] || collection.members[0];
+      /* Full-screen expanded photo carousel for family collections.
+         Shows all member garments in high resolution with horizontal swipe/scroll,
+         next/prev arrows, dot indicators, thumbnail scrubber, and keyboard navigation. */
+      function FamilyExpandedCarousel({
+        collection,
+        members,
+        initialIndex = 0,
+        activeCountry,
+        onClose,
+        onCommission,
+        isBodyPortal = false,
+      }) {
+        const [currentIndex, setCurrentIndex] = useState(initialIndex);
+        const trackRef = useRef(null);
+        const thumbsRef = useRef(null);
+        const count = members.length;
+        const activeMember = members[currentIndex] || members[0];
 
-        const next = () => setMemberIdx((i) => (i + 1) % count);
-        const prev = () => setMemberIdx((i) => (i - 1 + count) % count);
+        const prefersReducedMotion = () =>
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-        // Keyboard support
+        // Position to initialIndex on mount
         useEffect(() => {
-          const handleKey = (e) => {
-            if (e.key === "Escape") onClose();
-            else if (e.key === "ArrowRight") next();
-            else if (e.key === "ArrowLeft") prev();
-          };
-          window.addEventListener("keydown", handleKey);
-          return () => window.removeEventListener("keydown", handleKey);
-        }, [count]);
+          const el = trackRef.current;
+          if (!el) return;
+          requestAnimationFrame(() => {
+            const child = el.children[initialIndex];
+            if (child) {
+              el.scrollLeft = child.offsetLeft - el.offsetLeft;
+            }
+          });
+        }, [initialIndex]);
 
-        // Pointer swipe support for carousel
-        const onPointerDown = (e) => {
-          dragRef.current = { x: e.clientX, y: e.clientY };
-        };
-        const onPointerUp = (e) => {
-          if (!dragRef.current) return;
-          const dx = e.clientX - dragRef.current.x;
-          const dy = e.clientY - dragRef.current.y;
-          dragRef.current = null;
-          if (Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) {
-            if (dx < 0) next();
-            else prev();
+        // Sync currentIndex as user scrolls
+        const onScroll = () => {
+          const el = trackRef.current;
+          if (!el || !el.clientWidth) return;
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== currentIndex && i >= 0 && i < count) {
+            setCurrentIndex(i);
           }
         };
 
+        const goToSlide = (i) => {
+          const el = trackRef.current;
+          if (!el) return;
+          const clamped = Math.max(0, Math.min(count - 1, i));
+          const child = el.children[clamped];
+          if (!child) return;
+          setCurrentIndex(clamped);
+          const targetLeft =
+            typeof child.offsetLeft === "number"
+              ? child.offsetLeft - el.offsetLeft
+              : clamped * el.clientWidth;
+          el.scrollTo({
+            left: targetLeft,
+            behavior: prefersReducedMotion() ? "auto" : "smooth",
+          });
+        };
+
+        // Keep active thumbnail in view in the bottom scrubber
+        useEffect(() => {
+          const col = thumbsRef.current;
+          const t = col && col.children[currentIndex];
+          if (t && typeof t.scrollIntoView === "function") {
+            t.scrollIntoView({
+              block: "nearest",
+              inline: "nearest",
+              behavior: prefersReducedMotion() ? "auto" : "smooth",
+            });
+          }
+        }, [currentIndex]);
+
+        // Keyboard navigation (ArrowLeft, ArrowRight, Escape)
+        useEffect(() => {
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose(currentIndex);
+            } else if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              goToSlide(Math.max(0, currentIndex - 1));
+            } else if (e.key === "ArrowRight") {
+              e.preventDefault();
+              goToSlide(Math.min(count - 1, currentIndex + 1));
+            }
+          };
+          window.addEventListener("keydown", onKey, true);
+          return () => window.removeEventListener("keydown", onKey, true);
+        }, [currentIndex, count]);
+
+        const who = (activeMember.role || "").split(" / ")[0].toLowerCase();
+
         return (
-          <div className="bg-card w-full rounded-t-3xl px-5 pb-8 border-t border-hairline shadow-2xl aura-sheet-up max-h-[88vh] overflow-y-auto overscroll-contain">
-            {/* Sticky Sheet Drag Handle & Header */}
-            <div className="sticky top-0 bg-card z-20 pt-3.5 pb-2.5 border-b border-hairline -mx-5 px-5">
-              <div className="w-10 h-1 rounded-full bg-hairline mx-auto mb-3" aria-hidden="true" />
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="font-mono text-[9.5px] uppercase tracking-wider text-primary font-semibold block">
-                    Bespoke Family Collection
+          <div
+            className={`${isBodyPortal ? "fixed" : "absolute"} inset-0 z-[70] flex flex-col aura-fade-in select-none`}
+            style={{
+              backgroundColor: "rgb(var(--ink-rgb) / 0.96)",
+              backdropFilter: "blur(12px)",
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${collection.title} — Expanded Photo Carousel`}
+          >
+            {/* Top Bar: Collection Title, Active Role & Counter, Close Button */}
+            <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10 z-30">
+              <div className="min-w-0 pr-3">
+                <span className="block font-mono text-[10.5px] uppercase tracking-[0.14em] text-gold font-medium truncate">
+                  {collection.title}
+                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="font-editorial text-[16px] text-white tracking-wide truncate">
+                    {activeMember.role}
                   </span>
-                  <h2
-                    id="family-modal-title"
-                    className="text-[20px] font-serif font-medium text-ink leading-tight mt-0.5"
-                  >
-                    {collection.title}
-                  </h2>
-                  <p className="text-[11px] text-muted mt-0.5">
-                    {collection.subtitle} · Landed to {activeCountry.code}
-                  </p>
+                  <span className="font-mono text-[11px] text-white/50 tracking-wider shrink-0">
+                    {currentIndex + 1} / {count}
+                  </span>
                 </div>
+              </div>
+
+              <button
+                type="button"
+                autoFocus
+                onClick={() => onClose(currentIndex)}
+                aria-label="Close expanded view"
+                className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all shrink-0 cursor-pointer"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Middle: Horizontal Carousel Track + Nav Chevrons */}
+            <div className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+              {/* Previous Slide Button */}
+              {currentIndex > 0 && (
                 <button
                   type="button"
-                  onClick={onClose}
-                  aria-label="Close collection sheet"
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-inset active:scale-95 transition-all -mr-1"
+                  onClick={() => goToSlide(currentIndex - 1)}
+                  aria-label="Previous photo"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-black/50 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md shadow-lg active:scale-90 transition-all cursor-pointer"
                 >
                   <svg
-                    width="18"
-                    height="18"
+                    width="22"
+                    height="22"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.2"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
+                    <path d="m15 18-6-6 6-6" />
                   </svg>
                 </button>
+              )}
+
+              {/* Next Slide Button */}
+              {currentIndex < count - 1 && (
+                <button
+                  type="button"
+                  onClick={() => goToSlide(currentIndex + 1)}
+                  aria-label="Next photo"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full flex items-center justify-center bg-black/50 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md shadow-lg active:scale-90 transition-all cursor-pointer"
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Swipeable / Scrollable Carousel Track */}
+              <div
+                ref={trackRef}
+                onScroll={onScroll}
+                className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar touch-pan-x"
+                role="region"
+                aria-label="Expanded gallery images"
+              >
+                {members.map((m) => (
+                  <div
+                    key={m.id}
+                    className="w-full h-full shrink-0 snap-center flex items-center justify-center p-3 relative"
+                  >
+                    <div className="relative w-full h-full max-h-[60vh] flex items-center justify-center">
+                      <img
+                        src={m.image}
+                        alt={`${m.role} — ${m.garment}`}
+                        className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl select-none"
+                        draggable="false"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Collection Theme Callout */}
-            <div className="mt-3.5 p-3.5 rounded-2xl bg-inset border border-gold/40">
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="w-2 h-2 rounded-full bg-gold" />
-                <span className="font-mono text-[10px] uppercase tracking-wider text-goldtext font-semibold">
-                  Theme of the Collection
-                </span>
-              </div>
-              <p className="text-[12.5px] text-ink leading-relaxed font-serif italic">
-                "{collection.theme}"
-              </p>
-            </div>
-
-            {/* Member Switcher Tabs */}
-            <div className="mt-3.5">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-muted font-semibold">
-                  Garments by Member
-                </span>
-                <span className="font-mono text-[10.5px] text-primary font-medium">
-                  {member.role} · {memberIdx + 1} of {count}
-                </span>
-              </div>
-              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1" role="tablist">
-                {collection.members.map((m, idx) => (
+            {/* Bottom Scrubber Panel: Dots, Garment details, Thumbnails, Action */}
+            <div className="shrink-0 flex flex-col items-center px-4 pt-2 pb-5 z-30 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+              {/* Dot Indicators */}
+              <div className="flex items-center justify-center gap-1.5 mb-2" aria-hidden="true">
+                {members.map((m, i) => (
                   <button
                     key={m.id}
                     type="button"
-                    role="tab"
-                    aria-selected={memberIdx === idx}
-                    onClick={() => setMemberIdx(idx)}
-                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-[11.5px] font-medium transition-all ${
-                      memberIdx === idx
-                        ? "bg-primary text-onprimary shadow-sm"
-                        : "bg-inset text-muted hover:text-ink hover:bg-inset/80 border border-hairline"
-                    }`}
+                    onClick={() => goToSlide(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    className="p-1 cursor-pointer"
                   >
-                    {m.role}
+                    <span
+                      className={`block rounded-full transition-all ${
+                        i === currentIndex
+                          ? "w-6 h-1.5 bg-gold"
+                          : "w-1.5 h-1.5 bg-white/35 hover:bg-white/60"
+                      }`}
+                    />
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Garment Image Slider Carousel */}
-            <div
-              className="relative mt-3 w-full h-[320px] sm:h-[360px] rounded-2xl overflow-hidden bg-inset border border-hairline shadow-inner select-none touch-pan-y"
-              onPointerDown={onPointerDown}
-              onPointerUp={onPointerUp}
-            >
-              <img
-                key={member.id}
-                src={member.image}
-                alt={`${member.role} — ${member.garment}`}
-                className="w-full h-full object-cover object-top transition-opacity duration-300"
-              />
-
-              {/* Member Tag Pill Overlay */}
-              <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-[2px] text-white font-mono text-[10px] uppercase tracking-wider shadow-sm">
-                {member.role}
+              {/* Garment Title and Craft */}
+              <div className="text-center max-w-[360px] px-2">
+                <h3 className="font-editorial text-[17px] sm:text-[19px] text-white leading-snug tracking-wide truncate">
+                  {activeMember.garment}
+                </h3>
+                <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-white/65 mt-0.5 truncate">
+                  {activeMember.craft}
+                </p>
               </div>
 
-              {/* Garment Counter Pill Overlay */}
-              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-[2px] text-white font-mono text-[10px] uppercase tracking-wider shadow-sm">
-                {memberIdx + 1} / {count}
-              </div>
-
-              {/* Left / Right Carousel Controls */}
-              <button
-                type="button"
-                onClick={prev}
-                aria-label="Previous family member garment"
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/55 backdrop-blur-[2px] text-white flex items-center justify-center hover:bg-black/80 active:scale-90 transition-all shadow-md"
+              {/* Thumbnails scrubber rail to scroll and pick any photo */}
+              <div
+                ref={thumbsRef}
+                className="flex items-center justify-center gap-2.5 mt-3 overflow-x-auto max-w-full no-scrollbar px-1 py-1"
+                role="group"
+                aria-label="Select an image from the collection"
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={next}
-                aria-label="Next family member garment"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/55 backdrop-blur-[2px] text-white flex items-center justify-center hover:bg-black/80 active:scale-90 transition-all shadow-md"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-
-              {/* Dot Indicators */}
-              <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 pointer-events-none">
-                {collection.members.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === memberIdx ? "w-5 bg-white shadow-sm" : "w-1.5 bg-white/50"
+                {members.map((m, idx) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => goToSlide(idx)}
+                    aria-label={`Show ${m.role}`}
+                    aria-current={idx === currentIndex}
+                    className={`relative shrink-0 w-12 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                      idx === currentIndex
+                        ? "border-gold ring-2 ring-gold/40 scale-105 opacity-100 shadow-md"
+                        : "border-white/20 opacity-50 hover:opacity-85 hover:border-white/50"
                     }`}
-                  />
+                  >
+                    <img
+                      src={m.image}
+                      alt=""
+                      className="w-full h-full object-cover object-top select-none"
+                    />
+                  </button>
                 ))}
               </div>
+
+              {/* Inquire / Details button */}
+              {onCommission && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose(currentIndex);
+                    onCommission(collection, activeMember);
+                  }}
+                  className="mt-3 min-h-[38px] px-4 py-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white text-[12.5px] font-medium flex items-center gap-2 transition-all cursor-pointer border border-white/20"
+                >
+                  Ask about the {who}&rsquo;s piece ({activeCountry.symbol}
+                  {activeMember.price})
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      /* A rail showcasing coordinated bespoke family commissions. Tapping a card
+         opens this sheet. It follows the single-piece detail sheet: a swipeable
+         gallery (one frame per family member) with thumbnails beside it, the
+         name and craft line, the spec as rows, and the price pinned below. */
+      function FamilyCollectionModal({ collection, activeCountry, onClose, onCommission }) {
+        const trackRef = useRef(null);
+        const thumbsRef = useRef(null);
+        const [slide, setSlide] = useState(0);
+        const members = collection.members;
+        const count = members.length;
+        const member = members[slide] || members[0];
+
+        const reduced = () =>
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // Derive the active member from scroll position so a swipe, the
+        // thumbnails and the dots always agree about who is showing.
+        const onScroll = () => {
+          const el = trackRef.current;
+          if (!el) return;
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== slide) setSlide(Math.max(0, Math.min(count - 1, i)));
+        };
+
+        const goTo = (i) => {
+          const el = trackRef.current;
+          const child = el && el.children[i];
+          if (!el || !child) return;
+          setSlide(i);
+          el.scrollTo({
+            left: child.offsetLeft - el.offsetLeft,
+            behavior: reduced() ? "auto" : "smooth",
+          });
+        };
+
+        // Keep the chosen thumbnail in view by scrolling the thumbnail column
+        // only. scrollIntoView would also scroll the app viewport while the
+        // sheet is still sliding in from off-screen, which made it jump up
+        // past its resting place and sink back down.
+        useEffect(() => {
+          const col = thumbsRef.current;
+          const t = col && col.children[slide];
+          if (!t) return;
+          const top = t.getBoundingClientRect().top - col.getBoundingClientRect().top + col.scrollTop;
+          const bottom = top + t.offsetHeight;
+          let next = null;
+          if (top < col.scrollTop) next = top;
+          else if (bottom > col.scrollTop + col.clientHeight) next = bottom - col.clientHeight;
+          if (next !== null) col.scrollTo({ top: next, behavior: reduced() ? "auto" : "smooth" });
+        }, [slide]);
+
+        const rows = [
+          { k: "Craft", v: member.craft },
+          { k: "Fabric", v: member.fabric },
+          { k: "Details", v: member.details },
+          { k: "This piece", v: activeCountry.symbol + member.price },
+        ].filter((r) => r.v);
+
+        // Full-screen photo carousel, opened from full view button or image click.
+        const [enlargedIndex, setEnlargedIndex] = useState(null);
+        const [viewportEl, setViewportEl] = useState(null);
+
+        useEffect(() => {
+          setViewportEl(document.querySelector(".app-viewport") || document.body);
+        }, []);
+
+        const closeEnlarged = (finalIndex) => {
+          if (typeof finalIndex === "number") {
+            goTo(finalIndex);
+          }
+          setEnlargedIndex(null);
+        };
+
+        // "Mother / Bride" → "mother"
+        const who = member.role.split(" / ")[0].toLowerCase();
+
+        return (
+          <div
+            className="relative w-full bg-canvas rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden aura-sheet-up"
+            style={{ height: "calc(100% - 135px)" }}
+          >
+            {/* Grabber + close */}
+            <div className="relative shrink-0 pt-3 pb-3">
+              <span className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={`Close ${collection.title}`}
+                className="absolute top-1.5 right-3 w-11 h-11 rounded-full flex items-center justify-center bg-hairline/70 text-ink hover:bg-hairline active:scale-95 transition-all z-10"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
             </div>
 
-            {/* Dynamic Garment Details Below (updates dynamically per member) */}
-            <div className="mt-3.5 p-3.5 rounded-2xl bg-inset/60 border border-hairline space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="font-mono text-[9.5px] uppercase tracking-wider text-muted font-semibold block">
-                    {member.role}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar">
+              {/* Gallery: one frame per member, every member as a thumbnail beside it */}
+              <div className="flex gap-3 px-5 pt-5">
+                <div
+                  ref={trackRef}
+                  onScroll={onScroll}
+                  className="flex-1 min-w-0 flex overflow-x-auto snap-x snap-mandatory no-scrollbar rounded-2xl"
+                  role="group"
+                  aria-label={`${collection.title} garments, one per family member`}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      goTo(Math.min(count - 1, slide + 1));
+                    } else if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      goTo(Math.max(0, slide - 1));
+                    }
+                  }}
+                >
+                  {members.map((m, i) => (
+                    <div key={m.id} className="snap-center shrink-0 w-full">
+                      <div className="relative w-full h-[258px] rounded-2xl overflow-hidden bg-inset border border-hairline group">
+                        <img
+                          src={m.image}
+                          alt={`${m.role} — ${m.garment}`}
+                          className="w-full h-full object-cover object-top select-none cursor-pointer"
+                          draggable="false"
+                          decoding="async"
+                          onClick={() => setEnlargedIndex(i)}
+                          title="Click to view full image carousel"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEnlargedIndex(i)}
+                          aria-label={`Full view: ${m.role}`}
+                          title="Full view: browse all photos in expanded carousel"
+                          className="absolute bottom-3 left-3 min-h-[36px] flex items-center gap-2 text-[13px] text-white px-3 rounded-xl border border-white/40 hover:bg-ink/70 active:scale-95 transition-all cursor-pointer shadow-md"
+                          style={{
+                            background: "rgb(var(--ink-rgb) / 0.55)",
+                            backdropFilter: "blur(6px)",
+                          }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                          </svg>
+                          {m.role}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  ref={thumbsRef}
+                  className="shrink-0 w-[60px] h-[258px] flex flex-col gap-2 overflow-y-auto no-scrollbar"
+                  role="group"
+                  aria-label="Choose a family member"
+                >
+                  {members.map((m, i) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => goTo(i)}
+                      aria-label={`Show ${m.role}: ${m.garment}`}
+                      aria-current={i === slide}
+                      className={`relative shrink-0 w-full h-[80px] rounded-xl overflow-hidden bg-inset border-2 transition-colors ${
+                        i === slide ? "border-primary" : "border-transparent hover:border-hairline"
+                      }`}
+                    >
+                      <img
+                        src={m.image}
+                        alt=""
+                        decoding="async"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dots */}
+              <div className="flex items-center justify-center mt-2" aria-hidden="true">
+                {members.map((m, i) => (
+                  <span key={m.id} className="w-7 h-8 flex items-center justify-center">
+                    <span
+                      className={`block rounded-full transition-all ${
+                        i === slide ? "w-5 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-ctrl/35"
+                      }`}
+                    />
                   </span>
-                  <h3 className="text-[15.5px] font-medium text-ink leading-snug">
+                ))}
+              </div>
+
+              {/* Details */}
+              <div className="px-5 pb-6">
+                <h2
+                  id="family-modal-title"
+                  className="font-editorial text-[28px] text-ink leading-none mt-2"
+                >
+                  {collection.title}
+                </h2>
+                <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-goldtext mt-2.5">
+                  {collection.subtitle}
+                </p>
+                {/* The member in the frame above; swiping changes this block. */}
+                <div className="mt-6" aria-live="polite">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+                    {member.role} · {slide + 1} of {count}
+                  </p>
+                  <h3 className="text-[16px] font-medium text-ink leading-[1.725] mt-1.5">
                     {member.garment}
                   </h3>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="font-mono text-[15px] font-semibold text-primary block">
-                    {activeCountry.symbol}
-                    {member.price}
-                  </span>
-                  <span className="text-[10px] font-mono text-muted">Landed</span>
-                </div>
-              </div>
 
-              <div className="text-[12px] text-muted pt-2 border-t border-hairline/60 space-y-1.5">
-                <div className="flex gap-1.5">
-                  <span className="font-semibold text-ink shrink-0">Craft:</span>
-                  <span>{member.craft}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="font-semibold text-ink shrink-0">Fabric:</span>
-                  <span>{member.fabric}</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="font-semibold text-ink shrink-0">Details:</span>
-                  <span>{member.details}</span>
-                </div>
+                <dl className="mt-4 border-t border-hairline">
+                  {rows.map((r) => (
+                    <div
+                      key={r.k}
+                      className="flex items-baseline justify-between gap-4 py-3 border-b border-hairline"
+                    >
+                      <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted shrink-0">
+                        {r.k}
+                      </dt>
+                      <dd className="text-[14px] text-ink text-right m-0">{r.v}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <button
+                  type="button"
+                  onClick={() => onCommission(collection, member)}
+                  className="mt-3 min-h-[44px] flex items-center gap-2 text-[14px] font-medium text-primary hover:text-ink transition-colors"
+                >
+                  Ask about the {who}&rsquo;s piece
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+
+                <p className="text-[12px] text-muted leading-relaxed mt-4">
+                  Every piece is cut from one warp and one dye lot, and measured together. Nothing
+                  is added at checkout. You approve photographs of the finished garments before they
+                  are dispatched, and alterations are covered under the Perfect Fit Guarantee.
+                </p>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="mt-4 pb-4 flex flex-col gap-2">
+            {/* Set price stays put while everything above it scrolls. */}
+            <div className="shrink-0 border-t border-hairline bg-canvas pl-10 pr-5 pt-4 pb-6 flex items-center justify-between gap-6">
+              <div className="min-w-0">
+                <span className="block font-editorial text-[36px] tracking-[0.055em] text-ink leading-[38px] whitespace-nowrap">
+                  {activeCountry.symbol}
+                  {collection.from}
+                </span>
+              </div>
+
               <button
                 type="button"
                 onClick={() => onCommission(collection)}
-                className="w-full min-h-[48px] rounded-2xl bg-primary text-onprimary font-medium text-[13.5px] hover:bg-primary/90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="shrink-0 min-h-[52px] pl-6 pr-5 rounded-full bg-primary text-onprimary font-mono text-[15px] tracking-[0.04em] flex items-center gap-3 hover:bg-primary/90 active:scale-95 transition-all"
               >
-                <span>Commission Entire Family Set</span>
-                <span className="font-mono text-[11px] opacity-80">
-                  (From {activeCountry.symbol}
-                  {collection.from})
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onCommission(collection, member)}
-                className="w-full min-h-[42px] rounded-xl border border-hairline bg-card text-ink font-medium text-[12.5px] hover:bg-inset active:scale-[0.99] transition-all"
-              >
-                Discuss {member.role}'s Garment ({activeCountry.symbol}
-                {member.price})
+                See Fit
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
               </button>
             </div>
+
+            {/* Full-screen photo carousel */}
+            {enlargedIndex !== null &&
+              (viewportEl ? (
+                ReactDOM.createPortal(
+                  <FamilyExpandedCarousel
+                    collection={collection}
+                    members={members}
+                    initialIndex={enlargedIndex}
+                    activeCountry={activeCountry}
+                    onClose={closeEnlarged}
+                    onCommission={onCommission}
+                    isBodyPortal={viewportEl === document.body}
+                  />,
+                  viewportEl
+                )
+              ) : (
+                <FamilyExpandedCarousel
+                  collection={collection}
+                  members={members}
+                  initialIndex={enlargedIndex}
+                  activeCountry={activeCountry}
+                  onClose={closeEnlarged}
+                  onCommission={onCommission}
+                />
+              ))}
           </div>
         );
       }
@@ -2419,11 +3769,32 @@
         };
 
         return (
-          <div className="bg-canvas w-full rounded-t-[28px] px-6 pt-3 pb-8 shadow-2xl aura-sheet-up max-h-[92%] overflow-y-auto no-scrollbar">
-            <div className="w-10 h-1 rounded-full bg-ctrl/40 mx-auto mb-3" aria-hidden="true" />
+          <div className="relative bg-canvas w-full rounded-t-[28px] shadow-2xl aura-sheet-up max-h-[92%] overflow-hidden flex flex-col">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close the calendar"
+              className="absolute top-7 right-3 z-20 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
 
-            <div className="flex items-start justify-between">
-              <div className="pt-4">
+            <div className="relative shrink-0 z-10 bg-canvas px-6 pt-3 pb-4">
+              <div className="w-10 h-1 rounded-full bg-ctrl/40 mx-auto mb-3" aria-hidden="true" />
+              <div className="pt-4 pr-10">
                 <h2
                   id="calendar-sheet-title"
                   className="font-editorial text-[34px] font-normal text-ink leading-none"
@@ -2434,183 +3805,168 @@
                   Festivals and your own dates. Tap one to start the brief.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close the calendar"
-                className="shrink-0 -mr-3 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
+            </div>
+
+            <div className="px-6 pb-8 min-h-0 overflow-y-auto no-scrollbar">
+              <div
+                className="flex items-center gap-2.5 mt-5"
+                role="group"
+                aria-label="Calendar view"
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2.5 mt-5" role="group" aria-label="Calendar view">
-              {[
-                ["month", "Month"],
-                ["list", "List"],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={mode === id}
-                  onClick={() => setMode(id)}
-                  className={`min-h-[44px] px-6 rounded-full text-[15px] transition-colors ${
-                    mode === id
-                      ? "bg-primary text-onprimary"
-                      : "bg-inset text-ink border border-hairline hover:border-ctrl/60"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {mode === "month" ? (
-              <div className="mt-4">
-                <div className="flex items-center justify-between">
+                {[
+                  ["month", "Month"],
+                  ["list", "List"],
+                ].map(([id, label]) => (
                   <button
+                    key={id}
                     type="button"
-                    onClick={() => step(-1)}
-                    aria-label="Previous month"
-                    className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
+                    aria-pressed={mode === id}
+                    onClick={() => setMode(id)}
+                    className={`min-h-[44px] px-6 rounded-full text-[15px] transition-colors ${
+                      mode === id
+                        ? "bg-primary text-onprimary"
+                        : "bg-inset text-ink border border-hairline hover:border-ctrl/60"
+                    }`}
                   >
-                    <Chevron dir="left" size={20} />
+                    {label}
                   </button>
-                  <span className="font-editorial italic text-[24px] text-ink" aria-live="polite">
-                    {MONTH_NAMES[cursor.m]} {cursor.y}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => step(1)}
-                    aria-label="Next month"
-                    className="-mr-2 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
-                  >
-                    <Chevron size={20} />
-                  </button>
-                </div>
+                ))}
+              </div>
 
-                <div className="grid grid-cols-7 gap-1.5 mt-2" aria-hidden="true">
-                  {WEEKDAY_LABELS.map((w, i) => (
-                    <span
-                      key={i}
-                      className="py-1 text-center text-[11px] uppercase tracking-[0.06em] text-muted"
+              {mode === "month" ? (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => step(-1)}
+                      aria-label="Previous month"
+                      className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
                     >
-                      {w}
+                      <Chevron dir="left" size={20} />
+                    </button>
+                    <span className="font-editorial italic text-[24px] text-ink" aria-live="polite">
+                      {MONTH_NAMES[cursor.m]} {cursor.y}
                     </span>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => step(1)}
+                      aria-label="Next month"
+                      className="-mr-2 w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all"
+                    >
+                      <Chevron size={20} />
+                    </button>
+                  </div>
 
-                <div className="grid grid-cols-7 gap-x-1.5 gap-y-1 mt-1">
-                  {cells.map((c, i) => {
-                    if (c.out) {
+                  <div className="grid grid-cols-7 gap-1.5 mt-2" aria-hidden="true">
+                    {WEEKDAY_LABELS.map((w, i) => (
+                      <span
+                        key={i}
+                        className="py-1 text-center text-[11px] uppercase tracking-[0.06em] text-muted"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-x-1.5 gap-y-1 mt-1">
+                    {cells.map((c, i) => {
+                      if (c.out) {
+                        return (
+                          <span
+                            key={"out-" + i}
+                            aria-hidden="true"
+                            className="h-11 flex items-center justify-center font-read text-[16px] text-ink/25"
+                          >
+                            {c.d}
+                          </span>
+                        );
+                      }
+                      const d = c.d;
+                      const key = iso(d);
+                      const dayEvents = byDate[key];
+                      if (!dayEvents) {
+                        return (
+                          <span
+                            key={key}
+                            className={`h-11 flex items-center justify-center font-read text-[16px] ${
+                              isToday(d)
+                                ? "text-primary font-medium underline underline-offset-4 decoration-gold"
+                                : "text-ink"
+                            }`}
+                          >
+                            {d}
+                          </span>
+                        );
+                      }
+                      const on = selected === key;
+                      const tone = eventTone(dayEvents[0]);
                       return (
-                        <span
-                          key={"out-" + i}
-                          aria-hidden="true"
-                          className="h-11 flex items-center justify-center font-read text-[16px] text-ink/25"
-                        >
-                          {c.d}
-                        </span>
-                      );
-                    }
-                    const d = c.d;
-                    const key = iso(d);
-                    const dayEvents = byDate[key];
-                    if (!dayEvents) {
-                      return (
-                        <span
+                        <button
                           key={key}
-                          className={`h-11 flex items-center justify-center font-read text-[16px] ${
-                            isToday(d)
-                              ? "text-primary font-medium underline underline-offset-4 decoration-gold"
-                              : "text-ink"
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setSelected(key)}
+                          aria-label={
+                            d +
+                            " " +
+                            MONTH_NAMES[cursor.m] +
+                            " " +
+                            cursor.y +
+                            " — " +
+                            dayEvents.map((e) => e.name).join(", ")
+                          }
+                          className={`h-11 rounded-xl border flex flex-col items-center justify-center font-read text-[16px] leading-none transition-colors ${
+                            on
+                              ? "border-primary bg-primary text-onprimary"
+                              : `${tone.day} text-ink hover:border-primary/60`
                           }`}
                         >
                           {d}
-                        </span>
+                          <span
+                            className={`w-1 h-1 rounded-full mt-1 ${on ? "bg-onprimary" : tone.dot}`}
+                            aria-hidden="true"
+                          />
+                        </button>
                       );
-                    }
-                    const on = selected === key;
-                    const tone = eventTone(dayEvents[0]);
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setSelected(key)}
-                        aria-label={
-                          d +
-                          " " +
-                          MONTH_NAMES[cursor.m] +
-                          " " +
-                          cursor.y +
-                          " — " +
-                          dayEvents.map((e) => e.name).join(", ")
-                        }
-                        className={`h-11 rounded-xl border flex flex-col items-center justify-center font-read text-[16px] leading-none transition-colors ${
-                          on
-                            ? "border-primary bg-primary text-onprimary"
-                            : `${tone.day} text-ink hover:border-primary/60`
-                        }`}
-                      >
-                        {d}
-                        <span
-                          className={`w-1 h-1 rounded-full mt-1 ${on ? "bg-onprimary" : tone.dot}`}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
 
-                <div className="mt-4 pt-4 border-t border-hairline">
-                  {chosen.length ? (
-                    <>
-                      <div className="flex items-baseline justify-between mb-3">
-                        <h3 className="font-editorial text-[24px] font-normal text-ink leading-none">
-                          Events on {chosenDate.getDate()} {MONTH_NAMES[chosenDate.getMonth()]}
-                        </h3>
-                        <span className="text-[14px] text-muted">
-                          {chosen.length} {chosen.length === 1 ? "event" : "events"}
-                        </span>
-                      </div>
-                      <div className="space-y-2.5">
-                        {chosen.map((e) => (
-                          <EventCard key={e.id} event={e} onPick={onPick} />
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-[14px] text-muted py-2 m-0">
-                      Tap a marked day to see what falls on it.
-                    </p>
-                  )}
+                  <div className="mt-4 pt-4 border-t border-hairline">
+                    {chosen.length ? (
+                      <>
+                        <div className="flex items-baseline justify-between mb-3">
+                          <h3 className="font-editorial text-[24px] font-normal text-ink leading-none">
+                            Events on {chosenDate.getDate()} {MONTH_NAMES[chosenDate.getMonth()]}
+                          </h3>
+                          <span className="text-[14px] text-muted">
+                            {chosen.length} {chosen.length === 1 ? "event" : "events"}
+                          </span>
+                        </div>
+                        <div className="space-y-2.5">
+                          {chosen.map((e) => (
+                            <EventCard key={e.id} event={e} onPick={onPick} />
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[14px] text-muted py-2 m-0">
+                        Tap a marked day to see what falls on it.
+                      </p>
+                    )}
+                    <AddOwnDate onAdd={addDate} />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <div className="space-y-2.5">
+                    {events.map((e) => (
+                      <EventCard key={e.id} event={e} onPick={onPick} />
+                    ))}
+                  </div>
                   <AddOwnDate onAdd={addDate} />
                 </div>
-              </div>
-            ) : (
-              <div className="mt-4">
-                <div className="space-y-2.5">
-                  {events.map((e) => (
-                    <EventCard key={e.id} event={e} onPick={onPick} />
-                  ))}
-                </div>
-                <AddOwnDate onAdd={addDate} />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       }
@@ -3433,9 +4789,24 @@
         const [calendarSync] = useState(readCalendarSync);
         const [events, setEvents] = useState(upcomingEvents);
         const [calendarOpen, setCalendarOpen] = useState(false);
+        const [eventChatUrl, setEventChatUrl] = useState(null);
         const [openFamilyCollection, setOpenFamilyCollection] = useState(null);
+        const [sentPrompt, setSentPrompt] = useState(null);
+        const [sentPiece, setSentPiece] = useState(null);
 
         const inputRef = useRef(null);
+        const sendingRef = useRef(false);
+        useEffect(() => {
+          const resetSend = () => {
+            sendingRef.current = false;
+            setSentPrompt(null);
+            setSentPiece(null);
+            document.querySelector(".app-viewport")?.classList.remove("is-sending");
+            document.querySelector(".home-motion")?.classList.remove("is-sending");
+          };
+          window.addEventListener("pageshow", resetSend);
+          return () => window.removeEventListener("pageshow", resetSend);
+        }, []);
         const attachRef = useRef(null);
         const toastTimer = useRef(null);
         const micTimer = useRef(null);
@@ -3552,50 +4923,78 @@
 
         // Garments have no product page here. Tapping one hands the stylist
         // an opening line about that piece.
+        // Same hand-off as sending from the ask bar: the header and the bar
+        // stay put while the tapped photo and its opening line fly up to
+        // become the first message of the chat.
         const startGarmentChat = (g) => {
           const prompt = "Tell me about the " + g.name + " \u2014 " + g.craft + ".";
-          showToast("Opening your stylist conversation\u2026");
-          setTimeout(() => {
-            // The piece travels with the prompt so the chat can show what you
-            // tapped, and open its details when you tap it again.
-            window.location.href =
-              "conversation.html?prompt=" +
-              encodeURIComponent(prompt) +
-              "&piece=" +
-              encodeURIComponent(g.id) +
-              "&ship=" +
-              encodeURIComponent(activeCountry.code);
-          }, 400);
+          handleAsk(prompt, g);
         };
 
         // An event hands the stylist the date itself, so the thread opens on
         // what you are dressing for rather than on a garment.
         const startEventChat = (e) => {
-          showToast("Opening your stylist conversation\u2026");
-          setTimeout(() => {
-            window.location.href =
-              "conversation.html?prompt=" +
-              encodeURIComponent(e.prompt) +
-              "&ship=" +
-              encodeURIComponent(activeCountry.code);
-          }, 400);
+          setCalendarOpen(false);
+          const url =
+            "conversation.html?prompt=" +
+            encodeURIComponent(e.prompt) +
+            "&ship=" +
+            encodeURIComponent(activeCountry.code) +
+            "&embed=1&motion=send";
+          requestAnimationFrame(() => setEventChatUrl(url));
         };
 
-        const handleAsk = (text) => {
+        // `piece` is set when the message starts from a garment tile; it
+        // travels as the photo card above the prompt.
+        const handleAsk = (text, piece) => {
           const trimmed = (text || "").trim();
           if (!trimmed) {
             showToast("Tell Aura about your occasion first");
             if (inputRef.current) inputRef.current.focus();
             return;
           }
-          showToast("Opening your stylist conversation…");
-          setTimeout(() => {
-            window.location.href =
-              "conversation.html?prompt=" +
-              encodeURIComponent(trimmed) +
-              "&ship=" +
-              encodeURIComponent(activeCountry.code);
-          }, 500);
+          if (sendingRef.current) return;
+          sendingRef.current = true;
+          setToastMsg("");
+
+          // 1. Create flying chat bubble
+          setSentPrompt(trimmed);
+          setSentPiece(piece || null);
+
+          // 2. Collapse the input field immediately
+          setComposing(false);
+          setInputVal("");
+          if (inputRef.current) inputRef.current.blur();
+
+          // 3. Mark sending class on viewport
+          const viewport =
+            inputRef.current?.closest(".app-viewport") || document.querySelector(".app-viewport");
+          viewport?.classList.add("is-sending");
+
+          const destination =
+            "conversation.html?prompt=" +
+            encodeURIComponent(trimmed) +
+            (piece
+              ? "&piece=" +
+                encodeURIComponent(piece.id) +
+                "&name=" +
+                encodeURIComponent(piece.name || "") +
+                "&img=" +
+                encodeURIComponent(piece.image || "") +
+                "&craft=" +
+                encodeURIComponent(piece.craft || "")
+              : "") +
+            "&ship=" +
+            encodeURIComponent(activeCountry.code) +
+            "&motion=send";
+
+          // 4. Smooth flight transition to conversation view
+          setTimeout(
+            () => {
+              window.location.assign(destination);
+            },
+            prefersReducedMotion() ? 30 : 360
+          );
         };
 
         const loadPrompt = (prompt, label, chipId) => {
@@ -3642,119 +5041,206 @@
               </div>
             )}
 
-            <div className="app-viewport">
+            <div className={`app-viewport home-motion ${composing ? "is-composing" : ""}`}>
               <div className="canvas-wash" aria-hidden="true" />
+
+              {/* Sent chat bubble traveling to the chat view area */}
+              {sentPrompt && (
+                <div className="chat-send-flight-layer" aria-hidden="true">
+                  {sentPiece && sentPiece.image && (
+                    <div id="aura-flying-attachment" className="flying-sent-attachment">
+                      <img src={sentPiece.image} alt="" />
+                      <span>{sentPiece.name}</span>
+                    </div>
+                  )}
+                  <div id="aura-flying-bubble" className="flying-sent-bubble">
+                    {sentPrompt}
+                  </div>
+                </div>
+              )}
+
               {/* ---------- 1. Header (Aura / STYLIST DESK, AI Assistant pill, Hamburger) ---------- */}
-              {!composing && (
-                <header className="relative px-6 pt-4 pb-3 flex items-center justify-between z-20 shrink-0 bg-canvas">
-                  {/* Left: Brand Logo */}
-                  <div className="flex flex-col select-none">
+              <header className="relative px-6 pt-4 pb-3 flex items-center justify-between z-40 shrink-0 bg-canvas">
+                {/* Left: Back control in chat, brand control on Home. */}
+                <div className="flex items-center gap-1.5 select-none -ml-1">
+                  {eventChatUrl && (
                     <button
                       type="button"
-                      onClick={openHistory}
-                      className="text-left group cursor-pointer"
-                      aria-label="Aura Stylist Desk"
+                      onClick={() => setEventChatUrl(null)}
+                      aria-label="Back to Home"
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all shrink-0 cursor-pointer"
                     >
-                      <span className="font-editorial text-[30px] leading-[34px] tracking-[-0.02em] text-ink font-normal block group-hover:opacity-85 transition-opacity">
-                        Aura
-                      </span>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="m15 5-7 7 7 7" />
+                      </svg>
                     </button>
-                  </div>
-
-                  {/* Right: Clean 3-Line Hamburger Menu Button */}
+                  )}
                   <button
                     type="button"
-                    onClick={() => setDrawerOpen(true)}
-                    aria-label="Open navigation menu"
-                    aria-haspopup="dialog"
-                    aria-expanded={drawerOpen}
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all -mr-1 cursor-pointer"
+                    onClick={eventChatUrl ? () => setEventChatUrl(null) : openHistory}
+                    className="text-left group cursor-pointer"
+                    aria-label={eventChatUrl ? "Back to Home" : "Aura Stylist Desk"}
                   >
-                    <svg
-                      width="22"
-                      height="15"
-                      viewBox="0 0 22 15"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    >
-                      <line x1="2" y1="2" x2="20" y2="2" />
-                      <line x1="2" y1="7.5" x2="20" y2="7.5" />
-                      <line x1="2" y1="13" x2="20" y2="13" />
-                    </svg>
+                    <span className="font-editorial text-[30px] leading-[34px] tracking-[-0.02em] text-ink font-normal block group-hover:opacity-85 transition-opacity">
+                      Aura
+                    </span>
                   </button>
-                </header>
+                </div>
+
+                {/* Right: Clean 3-Line Hamburger Menu Button */}
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(true)}
+                  aria-label="Open navigation menu"
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerOpen}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all -mr-1 cursor-pointer"
+                >
+                  <svg
+                    width="22"
+                    height="15"
+                    viewBox="0 0 22 15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  >
+                    <line x1="2" y1="2" x2="20" y2="2" />
+                    <line x1="2" y1="7.5" x2="20" y2="7.5" />
+                    <line x1="2" y1="13" x2="20" y2="13" />
+                  </svg>
+                </button>
+              </header>
+
+              {eventChatUrl && (
+                <div className="event-chat-layer absolute inset-x-0 top-[68px] bottom-0 z-30 overflow-hidden">
+                  <iframe
+                    src={eventChatUrl}
+                    title="Aura conversation for selected calendar event"
+                    className="block w-full h-full border-0 bg-canvas"
+                  />
+                </div>
               )}
 
               {/* ---------- 2. Main Content ---------- */}
-              {!composing ? (
-                <main className="relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 pt-0 pb-24 z-10">
-                  {/* Hero Section with Arched Portrait */}
-                  <HeroSection
-                    onExplore={(slide) => {
-                      if (slide && slide.link) {
-                        window.location.href = slide.link;
-                      } else {
-                        window.location.href = "discover.html";
-                      }
-                    }}
-                  />
+              <main
+                aria-hidden={composing || Boolean(eventChatUrl)}
+                inert={composing || eventChatUrl ? "" : undefined}
+                className="home-content relative flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 pt-0 pb-24 z-10"
+              >
+                {/* Hero Section with Arched Portrait */}
+                <HeroSection
+                  onExplore={(slide) => {
+                    if (slide && slide.link) {
+                      window.location.href = slide.link;
+                    } else {
+                      window.location.href = "discover.html";
+                    }
+                  }}
+                />
 
-                  {/* Upcoming Events Section */}
-                  <UpcomingEvents
-                    events={events}
-                    onPick={startEventChat}
-                    onOpenCalendar={() => setCalendarOpen(true)}
-                  />
+                {/* Upcoming Events Section */}
+                <UpcomingEvents
+                  events={events}
+                  onPick={startEventChat}
+                  onOpenCalendar={() => setCalendarOpen(true)}
+                />
 
-                  {/* Wedding category rails */}
-                  {WEDDING_RAILS.map((rail) => (
-                    <CategoryRail
-                      key={rail.id}
-                      id={rail.id}
-                      title={rail.title}
-                      items={rail.items}
-                      onPick={(item) =>
-                        startGarmentChat({
-                          id: item.id,
-                          name: item.name,
-                          craft: item.craft,
-                          image: item.image,
-                        })
-                      }
-                      onOpenCategory={() => openCategory({ id: rail.id, name: rail.title })}
-                    />
-                  ))}
-
-                  {/* Family Collections */}
+                {/* Wedding category rails */}
+                {WEDDING_RAILS.map((rail) => (
                   <CategoryRail
-                    id="family"
-                    title="Family Collections"
-                    items={FAMILY_COLLECTIONS.map((col) => ({
-                      id: col.id,
-                      label: col.title.split(" & ")[0],
-                      name: `${col.title} family collection, ${col.members.length} pieces`,
-                      image: col.image,
-                      collection: col,
-                    }))}
-                    onPick={(item) => setOpenFamilyCollection(item.collection)}
+                    key={rail.id}
+                    id={rail.id}
+                    title={rail.title}
+                    items={rail.items}
+                    onPick={(item) =>
+                      startGarmentChat({
+                        id: item.id,
+                        name: item.name,
+                        craft: item.craft,
+                        image: item.image,
+                      })
+                    }
+                    onOpenCategory={() => openCategory({ id: rail.id, name: rail.title })}
                   />
-                </main>
-              ) : (
-                <div
-                  className="flex-1 z-10"
-                  onMouseDown={(e) => {
+                ))}
+
+                {/* Family Collections */}
+                <CategoryRail
+                  id="family"
+                  title="Family Collections"
+                  items={FAMILY_COLLECTIONS.map((col) => ({
+                    id: col.id,
+                    label: col.title.split(" & ")[0],
+                    name: `${col.title} family collection, ${col.members.length} pieces`,
+                    image: col.image,
+                    collection: col,
+                  }))}
+                  onPick={(item) => setOpenFamilyCollection(item.collection)}
+                />
+              </main>
+              <div
+                className="compose-stage"
+                aria-hidden={!composing}
+                inert={!composing ? "" : undefined}
+                onPointerDown={(e) => {
+                  if (e.target === e.currentTarget) {
                     e.preventDefault();
                     exitCompose();
-                  }}
-                  aria-hidden="true"
-                />
-              )}
+                  }
+                }}
+              >
+                <div className="compose-welcome">
+                  <h1>
+                    What can I help you
+                    <br />
+                    with today ?
+                  </h1>
+                  <p className="compose-subtitle">
+                    English, Hindi or Hinglish ? Aura shapes the rest.
+                  </p>
+                  <div className="compose-occasions" aria-label="Choose an occasion">
+                    {[CHIPS_DATA.slice(0, 3), CHIPS_DATA.slice(3, 5), CHIPS_DATA.slice(5)].map(
+                      (row, index) => (
+                        <div className="compose-chip-row" key={index}>
+                          {row.map((chip) => (
+                            <button
+                              key={chip.id}
+                              type="button"
+                              className="compose-occasion"
+                              aria-pressed={chip.isMore ? undefined : selectedChipId === chip.id}
+                              onPointerDown={(e) => e.preventDefault()}
+                              onClick={() => handleChipClick(chip)}
+                            >
+                              <span aria-hidden="true">{chip.icon}</span>
+                              {chip.isMore
+                                ? "Show More"
+                                : chip.id === "temple"
+                                  ? "Temple Morning"
+                                  : chip.label}
+                            </button>
+                          ))}
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* ---------- 3. Floating Prompt Bar ("Ask Aura anything...") ---------- */}
               <div
-                className="absolute inset-x-0 bottom-0 px-2 pt-2 pb-2 z-40 bg-white/10 backdrop-blur-md"
+                className={`compose-dock absolute inset-x-0 bottom-0 px-2 pt-2 pb-2 z-40 bg-white/10 backdrop-blur-md ${eventChatUrl ? "hidden" : ""}`}
                 ref={attachRef}
               >
                 {attachOpen && (
@@ -3772,7 +5258,7 @@
                     e.preventDefault();
                     handleAsk(inputVal);
                   }}
-                  className="w-full bg-card rounded-full border border-hairline/95 pl-1 pr-1.5 py-1.5 flex items-center gap-2 transition-shadow focus-within:border-primary/40"
+                  className="compose-form w-full bg-card rounded-full border border-hairline/95 pl-1 pr-1.5 py-1.5 flex items-center gap-2 transition-shadow focus-within:border-primary/40"
                   style={{ boxShadow: "var(--e-float)" }}
                 >
                   {/* Figma "Input box" (7:2876): + · field · mic (rest) or send (active) */}
@@ -3796,17 +5282,41 @@
                     </svg>
                   </button>
 
-                  <input
+                  <textarea
+                    rows={1}
                     id="aura-ask"
                     ref={inputRef}
-                    type="text"
                     value={inputVal}
-                    onChange={(e) => setInputVal(e.target.value)}
+                    onFocus={() => setComposing(true)}
+                    onChange={(e) => {
+                      setInputVal(e.target.value);
+                      setComposing(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        exitCompose();
+                      }
+                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        handleAsk(inputVal);
+                      }
+                    }}
                     placeholder="Ask me anything"
                     aria-label="Ask Aura anything"
                     className="flex-1 bg-transparent text-ink placeholder:text-muted text-[14px] leading-[19px] font-sans focus:outline-none py-1.5 pr-1 min-w-0"
                   />
 
+                  {composing && (
+                    <button
+                      type="button"
+                      className="compose-close"
+                      aria-label="Close typing mode"
+                      onClick={exitCompose}
+                    >
+                      ×
+                    </button>
+                  )}
                   {inputVal.trim() ? (
                     <button
                       type="submit"
@@ -3965,16 +5475,23 @@
                       const prompt = garment
                         ? `Tell me about the ${garment.garment} (${garment.role}) from the ${col.title} family collection.`
                         : `I'd like to commission the ${col.title} family collection for ${col.members.length} members. Theme: ${col.theme}.`;
-                      showToast("Opening your stylist conversation…");
-                      setTimeout(() => {
-                        window.location.href =
-                          "conversation.html?prompt=" +
-                          encodeURIComponent(prompt) +
-                          "&piece=" +
-                          encodeURIComponent(col.id) +
-                          "&ship=" +
-                          encodeURIComponent(activeCountry.code);
-                      }, 400);
+                      // Open the chat in place under Home's top bar, carrying
+                      // the photo being asked about as the first message's card.
+                      const url =
+                        "conversation.html?prompt=" +
+                        encodeURIComponent(prompt) +
+                        "&piece=" +
+                        encodeURIComponent(garment ? garment.id : col.id) +
+                        "&img=" +
+                        encodeURIComponent(garment ? garment.image : col.image) +
+                        "&name=" +
+                        encodeURIComponent(garment ? garment.garment : col.title) +
+                        "&craft=" +
+                        encodeURIComponent(garment ? garment.role : col.subtitle) +
+                        "&ship=" +
+                        encodeURIComponent(activeCountry.code) +
+                        "&embed=1&motion=send";
+                      requestAnimationFrame(() => setEventChatUrl(url));
                     }}
                   />
                 )}
@@ -4098,6 +5615,50 @@
       }
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) {
+                el.removeAttribute("id");
+              });
+              ghost.querySelectorAll("video").forEach(function (v) {
+                v.remove();
+              });
+              r.target.appendChild(ghost);
+              setTimeout(function () {
+                ghost.remove();
+              }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>

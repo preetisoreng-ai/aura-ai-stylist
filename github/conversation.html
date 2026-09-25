@@ -44,6 +44,8 @@
             },
             fontFamily: {
               display: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
+              // The Aura wordmark uses this, same as on Home.
+              editorial: ['"Instrument Serif"', "Iowan Old Style", "Georgia", "serif"],
               read: ["Newsreader", "Iowan Old Style", "Georgia", "serif"],
               sans: ['"DM Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
               mono: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
@@ -164,7 +166,7 @@
         /* Beige outline: accent/gold at low strength reads as warm beige on ivory. */
         border: 1px solid rgb(var(--gold-rgb) / 0.45);
         color: rgb(var(--ink-rgb));
-        font-family: "Newsreader", Georgia, serif;
+        font-family: var(--font-sans);
         font-size: 15px;
         font-weight: 400;
         line-height: 1;
@@ -187,14 +189,15 @@
         transform: scale(0.975);
       }
 
-
       .composer-bar {
         background: var(--card);
         border: 1px solid rgb(var(--hairline-rgb) / 0.95);
         box-shadow: var(--e-float);
         transition:
           box-shadow 0.22s ease,
-          border-color 0.22s ease;
+          border-color 0.22s ease,
+          border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+          padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       /* Attachment popup — Figma 36:1267. Frosted glass over the canvas. */
@@ -263,6 +266,20 @@
           transform: translateY(0);
           opacity: 1;
         }
+      }
+
+      @keyframes auraUserBubbleIn {
+        from {
+          transform: translateY(22px) scale(0.96);
+          opacity: 0.5;
+        }
+        to {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+      }
+      .aura-user-bubble-in {
+        animation: auraUserBubbleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
 
       @keyframes auraToastIn {
@@ -392,8 +409,11 @@
       /* ---- Overlay motion: the scrim fades on its own, panels only move.
          Transform-only animation stays on the compositor, so the slide is
          smooth; closing plays the same motion in reverse before unmount. */
-      html {
-        scrollbar-gutter: stable;
+      /* The app shell is fixed-height and only .thread-scroll scrolls, so the
+         document itself never needs a scrollbar (or a reserved gutter). */
+      html,
+      body {
+        overflow: hidden;
       }
       .drawer-slide-in {
         animation: auraDrawerIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -475,10 +495,865 @@
           animation-duration: 1ms;
         }
       }
+
+      @view-transition {
+        navigation: auto;
+      }
+      ::view-transition-group(*) {
+        animation-duration: 420ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      /* Do not dissolve the entire screen / root */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation: none !important;
+        mix-blend-mode: normal !important;
+      }
+      /* Top bar remains intact as is */
+      ::view-transition-group(aura-chat-header) {
+        animation: none !important;
+      }
+      ::view-transition-group(aura-chat-composer) {
+        animation-duration: 380ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      ::view-transition-group(aura-sent-prompt),
+      ::view-transition-group(aura-sent-attachment) {
+        animation-duration: 380ms;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        ::view-transition-group(*),
+        ::view-transition-old(*),
+        ::view-transition-new(*) {
+          animation-duration: 1ms !important;
+        }
+      }
+
+      .chat-arrival > header {
+        view-transition-name: aura-chat-header;
+      }
+      .chat-arrival .composer-bar {
+        view-transition-name: aura-chat-composer;
+      }
+      .chat-arrival .opening-prompt {
+        view-transition-name: aura-sent-prompt;
+      }
+      /* A garment tapped on Home arrives as the photo card above the prompt. */
+      .chat-arrival .opening-attachment > * {
+        view-transition-name: aura-sent-attachment;
+      }
+      .chat-arrival .thread-scroll {
+        animation: none;
+      }
+      /* Opened inside Home (embed=1): Home's top bar holds still and the ask
+         bar rises from the bottom. The shell and React's composer share one
+         clock (a negative delay), so the rise carries on across the swap. */
+      .embed-arrival .composer-rise {
+        animation: composerRise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @keyframes composerRise {
+        from {
+          opacity: 0;
+          transform: translateY(110%);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .embed-arrival .composer-rise {
+          animation: none;
+        }
+      }
+      .chat-arrival .back-btn-enter {
+        animation: backBtnFadeIn 320ms 180ms ease both;
+      }
+      @keyframes backBtnFadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* ---------- First-frame shell ----------
+         Arriving from Home (motion=send), the page's first paint must already
+         hold the header, the sent message and the ask bar, or the view
+         transition has nothing to carry them onto and the screen blanks while
+         React and Babel boot. Plain CSS only: Tailwind's CDN styles land after
+         first paint. React replaces all of this on its first render. */
+      body {
+        margin: 0;
+      }
+      #aura-chat-shell,
+      #aura-chat-shell * {
+        box-sizing: border-box;
+      }
+      #aura-chat-shell p,
+      #aura-chat-shell figure {
+        margin: 0;
+      }
+      #aura-chat-shell {
+        font-family: var(--font-sans);
+        color: var(--ink);
+      }
+      .cs-header {
+        position: relative;
+        z-index: 20;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px 12px;
+        background: var(--canvas);
+      }
+      .cs-left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: -4px;
+      }
+      .cs-back {
+        width: 36px;
+        height: 36px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+        flex-shrink: 0;
+      }
+      .cs-word {
+        display: block;
+        font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+        font-size: 30px;
+        line-height: 34px;
+        letter-spacing: -0.02em;
+        font-weight: 400;
+        color: var(--ink);
+      }
+      .cs-menu {
+        width: 40px;
+        height: 40px;
+        margin-right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+      }
+      .cs-thread {
+        padding: 16px;
+      }
+      .cs-log > * + * {
+        margin-top: 14px;
+      }
+      .cs-date {
+        text-align: center;
+        font-style: italic;
+        font-size: 14px;
+        line-height: 21px;
+        color: rgb(var(--muted-rgb));
+        padding-top: 4px;
+      }
+      .cs-user {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .cs-user-inner {
+        max-width: 80%;
+      }
+      .cs-att {
+        display: block;
+        width: 136px;
+        margin: 0 0 6px auto !important;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--hairline-rgb));
+        background: var(--card);
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+      .cs-att img {
+        display: block;
+        width: 100%;
+        height: 112px;
+        object-fit: cover;
+      }
+      .cs-att-text {
+        display: block;
+        padding: 6px 10px;
+      }
+      .cs-att-name {
+        display: block;
+        font-size: 11.5px;
+        line-height: 1.25;
+        font-weight: 500;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cs-att-label {
+        display: block;
+        margin-top: 2px;
+        font-family: "DM Mono", ui-monospace, monospace;
+        font-size: 10px;
+        line-height: 15px;
+        color: rgb(var(--muted-rgb));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cs-prompt {
+        color: #fff;
+        font-size: 13px;
+        line-height: 1.35;
+        padding: 12px 16px;
+        border-radius: 22px;
+        white-space: pre-line;
+        background: rgb(var(--primary-rgb));
+      }
+      .cs-typing {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        background: var(--card);
+        border: 1px solid rgb(var(--hairline-rgb));
+        border-radius: 6px 16px 16px 16px;
+        padding: 14px 16px;
+      }
+      .cs-chips {
+        flex-shrink: 0;
+        padding: 8px 16px 4px;
+      }
+      .cs-chip-row {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+        padding-bottom: 6px;
+      }
+      .cs-chip-row .reply-chip {
+        flex-shrink: 0;
+      }
+      .cs-composer-wrap {
+        position: relative;
+        z-index: 40;
+        flex-shrink: 0;
+        padding: 4px 16px 8px;
+      }
+      .cs-composer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 9999px;
+        padding: 0;
+      }
+      .cs-round {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cs-plus {
+        color: rgb(var(--primary-rgb));
+      }
+      .cs-mic {
+        background: rgb(var(--inset-rgb));
+      }
+      .cs-field {
+        flex: 1;
+        min-width: 0;
+        font-size: 14px;
+        line-height: 19px;
+        padding: 6px 4px 6px 0;
+        height: 31px;
+        color: rgb(var(--muted-rgb));
+      }
     </style>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from {
+          transform: translate3d(0, 100%, 0);
+        }
+        to {
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.3s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from {
+          background-color: transparent;
+        }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to {
+          background-color: transparent;
+        }
+      }
+      @keyframes auraSheetGhostOut {
+        from {
+          transform: translate3d(0, 0, 0);
+        }
+        to {
+          transform: translate3d(0, 100%, 0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) {
+          animation-duration: 1ms;
+        }
+      }
+    </style>
+    <!-- aura-tab-transition:start -->
+    <style id="aura-tab-transition-style">
+      /* ---- Drawer tab transition ----
+         Picking a tab in the right drawer slides the drawer out, then the
+         next page opens with its top bar held still while the content below
+         crossfades into a skeleton; the skeleton dissolves once the real
+         screen and its first images are ready. */
+      @view-transition {
+        navigation: auto;
+      }
+      ::view-transition-group(aura-topbar) {
+        animation: none !important;
+      }
+      ::view-transition-old(aura-topbar),
+      ::view-transition-new(aura-topbar) {
+        animation-duration: 220ms !important;
+        animation-timing-function: ease !important;
+        mix-blend-mode: normal;
+      }
+      /* The old screen holds still underneath while the new one fades up over
+     it, so the two never leave a see-through gap. */
+      html,
+      ::view-transition {
+        background-color: rgb(243 239 231);
+      }
+      html:active-view-transition-type(aura-tab)::view-transition-old(root) {
+        animation: none !important;
+        opacity: 1;
+      }
+      html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+        animation: auraTabIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+      }
+      @keyframes auraTabIn {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 10px, 0);
+        }
+      }
+
+      .aura-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        background: rgb(243 239 231);
+        transition: opacity 320ms ease;
+      }
+      .aura-boot.is-done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .aura-boot-vp {
+        width: 100%;
+        max-width: 430px;
+        height: 100vh;
+        height: 100dvh;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .aura-boot-top {
+        view-transition-name: aura-topbar;
+      }
+      .aura-boot-body {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 16px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .sk {
+        position: relative;
+        overflow: hidden;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: rgb(30 27 46 / 0.07);
+      }
+      .sk::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+        animation: auraShimmer 1.3s ease-in-out infinite;
+      }
+      @keyframes auraShimmer {
+        to {
+          transform: translateX(100%);
+        }
+      }
+      .sk-t {
+        height: 12px;
+        border-radius: 6px;
+      }
+      .sk-h {
+        height: 24px;
+        border-radius: 8px;
+      }
+      .sk-o {
+        border-radius: 9999px;
+      }
+      .sk-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .sk-col {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .sk-card {
+        flex-shrink: 0;
+        border-radius: 16px;
+        background: rgb(255 255 255 / 0.6);
+        border: 1px solid rgb(229 223 213);
+        padding: 12px;
+      }
+      .sk-f1 {
+        flex: 1;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sk::after {
+          animation: none;
+          display: none;
+        }
+        .aura-boot {
+          transition: none;
+        }
+        html:active-view-transition-type(aura-tab)::view-transition-old(root),
+        html:active-view-transition-type(aura-tab)::view-transition-new(root) {
+          animation: none !important;
+        }
+      }
+    </style>
+    <!-- Hold the first paint until the skeleton below is in the document. -->
+    <link rel="expect" href="#aura-boot-ready" blocking="render" />
+    <script id="aura-tab-transition-head">
+      (function () {
+        var KEY = "aura-drawer-nav";
+        var arriving = false;
+        try {
+          arriving = !!sessionStorage.getItem(KEY);
+          sessionStorage.removeItem(KEY);
+        } catch (e) {}
+        window.__auraTabArriving = arriving;
+        window.__auraTabLeaving = false;
+
+        // Only a drawer hop uses the transition; every other link behaves as before.
+        window.addEventListener("pagereveal", function (e) {
+          // A prerendered page ran the lines above before the hop, so read the
+          // flag again now that it is being shown.
+          if (!arriving) {
+            try {
+              if (sessionStorage.getItem(KEY)) {
+                sessionStorage.removeItem(KEY);
+                arriving = window.__auraTabArriving = true;
+                if (window.__auraShowBoot) window.__auraShowBoot();
+              }
+            } catch (err) {}
+          }
+          if (!e.viewTransition) return;
+          if (arriving) e.viewTransition.types.add("aura-tab");
+          else if (false) e.viewTransition.skipTransition();
+        });
+
+        // Outgoing page: pin its top bar so it stays put across the hop.
+        window.addEventListener("pageswap", function (e) {
+          if (!e.viewTransition || !window.__auraTabLeaving) return;
+          e.viewTransition.types.add("aura-tab");
+          var bar =
+            document.querySelector(".app-viewport > header") ||
+            document.querySelector("#root header");
+          if (bar) bar.style.viewTransitionName = "aura-topbar";
+        });
+      })();
+    </script>
+    <!-- aura-tab-transition:end -->
   </head>
   <body>
-    <div id="root"></div>
+    <!-- aura-tab-transition:start -->
+    <template id="aura-boot-template"></template>
+    <script id="aura-tab-transition">
+      (function () {
+        var KEY = "aura-drawer-nav";
+        var reduce =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var arriving = !!window.__auraTabArriving;
+
+        // Incoming page: show the top bar and a skeleton until React has painted.
+        var booted = false;
+        function showBoot() {
+          var tpl = document.getElementById("aura-boot-template");
+          // A prerendered page may already be on screen; it needs no skeleton.
+          if (booted || !tpl || !tpl.content.firstElementChild) return;
+          if (document.querySelector("#root header")) return;
+          booted = true;
+          var boot = tpl.content.firstElementChild.cloneNode(true);
+          boot.setAttribute("aria-hidden", "true");
+          document.body.insertBefore(boot, document.body.firstChild);
+          // #root is parsed after this script, so look it up when needed.
+          var started = Date.now();
+          var finish = function () {
+            if (boot.classList.contains("is-done")) return;
+            boot.classList.add("is-done");
+            setTimeout(
+              function () {
+                boot.remove();
+              },
+              reduce ? 0 : 360
+            );
+          };
+          var whenPainted = function () {
+            // Hold for the images the reader sees first, but never long.
+            var imgs = Array.prototype.filter.call(
+              document.querySelectorAll("#root img"),
+              function (img) {
+                var r = img.getBoundingClientRect();
+                return !img.complete && r.top < window.innerHeight && r.width > 40;
+              }
+            );
+            var left = imgs.length;
+            var cap = Math.max(250, 1200 - (Date.now() - started));
+            var t = setTimeout(finish, cap);
+            var one = function () {
+              if (--left <= 0) {
+                clearTimeout(t);
+                setTimeout(finish, 60);
+              }
+            };
+            if (!left) {
+              clearTimeout(t);
+              setTimeout(finish, 120);
+              return;
+            }
+            imgs.forEach(function (img) {
+              img.addEventListener("load", one, { once: true });
+              img.addEventListener("error", one, { once: true });
+            });
+          };
+          var ready = function () {
+            return document.querySelector("#root header");
+          };
+          if (ready()) whenPainted();
+          else if (window.MutationObserver) {
+            var mo = new MutationObserver(function () {
+              if (!ready()) return;
+              mo.disconnect();
+              setTimeout(whenPainted, 30);
+            });
+            mo.observe(document.documentElement, { childList: true, subtree: true });
+          }
+          setTimeout(finish, 6000); // never strand the skeleton
+        }
+        window.__auraShowBoot = showBoot;
+        if (arriving) showBoot();
+
+        // Start building the next tab's page as soon as a finger or pointer
+        // lands on it, so it is often ready before the drawer has left.
+        var speculated = {};
+        var canPrerender =
+          window.HTMLScriptElement &&
+          HTMLScriptElement.supports &&
+          HTMLScriptElement.supports("speculationrules");
+        function warm(e) {
+          if (!canPrerender) return;
+          var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+          if (!link || !link.closest(".drawer-slide-in")) return;
+          if (link.getAttribute("aria-current") === "page" || speculated[link.href]) return;
+          speculated[link.href] = true;
+          var rules = document.createElement("script");
+          rules.type = "speculationrules";
+          rules.textContent = JSON.stringify({
+            prerender: [{ source: "list", urls: [link.href] }],
+          });
+          document.head.appendChild(rules);
+        }
+        ["pointerover", "pointerdown", "touchstart", "focusin"].forEach(function (type) {
+          document.addEventListener(type, warm, { capture: true, passive: true });
+        });
+
+        // Drawer tabs: slide the drawer out, then open the tab's page.
+        var leaving = false;
+        document.addEventListener(
+          "click",
+          function (e) {
+            if (
+              e.defaultPrevented ||
+              e.button !== 0 ||
+              e.metaKey ||
+              e.ctrlKey ||
+              e.shiftKey ||
+              e.altKey
+            )
+              return;
+            var link = e.target.closest && e.target.closest('nav[aria-label="Primary"] a[href]');
+            if (!link) return;
+            var drawer = link.closest(".drawer-slide-in");
+            if (!drawer) return;
+            e.preventDefault();
+            if (leaving) return;
+            var close = drawer.querySelector('[aria-label="Close navigation menu"]');
+            if (close) close.click();
+            if (link.getAttribute("aria-current") === "page") return;
+            leaving = true;
+            var href = link.href;
+            var gone = false;
+            var go = function () {
+              if (gone) return;
+              gone = true;
+              try {
+                sessionStorage.setItem(KEY, "1");
+              } catch (err) {}
+              window.__auraTabLeaving = true;
+              window.location.href = href;
+            };
+            if (reduce) return go();
+            // Leave once the drawer has slid out: its slide ends, or the
+            // overlay unmounts it, whichever comes first.
+            drawer.addEventListener("animationend", function (ev) {
+              if (ev.target === drawer && /Out/.test(ev.animationName)) go();
+            });
+            (function watch() {
+              if (gone) return;
+              if (!drawer.isConnected) return go();
+              requestAnimationFrame(watch);
+            })();
+            setTimeout(go, 420);
+          },
+          true
+        );
+        window.addEventListener("pageshow", function () {
+          leaving = false;
+          window.__auraTabLeaving = false;
+        });
+      })();
+    </script>
+    <span id="aura-boot-ready" hidden></span>
+    <!-- aura-tab-transition:end -->
+    <div id="root">
+      <div
+        id="aura-chat-shell"
+        class="app-viewport chat-arrival"
+        style="display: none"
+        aria-hidden="true"
+      >
+        <header class="cs-header">
+          <div class="cs-left">
+            <span class="cs-back back-btn-enter">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m15 5-7 7 7 7" />
+              </svg>
+            </span>
+            <span class="cs-word">Aura</span>
+          </div>
+          <span class="cs-menu">
+            <svg
+              width="22"
+              height="15"
+              viewBox="0 0 22 15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            >
+              <line x1="2" y1="2" x2="20" y2="2" />
+              <line x1="2" y1="7.5" x2="20" y2="7.5" />
+              <line x1="2" y1="13" x2="20" y2="13" />
+            </svg>
+          </span>
+        </header>
+        <div class="thread-scroll cs-thread">
+          <div class="cs-log">
+            <p class="cs-date">Today, <span id="cs-time"></span></p>
+            <div class="cs-user">
+              <div class="cs-user-inner">
+                <div class="opening-attachment" id="cs-att" style="display: none">
+                  <figure class="cs-att">
+                    <img id="cs-att-img" alt="" />
+                    <span class="cs-att-text">
+                      <span class="cs-att-name" id="cs-att-name"></span>
+                      <span class="cs-att-label" id="cs-att-label"></span>
+                    </span>
+                  </figure>
+                </div>
+                <p class="opening-prompt cs-prompt" id="cs-prompt"></p>
+              </div>
+            </div>
+            <div>
+              <div class="cs-typing">
+                <span class="typing-dot"></span><span class="typing-dot"></span
+                ><span class="typing-dot"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cs-chips">
+          <div class="cs-chip-row">
+            <span class="reply-chip">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+              >
+                <path d="M10 3.5 11.8 9l5.7 1.8-5.7 1.8L10 18.5l-1.8-5.9L2.5 10.8 8.2 9 10 3.5Z" />
+                <path d="M18.5 3v4M16.5 5h4" stroke-linecap="round" />
+              </svg>
+              <span>Suggest 9 looks</span>
+            </span>
+            <span class="reply-chip"><span id="cs-budget">Under $500 each</span></span>
+            <span class="reply-chip"><span>With delivery timelines</span></span>
+            <span class="reply-chip">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              >
+                <path d="M3 7h9M17 7h4M3 17h4M12 17h9" />
+                <circle cx="14.5" cy="7" r="2.3" />
+                <circle cx="9.5" cy="17" r="2.3" />
+              </svg>
+              <span>More filters</span>
+            </span>
+          </div>
+        </div>
+        <div class="cs-composer-wrap composer-rise">
+          <div class="composer-bar cs-composer">
+            <span class="cs-round cs-plus">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              >
+                <path d="M9 2v14M2 9h14" />
+              </svg>
+            </span>
+            <span class="cs-field">Ask me anything</span>
+            <span class="cs-round cs-mic"
+              ><img src="images/input-box/icon-mic.svg" width="23.5517" height="24.75" alt=""
+            /></span>
+          </div>
+          <div class="home-pill-line"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Fill the first-frame shell from the URL, before first paint. Only a
+      // hand-off from Home (motion=send) uses it; every other arrival waits
+      // for React as before.
+      (function () {
+        var shell = document.getElementById("aura-chat-shell");
+        var p = new URLSearchParams(location.search);
+        var prompt = (p.get("prompt") || "").trim();
+        if (p.get("motion") !== "send" || !prompt || p.get("fit") === "1") {
+          shell.remove();
+          return;
+        }
+        window.__auraShell = true;
+        if (p.get("embed") === "1") {
+          // Home draws the top bar; start the ask bar's rise now.
+          shell.querySelector(".cs-header").remove();
+          shell.classList.add("embed-arrival");
+          window.__auraRiseAt = performance.now();
+        }
+        document.getElementById("cs-prompt").textContent = prompt;
+        document.getElementById("cs-time").textContent = new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        var budget = { US: "$500", UK: "£400", CA: "C$650", IN: "₹40,000" }[
+          (p.get("ship") || "US").toUpperCase()
+        ];
+        if (budget) document.getElementById("cs-budget").textContent = "Under " + budget + " each";
+        var img = (p.get("img") || "").trim();
+        var name = (p.get("name") || "").trim();
+        if (img || name) {
+          var known = [
+            "regal-lehenga",
+            "heritage-lehenga",
+            "featherweight-lehenga",
+            "modern-saree",
+            "kundan-bridal",
+            "kanjivaram-saree",
+            "family-silks",
+            "blush-pastel",
+          ];
+          document.getElementById("cs-att").style.display = "";
+          document.getElementById("cs-att-img").src = img;
+          document.getElementById("cs-att-name").textContent = name;
+          document.getElementById("cs-att-label").textContent =
+            known.indexOf(p.get("piece") || "") !== -1 ? "Tap for details" : p.get("craft") || "";
+        }
+        shell.style.display = "";
+      })();
+    </script>
 
     <script type="text/babel">
       const { useState, useRef, useEffect, useLayoutEffect, useCallback } = React;
@@ -976,8 +1851,7 @@
         const [payMethod, setPayMethod] = useState("credit");
         const [card, setCard] = useState({ number: "", name: "", exp: "", cvc: "" });
         const [upi, setUpi] = useState("");
-        const chosenPay =
-          PAY_METHODS.find((m) => m.id === payMethod) || PAY_METHODS[0];
+        const chosenPay = PAY_METHODS.find((m) => m.id === payMethod) || PAY_METHODS[0];
 
         const isCard = payMethod === "credit" || payMethod === "debit";
         const digits = card.number.replace(/\D/g, "");
@@ -992,8 +1866,7 @@
             /^\d{3,4}$/.test(card.cvc)
           : /^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upi.trim());
 
-        const setCardField = (k) => (v) =>
-          setCard((c) => Object.assign({}, c, { [k]: v }));
+        const setCardField = (k) => (v) => setCard((c) => Object.assign({}, c, { [k]: v }));
 
         useEffect(() => {
           restoreRef.current = document.activeElement;
@@ -1161,8 +2034,7 @@
                     aria-hidden="true"
                     focusable="false"
                     className={
-                      "shrink-0 text-muted transition-transform " +
-                      (payOpen ? "rotate-180" : "")
+                      "shrink-0 text-muted transition-transform " + (payOpen ? "rotate-180" : "")
                     }
                   >
                     <path d="m6 9 6 6 6-6" />
@@ -1280,9 +2152,7 @@
                         value={card.exp}
                         onChange={(e) => {
                           const d = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          setCardField("exp")(
-                            d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d
-                          );
+                          setCardField("exp")(d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d);
                         }}
                         placeholder="MM/YY"
                         style={{ fontSize: 16 }}
@@ -1627,9 +2497,7 @@
         const panelRef = useRef(null);
         const restoreRef = useRef(null);
         const inputRefs = useRef({});
-        const [form, setForm] = useState(() =>
-          Object.assign({}, FIT_SEED, initial || {}),
-        );
+        const [form, setForm] = useState(() => Object.assign({}, FIT_SEED, initial || {}));
         const [method, setMethod] = useState("manual");
         const set = (k) => (v) => setForm((f) => Object.assign({}, f, { [k]: v }));
 
@@ -1664,7 +2532,7 @@
                   f.fitNote && f.fitNote.trim()
                     ? f.fitNote
                     : "Measured from a garment that fits well.",
-              }),
+              })
             );
             setMethod("manual");
           } else if (method === "session") {
@@ -1689,7 +2557,10 @@
               <span className="shrink-0 w-12 flex items-center justify-center border-r border-hairline my-3">
                 <FitIcon name={r.k} size={28} />
               </span>
-              <label htmlFor={"fit-" + r.k} className="flex-1 min-w-0 pl-2.5 pr-9 py-2.5 cursor-text">
+              <label
+                htmlFor={"fit-" + r.k}
+                className="flex-1 min-w-0 pl-2.5 pr-9 py-2.5 cursor-text"
+              >
                 <span className="block text-[10.5px] uppercase tracking-[0.06em] text-muted truncate">
                   {SHORT[r.k] || r.label}
                 </span>
@@ -1811,7 +2682,10 @@
                         role="tab"
                         aria-selected={on}
                         onClick={() => setMethod(m.id)}
-                        className={"flex-1 min-w-0 min-h-[44px] px-1 rounded-full flex items-center justify-center gap-1.5 font-read text-[15px] whitespace-nowrap transition-colors " + (on ? "bg-primary text-onprimary" : "text-ink hover:bg-inset")}
+                        className={
+                          "flex-1 min-w-0 min-h-[44px] px-1 rounded-full flex items-center justify-center gap-1.5 font-read text-[15px] whitespace-nowrap transition-colors " +
+                          (on ? "bg-primary text-onprimary" : "text-ink hover:bg-inset")
+                        }
                       >
                         <svg
                           width="16"
@@ -1839,9 +2713,7 @@
                     <h3 className="font-read text-[20px] leading-snug text-ink m-0">
                       {copy.title}
                     </h3>
-                    <p className="text-[14px] text-muted leading-relaxed mt-2 mb-0">
-                      {copy.body}
-                    </p>
+                    <p className="text-[14px] text-muted leading-relaxed mt-2 mb-0">{copy.body}</p>
                     <button
                       type="button"
                       onClick={methodAction}
@@ -1866,10 +2738,7 @@
                   </div>
                 ) : (
                   <>
-                    <span
-                      id="fit-unit-label"
-                      className="block text-[14px] text-ink mt-5 mb-2"
-                    >
+                    <span id="fit-unit-label" className="block text-[14px] text-ink mt-5 mb-2">
                       Units
                     </span>
                     <div
@@ -1888,7 +2757,12 @@
                             type="button"
                             aria-pressed={on}
                             onClick={() => set("unit")(u.id)}
-                            className={"min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " + (on ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]" : "text-muted hover:text-ink")}
+                            className={
+                              "min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " +
+                              (on
+                                ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]"
+                                : "text-muted hover:text-ink")
+                            }
                           >
                             {u.label}
                           </button>
@@ -2456,9 +3330,7 @@
                     {r.k}
                   </dt>
                   <dd className="flex-1 min-w-0 m-0 text-right font-read text-[16px] leading-[24px] text-ink">
-                    <span style={{ whiteSpace: "pre-wrap" }}>
-                      {r.v || r.fallback}
-                    </span>
+                    <span style={{ whiteSpace: "pre-wrap" }}>{r.v || r.fallback}</span>
                     {r.note && (
                       <span className="block font-sans italic text-[12px] leading-[18px] text-muted mt-0.5">
                         {r.note}
@@ -2720,16 +3592,13 @@
           { k: "On the loom", v: d.weeks },
         ].filter((r) => r.v);
 
-        /* "DHL Express · 4 days" — the courier sits with the duty line, the
-           transit time drops to its own line under it. */
-        const [courierName, courierDays] = ship.courier.split(" · ");
-
         // Keep the chosen thumbnail in view when the column scrolls.
         const thumbsRef = React.useRef(null);
         React.useEffect(() => {
           const col = thumbsRef.current;
           const t = col && col.children[slide];
-          if (t) t.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+          if (t)
+            t.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
         }, [slide]);
 
         // Full-screen photo, opened from the label on each slide.
@@ -2752,11 +3621,15 @@
               aria-modal="true"
               aria-labelledby="dir-sheet-title"
               tabIndex={-1}
-              className="absolute inset-x-0 bottom-0 h-[92%] bg-canvas rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+              className="absolute inset-x-0 bottom-0 bg-canvas rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
+              style={{ height: "calc(100% - 135px)" }}
             >
               {/* Grabber + close */}
               <div className="relative shrink-0 pt-3 pb-3">
-                <span className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto" aria-hidden="true" />
+                <span
+                  className="block w-10 h-1 rounded-full bg-ctrl/40 mx-auto"
+                  aria-hidden="true"
+                />
                 <button
                   type="button"
                   onClick={onClose}
@@ -2809,7 +3682,10 @@
                             onClick={() => setEnlarged(v)}
                             aria-label={`Enlarge: ${v.label}`}
                             className="absolute bottom-3 left-3 min-h-[36px] flex items-center gap-2 text-[13px] text-white px-3 rounded-xl border border-white/40 hover:bg-ink/70 transition-colors"
-                            style={{ background: "rgb(var(--ink-rgb) / 0.55)", backdropFilter: "blur(6px)" }}
+                            style={{
+                              background: "rgb(var(--ink-rgb) / 0.55)",
+                              backdropFilter: "blur(6px)",
+                            }}
                           >
                             <svg
                               width="14"
@@ -2846,7 +3722,9 @@
                         aria-label={`Show ${v.label}`}
                         aria-current={i === slide}
                         className={`relative shrink-0 w-full h-[80px] rounded-xl overflow-hidden bg-inset border-2 transition-colors ${
-                          i === slide ? "border-primary" : "border-transparent hover:border-hairline"
+                          i === slide
+                            ? "border-primary"
+                            : "border-transparent hover:border-hairline"
                         }`}
                       >
                         <Photo d={d} view={{ ...v, fit: "cover" }} alt="" />
@@ -2875,7 +3753,7 @@
                   <div className="flex items-start justify-between gap-3 mt-2">
                     <h2
                       id="dir-sheet-title"
-                      className="font-display text-[34px] text-ink leading-[1.05]"
+                      className="font-display text-[28px] text-ink leading-none"
                     >
                       {d.name}
                     </h2>
@@ -2892,7 +3770,7 @@
                   <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-goldtext mt-2.5">
                     {d.craft}
                   </p>
-                  <p className="text-[15px] text-ink leading-[1.6] mt-4">{d.note}</p>
+                  <p className="text-[13px] text-ink leading-6 mt-4">{d.note}</p>
 
                   <dl className="mt-5 border-t border-hairline">
                     {rows.map((r) => (
@@ -2917,17 +3795,11 @@
               </div>
 
               {/* Price stays put while everything above it scrolls. */}
-              <div className="shrink-0 border-t border-hairline bg-canvas px-5 pt-4 pb-6 flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <span className="block font-display text-[38px] text-ink leading-none">
+              <div className="shrink-0 border-t border-hairline bg-canvas pl-10 pr-5 pt-4 pb-6 flex items-center justify-between gap-6">
+                <div className="min-w-0">
+                  <span className="block font-display text-[38px] tracking-[0.052em] text-ink leading-[38px] whitespace-nowrap">
                     {ship.symbol}
                     {d.from}
-                  </span>
-                  <span className="block font-mono text-[11px] text-muted leading-snug mt-2 whitespace-nowrap">
-                    {ship.duty} · {courierName}
-                  </span>
-                  <span className="block font-mono text-[11px] text-muted leading-snug">
-                    {courierDays}
                   </span>
                 </div>
 
@@ -2964,7 +3836,9 @@
                   aria-label={`${d.name} — ${enlarged.label}`}
                 >
                   <div className="flex items-center justify-between px-4 pt-3 pb-2 text-onprimary">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.1em]">{enlarged.label}</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.1em]">
+                      {enlarged.label}
+                    </span>
                     <button
                       type="button"
                       autoFocus
@@ -2989,7 +3863,11 @@
                     </button>
                   </div>
                   <div className="relative flex-1 m-4 rounded-2xl overflow-hidden">
-                    <Photo d={d} view={{ ...enlarged, fit: "contain" }} alt={`${d.name} — ${enlarged.label}`} />
+                    <Photo
+                      d={d}
+                      view={{ ...enlarged, fit: "contain" }}
+                      alt={`${d.name} — ${enlarged.label}`}
+                    />
                   </div>
                 </div>
               )}
@@ -3071,7 +3949,8 @@
             document.removeEventListener("keydown", onKeyDown, true);
             document.body.classList.remove("aura-locked");
             const restore = restoreRef.current;
-            if (restore && typeof restore.focus === "function") restore.focus({ preventScroll: true });
+            if (restore && typeof restore.focus === "function")
+              restore.focus({ preventScroll: true });
           };
         }, [open, onClose]);
 
@@ -3297,12 +4176,7 @@
                     aria-label="Edit your profile"
                     className="shrink-0 w-8 h-8 -m-[7px] rounded-full flex items-center justify-center hover:bg-inset transition-colors"
                   >
-                    <img
-                      src={DRAWER_ICON + "edit.svg"}
-                      width="18"
-                      height="18"
-                      alt=""
-                    />
+                    <img src={DRAWER_ICON + "edit.svg"} width="18" height="18" alt="" />
                   </a>
                   <img
                     src={DRAWER_ICON + "online.svg"}
@@ -3327,10 +4201,7 @@
             </div>
 
             {/* 5 primary tabs */}
-            <nav
-              aria-label="Primary"
-              className="shrink-0 py-3 border-b border-hairline"
-            >
+            <nav aria-label="Primary" className="shrink-0 py-3 border-b border-hairline">
               <ul className="list-none m-0 p-0 flex flex-col gap-1">
                 {DRAWER_TABS.map((t) => {
                   const on = t.id === active;
@@ -3378,11 +4249,7 @@
                 >
                   Ship to
                 </span>
-                <div
-                  className="flex gap-2"
-                  role="group"
-                  aria-labelledby="ship-to-label"
-                >
+                <div className="flex gap-2" role="group" aria-labelledby="ship-to-label">
                   {countries.map((c) => {
                     const on = current.code === c.code;
                     return (
@@ -3425,8 +4292,8 @@
                   className="shrink-0"
                 />
                 <span className="flex-1 min-w-0 font-sans text-[12px] leading-[18px] text-muted">
-                  Prices are landed to {current.code} — {current.duty},{" "}
-                  {current.courier}. Nothing is added at checkout.
+                  Prices are landed to {current.code} — {current.duty}, {current.courier}. Nothing
+                  is added at checkout.
                 </span>
               </p>
             </div>
@@ -3449,6 +4316,7 @@
       function App() {
         const wish = useWishlist();
         const params = new URLSearchParams(window.location.search);
+        const embedded = params.get("embed") === "1";
         const initialPrompt = (params.get("prompt") || "").trim();
         const [shipCode, setShipCode] = useState(() => (params.get("ship") || "US").toUpperCase());
         const ship = SHIP_TO[shipCode] || SHIP_TO.US;
@@ -3531,23 +4399,27 @@
         const [attachOpen, setAttachOpen] = useState(false);
 
         const attachRef = useRef(null);
+
+        // Pick up the shell's ask-bar rise where it is, once, on first render.
+        const [composerRiseStyle] = useState(() =>
+          window.__auraRiseAt
+            ? { animationDelay: `${-(performance.now() - window.__auraRiseAt)}ms` }
+            : undefined,
+        );
         const threadRef = useRef(null);
         const bottomRef = useRef(null);
         const inputRef = useRef(null);
         const toastTimer = useRef(null);
         const timers = useRef([]);
-
         const track = (id) => {
           timers.current.push(id);
           return id;
         };
-
         // Log the opening brief once per mount so it appears in the home
         // screen's history drawer.
         useEffect(() => {
           recordChat(initialPrompt, shipCode);
         }, [initialPrompt, shipCode]);
-
         // Attachment popup dismisses on Escape or a click outside it. The
         // popup is a menu, not a dialog, so it does not trap focus.
         useEffect(() => {
@@ -3570,7 +4442,6 @@
             document.removeEventListener("pointerdown", onPointer);
           };
         }, [attachOpen]);
-
         useEffect(
           () => () => {
             timers.current.forEach(clearTimeout);
@@ -3578,7 +4449,6 @@
           },
           []
         );
-
         // The mobile keyboard shrinks the visual viewport without changing
         // the layout viewport — track it so the composer is never covered.
         useEffect(() => {
@@ -3597,13 +4467,11 @@
             root.style.removeProperty("--app-h");
           };
         }, []);
-
         const showToast = useCallback((msg) => {
           setToastMsg(msg);
           if (toastTimer.current) clearTimeout(toastTimer.current);
           toastTimer.current = setTimeout(() => setToastMsg(""), 3200);
         }, []);
-
         // Opening reply to the brief carried over from the home screen.
         useEffect(() => {
           if (!initialPrompt) return;
@@ -3639,13 +4507,20 @@
           );
           return () => clearTimeout(id);
         }, []);
-
-        // Keep the newest message in view without yanking the whole page.
+        // Keep the opening brief visible; reveal subsequent replies from their top.
         useEffect(() => {
-          const el = bottomRef.current;
-          if (!el) return;
-          el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "end" });
-        }, [messages, typing]);
+          const thread = threadRef.current;
+          const latest = messages[messages.length - 1];
+          if (!thread || !latest || latest.id === "u0" || latest.id === "a0") return;
+          const message = thread.querySelector('[data-message-id="' + latest.id + '"]');
+          if (!message) return;
+          const top =
+            message.getBoundingClientRect().top -
+            thread.getBoundingClientRect().top +
+            thread.scrollTop -
+            16;
+          thread.scrollTo({ top: Math.max(0, top), behavior: reducedMotion() ? "auto" : "smooth" });
+        }, [messages]);
 
         /* `context` attaches the photograph the question came from, so the
            thread shows what was being looked at and Meera answers about it. */
@@ -3716,7 +4591,9 @@
             aria-haspopup="menu"
             aria-expanded={attachOpen}
             className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors ${
-              attachOpen ? "bg-primary text-onprimary" : "text-primary hover:bg-inset active:scale-95"
+              attachOpen
+                ? "bg-primary text-onprimary"
+                : "text-primary hover:bg-inset active:scale-95"
             }`}
           >
             <svg
@@ -3742,7 +4619,9 @@
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
             aria-pressed={isListening}
             className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors ${
-              isListening ? "bg-primary aura-listening" : "bg-inset hover:bg-hairline active:scale-95"
+              isListening
+                ? "bg-primary aura-listening"
+                : "bg-inset hover:bg-hairline active:scale-95"
             }`}
           >
             <img
@@ -3847,67 +4726,76 @@
               </div>
             )}
 
-            <div className="app-viewport">
+            <div
+              className={`app-viewport ${params.get("motion") === "send" ? "chat-arrival" : ""} ${embedded && window.__auraRiseAt ? "embed-arrival" : ""}`}
+            >
               {/* ---------- Header ---------- */}
-              <header className="shrink-0 z-20 pl-2 pr-4 pt-3 pb-2 flex items-center gap-1 bg-canvas">
-                <a
-                  href="index.html"
-                  onClick={(e) => {
-                    // Go back to wherever we came from when there is somewhere to go.
-                    if (window.history.length > 1 && document.referrer) {
-                      e.preventDefault();
-                      window.history.back();
-                    }
-                  }}
-                  aria-label="Back"
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all shrink-0"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path d="m15 5-7 7 7 7" />
-                  </svg>
-                </a>
+              {!embedded && (
+                <header className="relative px-6 pt-4 pb-3 flex items-center justify-between z-20 shrink-0 bg-canvas">
+                  <div className="flex items-center gap-1.5 select-none -ml-1">
+                    <a
+                      href="index.html"
+                      onClick={(e) => {
+                        // Go back to wherever we came from when there is somewhere to go.
+                        if (window.history.length > 1 && document.referrer) {
+                          e.preventDefault();
+                          window.history.back();
+                        }
+                      }}
+                      aria-label="Back to home"
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all shrink-0 cursor-pointer ${
+                        // The first-frame shell already showed the arrow; fading it in
+                        // again when React takes over would read as a blink.
+                        params.get("motion") === "send" && !window.__auraShell
+                          ? "back-btn-enter"
+                          : ""
+                      }`}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="m15 5-7 7 7 7" />
+                      </svg>
+                    </a>
 
-                <h1 className="flex-1 min-w-0 font-display text-[36px] leading-none text-ink truncate">
-                  Aura
-                </h1>
+                    <span className="font-editorial text-[30px] leading-[34px] tracking-[-0.02em] text-ink font-normal block">
+                      Aura
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(true)}
-                  aria-label="Open navigation menu"
-                  aria-haspopup="dialog"
-                  aria-expanded={drawerOpen}
-                  className="w-11 h-11 rounded-full border border-hairline flex items-center justify-center text-ink hover:border-primary/40 active:scale-95 transition-all shrink-0"
-                  style={{ background: "rgb(var(--card-rgb))" }}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                    focusable="false"
+                  <button
+                    type="button"
+                    onClick={() => setDrawerOpen(true)}
+                    aria-label="Open navigation menu"
+                    aria-haspopup="dialog"
+                    aria-expanded={drawerOpen}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-ink hover:bg-inset active:scale-95 transition-all -mr-1 cursor-pointer"
                   >
-                    <line x1="4" y1="7" x2="20" y2="7" />
-                    <line x1="4" y1="12" x2="20" y2="12" />
-                    <line x1="4" y1="17" x2="20" y2="17" />
-                  </svg>
-                </button>
-              </header>
+                    <svg
+                      width="22"
+                      height="15"
+                      viewBox="0 0 22 15"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                    >
+                      <line x1="2" y1="2" x2="20" y2="2" />
+                      <line x1="2" y1="7.5" x2="20" y2="7.5" />
+                      <line x1="2" y1="13" x2="20" y2="13" />
+                    </svg>
+                  </button>
+                </header>
+              )}
 
               {/* ---------- Thread ---------- */}
               <div ref={threadRef} className="thread-scroll px-4 py-4">
@@ -3930,7 +4818,7 @@
                   )}
 
                   {messages.length > 0 && (
-                    <p className="text-center font-read italic text-[14px] text-muted m-0 pt-1">
+                    <p className="text-center font-sans italic text-[14px] text-muted m-0 pt-1">
                       Today, {startedAt}
                     </p>
                   )}
@@ -3938,18 +4826,27 @@
                   {messages.map((m) => (
                     <div
                       key={m.id}
+                      data-message-id={m.id}
                       className={m.from === "user" ? "flex justify-end" : "flex justify-start"}
                     >
                       <div className={m.from === "user" ? "max-w-[80%]" : "w-full"}>
                         {m.from === "user" ? (
-                          <div className="aura-msg-in">
-                            <MessageAttachment
-                              context={m.context}
-                              directions={directions}
-                              onOpen={setOpenDirection}
-                            />
+                          <div
+                            className={
+                              m.id === "u0" && params.get("motion") === "send"
+                                ? ""
+                                : "aura-user-bubble-in"
+                            }
+                          >
+                            <div className={m.id === "u0" ? "opening-attachment" : undefined}>
+                              <MessageAttachment
+                                context={m.context}
+                                directions={directions}
+                                onOpen={setOpenDirection}
+                              />
+                            </div>
                             <p
-                              className="text-white font-read text-[17px] leading-[1.35] px-4 py-3 rounded-[22px] whitespace-pre-line m-0"
+                              className={`${m.id === "u0" ? "opening-prompt " : ""}text-white font-sans text-[13px] leading-[1.35] px-4 py-3 rounded-[22px] whitespace-pre-line m-0`}
                               style={{ background: "rgb(var(--primary-rgb))" }}
                             >
                               {m.text}
@@ -3963,7 +4860,13 @@
                                 className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-primary border border-primary/15"
                                 style={{ background: "rgb(var(--sel-fill-rgb))" }}
                               >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  focusable="false"
+                                >
                                   <path d="M12 1.5c.5 5.6 4.9 10 10.5 10.5-5.6.5-10 4.9-10.5 10.5C11.5 16.9 7.1 12.5 1.5 12 7.1 11.5 11.5 7.1 12 1.5Z" />
                                 </svg>
                               </span>
@@ -3972,7 +4875,7 @@
                                   Aura
                                 </span>
                                 <p
-                                  className="border border-hairline text-ink font-read text-[17px] leading-[1.35] px-4 py-3 rounded-[20px] whitespace-pre-line m-0"
+                                  className="border border-hairline text-ink font-sans text-[13px] leading-[1.35] px-4 py-3 rounded-[20px] whitespace-pre-line m-0"
                                   style={{ background: "rgb(var(--card-rgb))" }}
                                 >
                                   {m.text}
@@ -4167,7 +5070,10 @@
                                   onEdit={() => {
                                     // Editing the brief is just telling Aura what changed.
                                     setInputVal("Change my brief: ");
-                                    setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
+                                    setTimeout(
+                                      () => inputRef.current && inputRef.current.focus(),
+                                      0
+                                    );
                                   }}
                                 />
 
@@ -4281,13 +5187,33 @@
                         className="reply-chip shrink-0"
                       >
                         {q.icon === "sparkle" && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
                             <path d="M10 3.5 11.8 9l5.7 1.8-5.7 1.8L10 18.5l-1.8-5.9L2.5 10.8 8.2 9 10 3.5Z" />
                             <path d="M18.5 3v4M16.5 5h4" strokeLinecap="round" />
                           </svg>
                         )}
                         {q.icon === "sliders" && (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" focusable="false">
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
                             <path d="M3 7h9M17 7h4M3 17h4M12 17h9" />
                             <circle cx="14.5" cy="7" r="2.3" />
                             <circle cx="9.5" cy="17" r="2.3" />
@@ -4306,7 +5232,11 @@
                active — same pill once there is text; the mic becomes a plum send
                typing — once the text runs past one line, a card: the text
                         scrolls above, + bottom-left, send bottom-right. */}
-              <div className="relative shrink-0 px-4 pb-2 pt-1 z-40" ref={attachRef}>
+              <div
+                className="composer-rise relative shrink-0 px-4 pb-2 pt-1 z-40"
+                ref={attachRef}
+                style={composerRiseStyle}
+              >
                 {attachOpen && (
                   <div className="absolute left-4 right-4 bottom-full z-50">
                     <AttachmentPopup
@@ -4440,6 +5370,50 @@
       }
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) {
+                el.removeAttribute("id");
+              });
+              ghost.querySelectorAll("video").forEach(function (v) {
+                v.remove();
+              });
+              r.target.appendChild(ghost);
+              setTimeout(function () {
+                ghost.remove();
+              }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>

@@ -365,6 +365,49 @@
         }
       }
     </style>
+    <style id="aura-sheet-motion">
+      /* ---- Bottom sheets move like the side drawer ----
+         The sheet slides on the same curve and timing as the nav drawer,
+         and only the backdrop fades, never the sheet, so opening reads as
+         a panel arriving rather than the screen reloading. Closing plays
+         it in reverse (see the script at the end of the body). Placed last
+         in <head> so it wins over each page's older sheet timing. */
+      .aura-sheet-up {
+        animation: auraSheetIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+        will-change: transform;
+      }
+      @keyframes auraSheetIn {
+        from { transform: translate3d(0, 100%, 0); }
+        to { transform: translate3d(0, 0, 0); }
+      }
+      /* The overlay that holds a sheet fades its backdrop colour only. */
+      .aura-fade-in:has(.aura-sheet-up) {
+        animation: auraScrimBgIn 0.3s ease-out both;
+      }
+      @keyframes auraScrimBgIn {
+        from { background-color: transparent; }
+      }
+      /* A closed sheet's stand-in, playing the exit before it is removed. */
+      .aura-sheet-ghost.aura-sheet-ghost {
+        pointer-events: none;
+        animation: auraScrimBgOut 0.26s ease-in both;
+      }
+      .aura-sheet-ghost .aura-sheet-up,
+      .aura-sheet-ghost.aura-sheet-up {
+        animation: auraSheetGhostOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      @keyframes auraScrimBgOut {
+        to { background-color: transparent; }
+      }
+      @keyframes auraSheetGhostOut {
+        from { transform: translate3d(0, 0, 0); }
+        to { transform: translate3d(0, 100%, 0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .aura-sheet-up,
+        .aura-fade-in:has(.aura-sheet-up) { animation-duration: 1ms; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -618,7 +661,7 @@
         );
       }
 
-/* ===================================================================
+      /* ===================================================================
        AI SCAN
        Three photographs — front, back and side — framed against an on-screen
        guide so the whole body lands in shot at a consistent distance. The
@@ -626,529 +669,500 @@
        fourteen points afterwards, which is what the Measurements note
        already promises.
        =================================================================== */
-const SHOTS = [
-  {
-    id: "front",
-    label: "Front",
-    cue: "Face the camera. Arms a hand's width from your sides, feet hip-width apart.",
-  },
-  {
-    id: "back",
-    label: "Back",
-    cue: "Turn around, same stance. Keep your heels on the lower line.",
-  },
-  {
-    id: "side",
-    label: "Side profile",
-    cue: "Turn a quarter. Arms straight down, looking ahead, not at the camera.",
-  },
-];
+      const SHOTS = [
+        {
+          id: "front",
+          label: "Front",
+          cue: "Face the camera. Arms a hand's width from your sides, feet hip-width apart.",
+        },
+        {
+          id: "back",
+          label: "Back",
+          cue: "Turn around, same stance. Keep your heels on the lower line.",
+        },
+        {
+          id: "side",
+          label: "Side profile",
+          cue: "Turn a quarter. Arms straight down, looking ahead, not at the camera.",
+        },
+      ];
 
-const STANDING_GUIDE = [
-  "Stand 2.5 metres (about 8 feet) back — far enough that your whole body sits inside the outline.",
-  "Prop the phone at hip height, portrait, against something steady.",
-  "Plain wall behind you. Light on your face, not behind you.",
-  "Wear fitted clothes. No coat, nothing bunched at the waist.",
-  "Crown of your head on the top line, heels on the bottom one.",
-];
+      const STANDING_GUIDE = [
+        "Stand 2.5 m (8 ft) back.",
+        "Phone upright at hip height.",
+        "Plain wall, light on your face.",
+        "Wear fitted clothes.",
+      ];
 
-/* The body guide drawn over the viewfinder. Deliberately a guide rather
+      /* The body guide drawn over the viewfinder. Deliberately a guide rather
          than a silhouette — you line yourself up with it, you do not have to
          match its shape. */
-function BodyGuide({ view }) {
-  const side = view === "side";
-  return (
-    <svg
-      viewBox="0 0 120 300"
-      preserveAspectRatio="xMidYMid meet"
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {/* Crown and heel lines */}
-      <line
-        x1="8"
-        y1="10"
-        x2="112"
-        y2="10"
-        stroke="rgba(255,255,255,0.9)"
-        strokeWidth="1"
-        strokeDasharray="4 4"
-      />
-      <line
-        x1="8"
-        y1="278"
-        x2="112"
-        y2="278"
-        stroke="rgba(255,255,255,0.9)"
-        strokeWidth="1"
-        strokeDasharray="4 4"
-      />
-      <text
-        x="10"
-        y="7"
-        fill="rgba(255,255,255,0.9)"
-        fontSize="6"
-        fontFamily="monospace"
-      >
-        CROWN
-      </text>
-      <text
-        x="10"
-        y="288"
-        fill="rgba(255,255,255,0.9)"
-        fontSize="6"
-        fontFamily="monospace"
-      >
-        HEELS
-      </text>
-
-      <g
-        stroke="rgba(255,255,255,0.75)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        fill="none"
-        strokeDasharray="6 5"
-      >
-        <circle cx="60" cy="30" r="17" />
-        <line x1="60" y1="47" x2="60" y2="158" />
-        {side ? (
-          <>
-            <line x1="60" y1="66" x2="64" y2="150" />
-            <line x1="60" y1="158" x2="62" y2="272" />
-          </>
-        ) : (
-          <>
-            <line x1="34" y1="66" x2="86" y2="66" />
-            <line x1="34" y1="66" x2="26" y2="150" />
-            <line x1="86" y1="66" x2="94" y2="150" />
-            <line x1="60" y1="158" x2="42" y2="272" />
-            <line x1="60" y1="158" x2="78" y2="272" />
-          </>
-        )}
-      </g>
-    </svg>
-  );
-}
-
-function AiScanModal({ onClose, onDone }) {
-  const [shots, setShots] = useState({});
-  const [capturing, setCapturing] = useState(null); // shot id while the camera is live
-  const [countdown, setCountdown] = useState(0);
-  const [camError, setCamError] = useState("");
-  const [picking, setPicking] = useState(null); // the shot whose picker is open
-  const [streamTick, setStreamTick] = useState(0);
-
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const panelRef = useRef(null);
-  const restoreRef = useRef(null);
-  const timerRef = useRef(null);
-
-  const stopCamera = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    restoreRef.current = document.activeElement;
-    document.body.classList.add("aura-locked");
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", onKey, true);
-    return () => {
-      document.removeEventListener("keydown", onKey, true);
-      document.body.classList.remove("aura-locked");
-      stopCamera();
-      const r = restoreRef.current;
-      if (r && typeof r.focus === "function") r.focus();
-    };
-  }, [onClose, stopCamera]);
-
-  // Attach once both the element and the stream exist.
-  useEffect(() => {
-    const v = videoRef.current;
-    const stream = streamRef.current;
-    if (!capturing || !v || !stream) return;
-    v.srcObject = stream;
-    const p = v.play();
-    if (p && p.catch) p.catch(() => {});
-  }, [capturing, streamTick]);
-
-  const openCamera = async (id) => {
-    setCamError("");
-    setCapturing(id);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      // The <video> only mounts on the re-render that `capturing` triggers,
-      // so hand off to an effect rather than touching the ref here, where it
-      // is still null.
-      setStreamTick((n) => n + 1);
-    } catch (err) {
-      // No camera, or permission refused — the upload path still works.
-      setCamError(
-        err && err.name === "NotAllowedError"
-          ? "Camera permission was declined. You can upload a photograph instead."
-          : "No camera available on this device. Upload a photograph instead.",
-      );
-    }
-  };
-
-  const grabFrame = (id) => {
-    const v = videoRef.current;
-    if (!v || !v.videoWidth) {
-      setCountdown(0);
-      setCamError("Could not read a frame from the camera. Upload a photograph instead.");
-      return;
-    }
-    const c = document.createElement("canvas");
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    const ctx = c.getContext("2d");
-    // Mirror the front camera back, so the saved frame reads the way a
-    // photograph would rather than the way a mirror does.
-    ctx.translate(c.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(v, 0, 0, c.width, c.height);
-    setShots((s) => ({ ...s, [id]: c.toDataURL("image/jpeg", 0.85) }));
-    stopCamera();
-    setCapturing(null);
-    setCountdown(0);
-  };
-
-  // A self-taken full-body shot needs a delay — you cannot be 2.5m away
-  // and holding the phone.
-  const startTimer = (id) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    let n = 5;
-    setCountdown(n);
-    timerRef.current = setInterval(() => {
-      n -= 1;
-      setCountdown(n);
-      if (n <= 0) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-        grabFrame(id);
-      }
-    }, 1000);
-  };
-
-  const onUpload = (id) => (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setShots((s) => ({ ...s, [id]: reader.result }));
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const taken = SHOTS.filter((s) => shots[s.id]).length;
-  const active = SHOTS.find((s) => s.id === capturing);
-
-  return (
-    <div
-      className="absolute inset-0 z-50 aura-fade-in"
-      style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="scan-title"
-        tabIndex={-1}
-        className="absolute inset-x-0 bottom-0 h-[92%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
-      >
-        <div className="relative shrink-0 pt-2.5 pb-2.5">
-          <span
-            className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+      function BodyGuide({ view }) {
+        const side = view === "side";
+        return (
+          <svg
+            viewBox="0 0 120 300"
+            preserveAspectRatio="xMidYMid meet"
+            className="absolute inset-0 w-full h-full pointer-events-none"
             aria-hidden="true"
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close AI scan"
-            className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
+            focusable="false"
           >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+            {/* Crown and heel lines */}
+            <line
+              x1="8"
+              y1="10"
+              x2="112"
+              y2="10"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+            <line
+              x1="8"
+              y1="278"
+              x2="112"
+              y2="278"
+              stroke="rgba(255,255,255,0.9)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+            <text x="10" y="7" fill="rgba(255,255,255,0.9)" fontSize="6" fontFamily="monospace">
+              CROWN
+            </text>
+            <text x="10" y="288" fill="rgba(255,255,255,0.9)" fontSize="6" fontFamily="monospace">
+              HEELS
+            </text>
+
+            <g
+              stroke="rgba(255,255,255,0.75)"
+              strokeWidth="2.5"
               strokeLinecap="round"
-              aria-hidden="true"
-              focusable="false"
+              fill="none"
+              strokeDasharray="6 5"
             >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {capturing ? (
-          /* ---------- Viewfinder ---------- */
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-5 pb-3">
-              <h2
-                id="scan-title"
-                className="font-display text-[22px] text-ink leading-tight"
-              >
-                {active.label}
-              </h2>
-              <p className="text-[12px] text-muted leading-snug mt-1">
-                {active.cue}
-              </p>
-            </div>
-
-            <div className="relative flex-1 min-h-0 mx-5 rounded-2xl overflow-hidden bg-ink">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-              <BodyGuide view={active.id} />
-
-              {countdown > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="font-display text-[72px] text-white drop-shadow-lg">
-                    {countdown}
-                  </span>
-                </div>
+              <circle cx="60" cy="30" r="17" />
+              <line x1="60" y1="47" x2="60" y2="158" />
+              {side ? (
+                <>
+                  <line x1="60" y1="66" x2="64" y2="150" />
+                  <line x1="60" y1="158" x2="62" y2="272" />
+                </>
+              ) : (
+                <>
+                  <line x1="34" y1="66" x2="86" y2="66" />
+                  <line x1="34" y1="66" x2="26" y2="150" />
+                  <line x1="86" y1="66" x2="94" y2="150" />
+                  <line x1="60" y1="158" x2="42" y2="272" />
+                  <line x1="60" y1="158" x2="78" y2="272" />
+                </>
               )}
+            </g>
+          </svg>
+        );
+      }
 
-              {camError && (
-                <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
-                  <p className="text-[13px] text-white leading-relaxed">
-                    {camError}
-                  </p>
-                </div>
-              )}
+      function AiScanModal({ onClose, onDone }) {
+        const [shots, setShots] = useState({});
+        const [capturing, setCapturing] = useState(null); // shot id while the camera is live
+        const [countdown, setCountdown] = useState(0);
+        const [camError, setCamError] = useState("");
+        const [picking, setPicking] = useState(null); // the shot whose picker is open
+        const [streamTick, setStreamTick] = useState(0);
 
-              <p className="absolute left-0 right-0 bottom-3 text-center font-mono text-[10.5px] text-white/90">
-                2.5 m back · phone at hip height
-              </p>
-            </div>
+        const videoRef = useRef(null);
+        const streamRef = useRef(null);
+        const panelRef = useRef(null);
+        const restoreRef = useRef(null);
+        const timerRef = useRef(null);
 
-            <div className="shrink-0 px-5 pt-4 pb-5 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  stopCamera();
-                  setCapturing(null);
-                  setCountdown(0);
-                }}
-                className="min-h-[48px] px-5 rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium hover:bg-inset active:scale-95 transition-all"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                disabled={!!camError || countdown > 0}
-                onClick={() => startTimer(active.id)}
-                className="flex-1 min-h-[48px] px-5 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
-              >
-                {countdown > 0
-                  ? `Hold still — ${countdown}`
-                  : "Take it in 5 seconds"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* ---------- Setup and review ---------- */
-          <div className="flex-1 overflow-y-auto px-5 pb-5">
-            <h2
-              id="scan-title"
-              className="font-display text-[24px] text-ink leading-tight"
+        const stopCamera = useCallback(() => {
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = null;
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+        }, []);
+
+        useEffect(() => {
+          restoreRef.current = document.activeElement;
+          document.body.classList.add("aura-locked");
+          const onKey = (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onClose();
+            }
+          };
+          document.addEventListener("keydown", onKey, true);
+          return () => {
+            document.removeEventListener("keydown", onKey, true);
+            document.body.classList.remove("aura-locked");
+            stopCamera();
+            const r = restoreRef.current;
+            if (r && typeof r.focus === "function") r.focus();
+          };
+        }, [onClose, stopCamera]);
+
+        // Attach once both the element and the stream exist.
+        useEffect(() => {
+          const v = videoRef.current;
+          const stream = streamRef.current;
+          if (!capturing || !v || !stream) return;
+          v.srcObject = stream;
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});
+        }, [capturing, streamTick]);
+
+        const openCamera = async (id) => {
+          setCamError("");
+          setCapturing(id);
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: "user",
+                width: { ideal: 1080 },
+                height: { ideal: 1920 },
+              },
+              audio: false,
+            });
+            streamRef.current = stream;
+            // The <video> only mounts on the re-render that `capturing` triggers,
+            // so hand off to an effect rather than touching the ref here, where it
+            // is still null.
+            setStreamTick((n) => n + 1);
+          } catch (err) {
+            // No camera, or permission refused — the upload path still works.
+            setCamError(
+              err && err.name === "NotAllowedError"
+                ? "Camera permission was declined. You can upload a photograph instead."
+                : "No camera available on this device. Upload a photograph instead."
+            );
+          }
+        };
+
+        const grabFrame = (id) => {
+          const v = videoRef.current;
+          if (!v || !v.videoWidth) {
+            setCountdown(0);
+            setCamError("Could not read a frame from the camera. Upload a photograph instead.");
+            return;
+          }
+          const c = document.createElement("canvas");
+          c.width = v.videoWidth;
+          c.height = v.videoHeight;
+          const ctx = c.getContext("2d");
+          // Mirror the front camera back, so the saved frame reads the way a
+          // photograph would rather than the way a mirror does.
+          ctx.translate(c.width, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(v, 0, 0, c.width, c.height);
+          setShots((s) => ({ ...s, [id]: c.toDataURL("image/jpeg", 0.85) }));
+          stopCamera();
+          setCapturing(null);
+          setCountdown(0);
+        };
+
+        // A self-taken full-body shot needs a delay — you cannot be 2.5m away
+        // and holding the phone.
+        const startTimer = (id) => {
+          if (timerRef.current) clearInterval(timerRef.current);
+          let n = 5;
+          setCountdown(n);
+          timerRef.current = setInterval(() => {
+            n -= 1;
+            setCountdown(n);
+            if (n <= 0) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+              grabFrame(id);
+            }
+          }, 1000);
+        };
+
+        const onUpload = (id) => (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => setShots((s) => ({ ...s, [id]: reader.result }));
+          reader.readAsDataURL(file);
+          e.target.value = "";
+        };
+
+        const taken = SHOTS.filter((s) => shots[s.id]).length;
+        const active = SHOTS.find((s) => s.id === capturing);
+
+        return (
+          <div
+            className="absolute inset-0 z-50 aura-fade-in"
+            style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+          >
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="scan-title"
+              tabIndex={-1}
+              className="absolute inset-x-0 bottom-0 h-[92%] bg-card rounded-t-3xl border-t border-hairline shadow-2xl flex flex-col overflow-hidden focus:outline-none aura-sheet-up"
             >
-              AI scan
-            </h2>
-            <div className="mt-5 rounded-2xl border border-hairline bg-inset/50 p-4">
-              <h3 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mb-2">
-                How to stand
-              </h3>
-              <ul className="space-y-1.5">
-                {STANDING_GUIDE.map((g, i) => (
-                  <li
-                    key={i}
-                    className="flex gap-2 text-[12px] text-ink leading-snug"
-                  >
-                    <span className="font-mono text-[10.5px] text-goldtext shrink-0 mt-0.5">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span>{g}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Three shots, three cards, side by side — the stance cue moves
-                into the picker, where it is read at the moment it matters. */}
-            <div className="mt-4 grid grid-cols-3 gap-2.5">
-              {SHOTS.map((s) => (
+              <div className="relative shrink-0 pt-2.5 pb-2.5">
+                <span
+                  className="block w-10 h-1 rounded-full bg-hairline mx-auto"
+                  aria-hidden="true"
+                />
                 <button
-                  key={s.id}
                   type="button"
-                  onClick={() => setPicking(s)}
-                  aria-haspopup="dialog"
-                  aria-label={
-                    shots[s.id]
-                      ? `${s.label} — captured, choose how to retake it`
-                      : `${s.label} — choose how to take it`
-                  }
-                  className={`p-2 rounded-2xl border bg-card text-left transition-all active:scale-[0.98] ${
-                    shots[s.id]
-                      ? "border-primary/50"
-                      : "border-hairline hover:border-primary/45"
-                  }`}
+                  onClick={onClose}
+                  aria-label="Close AI scan"
+                  className="absolute top-0.5 right-2.5 w-11 h-11 rounded-full flex items-center justify-center bg-card border border-hairline text-ink shadow-sm hover:bg-inset active:scale-95 transition-all z-10"
                 >
-                  <span className="block w-full aspect-[3/4] rounded-xl overflow-hidden bg-inset border border-hairline flex items-center justify-center">
-                    {shots[s.id] ? (
-                      <img
-                        src={shots[s.id]}
-                        alt={`${s.label} photograph`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg
-                        viewBox="0 0 120 300"
-                        className="w-full h-full p-2 opacity-35"
-                        aria-hidden="true"
-                      >
-                        <g
-                          stroke="currentColor"
-                          strokeWidth="9"
-                          strokeLinecap="round"
-                          fill="none"
-                          className="text-muted"
-                        >
-                          <circle cx="60" cy="34" r="20" />
-                          <line x1="60" y1="54" x2="60" y2="170" />
-                          <line x1="30" y1="76" x2="90" y2="76" />
-                          <line x1="60" y1="170" x2="38" y2="270" />
-                          <line x1="60" y1="170" x2="82" y2="270" />
-                        </g>
-                      </svg>
-                    )}
-                  </span>
-
-                  <span className="block text-[12.5px] font-medium text-ink mt-1.5 truncate">
-                    {s.label}
-                  </span>
-                  <span
-                    className={`block font-mono text-[10px] mt-0.5 ${
-                      shots[s.id] ? "text-primary" : "text-muted"
-                    }`}
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
                   >
-                    {shots[s.id] ? "Captured" : "Not yet"}
-                  </span>
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
                 </button>
-              ))}
-            </div>
-
-            {picking && (
-              <div
-                className="absolute inset-0 z-50 flex items-center justify-center px-6 aura-fade-in"
-                style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
-                onMouseDown={(e) => {
-                  if (e.target === e.currentTarget) setPicking(null);
-                }}
-              >
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="shot-choice-title"
-                  className="w-full max-w-[300px] bg-card rounded-3xl border border-hairline shadow-2xl p-5"
-                >
-                  <h3
-                    id="shot-choice-title"
-                    className="font-display text-[20px] text-ink leading-tight"
-                  >
-                    {picking.label}
-                  </h3>
-                  <p className="text-[12px] text-muted leading-relaxed mt-1.5 mb-4">
-                    {picking.cue}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const id = picking.id;
-                      setPicking(null);
-                      openCamera(id);
-                    }}
-                    className="w-full min-h-[48px] rounded-full bg-primary text-onprimary text-[13.5px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
-                  >
-                    Use camera
-                  </button>
-
-                  <label className="mt-2.5 w-full min-h-[48px] rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium flex items-center justify-center cursor-pointer hover:bg-inset active:scale-95 transition-all">
-                    Upload a photograph
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const handler = onUpload(picking.id);
-                        setPicking(null);
-                        handler(e);
-                      }}
-                    />
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => setPicking(null)}
-                    className="w-full min-h-[44px] mt-1.5 text-[12.5px] font-medium text-muted hover:text-ink transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
-            )}
 
-            <button
-              type="button"
-              disabled={taken < SHOTS.length}
-              onClick={() => onDone(taken)}
-              className="w-full mt-5 min-h-[48px] rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
-            >
-              {taken < SHOTS.length
-                ? `Extract measurements — ${taken} of ${SHOTS.length}`
-                : "Extract measurements"}
-            </button>
+              {capturing ? (
+                /* ---------- Viewfinder ---------- */
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="px-5 pb-3">
+                    <h2 id="scan-title" className="font-display text-[22px] text-ink leading-tight">
+                      {active.label}
+                    </h2>
+                    <p className="text-[12px] text-muted leading-snug mt-1">{active.cue}</p>
+                  </div>
 
-            <p className="text-[11px] text-muted leading-relaxed mt-3">
-              Photographs stay on this device in this prototype — nothing is
-              uploaded.
-            </p>
+                  <div className="relative flex-1 min-h-0 mx-5 rounded-2xl overflow-hidden bg-ink">
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ transform: "scaleX(-1)" }}
+                    />
+                    <BodyGuide view={active.id} />
+
+                    {countdown > 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="font-display text-[72px] text-white drop-shadow-lg">
+                          {countdown}
+                        </span>
+                      </div>
+                    )}
+
+                    {camError && (
+                      <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+                        <p className="text-[13px] text-white leading-relaxed">{camError}</p>
+                      </div>
+                    )}
+
+                    <p className="absolute left-0 right-0 bottom-3 text-center font-mono text-[10.5px] text-white/90">
+                      2.5 m back · phone at hip height
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 px-5 pt-4 pb-5 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopCamera();
+                        setCapturing(null);
+                        setCountdown(0);
+                      }}
+                      className="min-h-[48px] px-5 rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium hover:bg-inset active:scale-95 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!!camError || countdown > 0}
+                      onClick={() => startTimer(active.id)}
+                      className="flex-1 min-h-[48px] px-5 rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
+                    >
+                      {countdown > 0 ? `Hold still — ${countdown}` : "Take it in 5 seconds"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ---------- Setup and review ---------- */
+                <div className="flex-1 overflow-y-auto px-5 pb-5">
+                  <h2 id="scan-title" className="font-display text-[24px] text-ink leading-tight">
+                    AI scan
+                  </h2>
+                  <div className="mt-5 rounded-2xl border border-hairline bg-inset/50 p-4">
+                    <h3 className="font-mono text-[10.5px] uppercase tracking-wider text-muted mb-2">
+                      How to stand
+                    </h3>
+                    <ul className="space-y-1.5">
+                      {STANDING_GUIDE.map((g, i) => (
+                        <li key={i} className="flex gap-2 text-[12px] text-ink leading-snug">
+                          <span className="font-mono text-[10.5px] text-goldtext shrink-0 mt-0.5">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span>{g}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Three shots, three cards, side by side — the stance cue moves
+                into the picker, where it is read at the moment it matters. */}
+                  <div className="mt-4 grid grid-cols-3 gap-2.5">
+                    {SHOTS.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setPicking(s)}
+                        aria-haspopup="dialog"
+                        aria-label={
+                          shots[s.id]
+                            ? `${s.label} — captured, choose how to retake it`
+                            : `${s.label} — choose how to take it`
+                        }
+                        className={`p-2 rounded-2xl border bg-card text-left transition-all active:scale-[0.98] ${
+                          shots[s.id]
+                            ? "border-primary/50"
+                            : "border-hairline hover:border-primary/45"
+                        }`}
+                      >
+                        <span className="block w-full aspect-[3/4] rounded-xl overflow-hidden bg-inset border border-hairline flex items-center justify-center">
+                          {shots[s.id] ? (
+                            <img
+                              src={shots[s.id]}
+                              alt={`${s.label} photograph`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <svg
+                              viewBox="0 0 120 300"
+                              className="w-full h-full p-2 opacity-35"
+                              aria-hidden="true"
+                            >
+                              <g
+                                stroke="currentColor"
+                                strokeWidth="9"
+                                strokeLinecap="round"
+                                fill="none"
+                                className="text-muted"
+                              >
+                                <circle cx="60" cy="34" r="20" />
+                                <line x1="60" y1="54" x2="60" y2="170" />
+                                <line x1="30" y1="76" x2="90" y2="76" />
+                                <line x1="60" y1="170" x2="38" y2="270" />
+                                <line x1="60" y1="170" x2="82" y2="270" />
+                              </g>
+                            </svg>
+                          )}
+                        </span>
+
+                        <span className="block text-[12.5px] font-medium text-ink mt-1.5 truncate">
+                          {s.label}
+                        </span>
+                        <span
+                          className={`block font-mono text-[10px] mt-0.5 ${
+                            shots[s.id] ? "text-primary" : "text-muted"
+                          }`}
+                        >
+                          {shots[s.id] ? "Captured" : "Not yet"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {picking && (
+                    <div
+                      className="absolute inset-0 z-50 flex items-center justify-center px-6 aura-fade-in"
+                      style={{ backgroundColor: "rgb(var(--ink-rgb) / 0.5)" }}
+                      onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) setPicking(null);
+                      }}
+                    >
+                      <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="shot-choice-title"
+                        className="w-full max-w-[300px] bg-card rounded-3xl border border-hairline shadow-2xl p-5"
+                      >
+                        <h3
+                          id="shot-choice-title"
+                          className="font-display text-[20px] text-ink leading-tight"
+                        >
+                          {picking.label}
+                        </h3>
+                        <p className="text-[12px] text-muted leading-relaxed mt-1.5 mb-4">
+                          {picking.cue}
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const id = picking.id;
+                            setPicking(null);
+                            openCamera(id);
+                          }}
+                          className="w-full min-h-[48px] rounded-full bg-primary text-onprimary text-[13.5px] font-medium hover:bg-primary/90 active:scale-95 transition-all"
+                        >
+                          Use camera
+                        </button>
+
+                        <label className="mt-2.5 w-full min-h-[48px] rounded-full bg-card border border-ctrl text-ink text-[13.5px] font-medium flex items-center justify-center cursor-pointer hover:bg-inset active:scale-95 transition-all">
+                          Upload a photograph
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={(e) => {
+                              const handler = onUpload(picking.id);
+                              setPicking(null);
+                              handler(e);
+                            }}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => setPicking(null)}
+                          className="w-full min-h-[44px] mt-1.5 text-[12.5px] font-medium text-muted hover:text-ink transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={taken < SHOTS.length}
+                    onClick={() => onDone(taken)}
+                    className="w-full mt-5 min-h-[48px] rounded-full bg-primary text-onprimary text-[14px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40"
+                  >
+                    {taken < SHOTS.length
+                      ? `Extract measurements — ${taken} of ${SHOTS.length}`
+                      : "Extract measurements"}
+                  </button>
+
+                  <p className="text-[11px] text-muted leading-relaxed mt-3">
+                    Photographs stay on this device in this prototype — nothing is uploaded.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
+        );
+      }
       function App() {
         const [form, setForm] = useState(load);
         const [toastMsg, setToastMsg] = useState("");
@@ -1336,7 +1350,12 @@ function AiScanModal({ onClose, onDone }) {
                                 type="button"
                                 aria-pressed={on}
                                 onClick={() => set("unit")(u.id)}
-                                className={"min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " + (on ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]" : "text-muted hover:text-ink")}
+                                className={
+                                  "min-h-[32px] px-4 rounded-full text-[13.5px] transition-colors " +
+                                  (on
+                                    ? "bg-card text-primary font-medium shadow-[0_1px_2px_rgb(30_27_46/0.08)]"
+                                    : "text-muted hover:text-ink")
+                                }
                               >
                                 {u.label}
                               </button>
@@ -1541,8 +1560,8 @@ function AiScanModal({ onClose, onDone }) {
                   </Section>
 
                   <p className="text-[11.5px] text-muted leading-relaxed">
-                    Your measurements stay with your commission and are never shown on a
-                    public profile. Alterations are covered under the Perfect Fit Guarantee.
+                    Your measurements stay with your commission and are never shown on a public
+                    profile. Alterations are covered under the Perfect Fit Guarantee.
                   </p>
                 </div>
 
@@ -1584,6 +1603,44 @@ function AiScanModal({ onClose, onDone }) {
       }
 
       ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script id="aura-sheet-motion-exit">
+      /* Sheets unmount the instant they close. So the exit can mirror the
+         drawer's, a copy of the closed sheet stays for one short slide down
+         while its backdrop fades, then goes. Overlays that already animate
+         their own exit (class aura-leaving) are left alone. */
+      (function () {
+        if (!window.MutationObserver) return;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+        function isSheetOverlay(n) {
+          if (!n || n.nodeType !== 1 || n.classList.contains("aura-leaving")) return false;
+          if (n.classList.contains("aura-sheet-ghost")) return false;
+          var holds = n.classList.contains("aura-sheet-up") || n.querySelector(".aura-sheet-up");
+          if (!holds) return false;
+          return (
+            n.classList.contains("aura-sheet-up") ||
+            n.classList.contains("aura-fade-in") ||
+            /(^|\s)inset-0(\s|$)/.test(n.className || "")
+          );
+        }
+        new MutationObserver(function (records) {
+          if (reduce && reduce.matches) return;
+          records.forEach(function (r) {
+            if (!r.target.isConnected) return;
+            r.removedNodes.forEach(function (n) {
+              if (!isSheetOverlay(n)) return;
+              var ghost = n.cloneNode(true);
+              ghost.classList.add("aura-sheet-ghost");
+              ghost.setAttribute("aria-hidden", "true");
+              ghost.removeAttribute("id");
+              ghost.querySelectorAll("[id]").forEach(function (el) { el.removeAttribute("id"); });
+              ghost.querySelectorAll("video").forEach(function (v) { v.remove(); });
+              r.target.appendChild(ghost);
+              setTimeout(function () { ghost.remove(); }, 300);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+      })();
     </script>
   </body>
 </html>
